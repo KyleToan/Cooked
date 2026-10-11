@@ -42,7 +42,7 @@ export function SettingsRow({
           {value}
         </Text>
       ) : null}
-      <Chevron direction="right" />
+      {onPress ? <Chevron direction="right" /> : null}
     </Tap>
   );
 }

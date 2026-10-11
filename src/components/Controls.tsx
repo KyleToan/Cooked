@@ -62,7 +62,7 @@ export function Switch({ value, onChange, label }: { value: boolean; onChange: (
       drawn={SWITCH_H}
       style={styles.switchHit}
     >
-      <View style={[styles.switchTrack, { backgroundColor: value ? color.sageInk : color.line }]}>
+      <View style={[styles.switchTrack, { backgroundColor: value ? color.sageInk : color.checkBorder }]}>
         <View style={[styles.knob, { left: value ? SWITCH_W - KNOB - 2 : 2 }]} />
       </View>
     </Tap>
