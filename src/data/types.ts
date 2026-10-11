@@ -108,8 +108,8 @@ export type Session = {
   /** The email or phone the code was sent to. */
   contact: string;
   path: KitchenPath | null;
-  /** How many things the first scan put away, for the Ready screen. */
-  firstScanCount: number;
+  /** What the last scan put away, for the Ready screen ("milk, eggs, basil"). */
+  lastScan: Record<Place, string[]>;
 };
 
 /** A scanned line on Check your scan. */

@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: color.line,
   },
-  input: { ...type.body, color: color.ink, padding: 0 },
+  input: { ...type.body, color: color.ink, padding: 0, outlineWidth: 0 },
   textArea: {
     height: TEXT_HEIGHT,
     padding: space.s3 + 2,
