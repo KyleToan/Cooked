@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 
 import { ErrorLine } from '@/components/Controls';
 import { OnbScreen } from '@/components/Onboarding';
@@ -8,6 +9,8 @@ import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
 import { useStore } from '@/data/store';
+import { haptics } from '@/hooks/haptics';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { color, radius, size, space, type } from '@/theme';
 
 /** Sign-in is faked: this is the only code that works. */
@@ -16,6 +19,13 @@ const LENGTH = 6;
 const FIRST_WAIT = 24;
 const RESEND_WAIT = 30;
 const CARET_H = 24;
+/** Box height at the default text size; the boxes grow taller with larger text. */
+const BOX_H = size.controlHeight + space.s3 - 2;
+/** Six boxes share the width, so the digits grow with Dynamic Type only as far as a box can hold them. */
+const DIGIT_MAX_SCALE = 1.4;
+/** A wrong code shakes the boxes: three short side-to-side cycles. */
+const SHAKE = 6;
+const SHAKE_STEP = 45;
 
 /** Six boxes, "Sent to … · Change", the resend timer, and the wrong-code state. */
 export default function Code() {
@@ -26,6 +36,15 @@ export default function Code() {
   const [wrong, setWrong] = useState(false);
   const [secs, setSecs] = useState(FIRST_WAIT);
   const [focused, setFocused] = useState(true);
+  const reduced = useReducedMotion();
+  const shakeX = useSharedValue(0);
+  const shakeStyle = useAnimatedStyle(() => ({ transform: [{ translateX: shakeX.value }] }));
+
+  const shake = () => {
+    if (reduced) return;
+    const step = (to: number) => withTiming(to, { duration: SHAKE_STEP, easing: Easing.inOut(Easing.quad) });
+    shakeX.set(withSequence(step(-SHAKE), step(SHAKE), step(-SHAKE), step(SHAKE), step(-SHAKE / 2), step(SHAKE / 2), step(0)));
+  };
 
   useEffect(() => {
     if (secs <= 0) return;
@@ -46,6 +65,8 @@ export default function Code() {
       } else {
         setWrong(true);
         setCode('');
+        haptics.error();
+        shake();
       }
     }
   };
@@ -78,28 +99,29 @@ export default function Code() {
           accessibilityRole="button"
           accessibilityLabel={`6-digit code, ${code.length} entered`}
           onPress={() => input.current?.focus()}
-          style={styles.boxes}
         >
-          {Array.from({ length: LENGTH }, (_, i) => {
-            const current = focused && i === code.length;
-            return (
-              <View
-                key={i}
-                style={[
-                  styles.box,
-                  wrong ? styles.boxWrong : current ? styles.boxCurrent : null,
-                ]}
-              >
-                {code[i] ? (
-                  <Text variant="sectionTitle" style={styles.digit}>
-                    {code[i]}
-                  </Text>
-                ) : current && !wrong ? (
-                  <View style={styles.caret} />
-                ) : null}
-              </View>
-            );
-          })}
+          <Animated.View style={[styles.boxes, shakeStyle]}>
+            {Array.from({ length: LENGTH }, (_, i) => {
+              const current = focused && i === code.length;
+              return (
+                <View
+                  key={i}
+                  style={[
+                    styles.box,
+                    wrong ? styles.boxWrong : current ? styles.boxCurrent : null,
+                  ]}
+                >
+                  {code[i] ? (
+                    <Text variant="sectionTitle" style={styles.digit} maxFontSizeMultiplier={DIGIT_MAX_SCALE}>
+                      {code[i]}
+                    </Text>
+                  ) : current && !wrong ? (
+                    <View style={styles.caret} />
+                  ) : null}
+                </View>
+              );
+            })}
+          </Animated.View>
         </Pressable>
         {/* The real input: the system number pad, with iOS offering the code from Mail or Messages. */}
         <TextInput
@@ -138,10 +160,11 @@ const styles = StyleSheet.create({
   boxes: { flexDirection: 'row', gap: space.s2 + 2 },
   box: {
     flex: 1,
-    height: size.controlHeight + space.s3 - 2,
+    minHeight: BOX_H,
+    paddingVertical: space.s1,
     borderRadius: radius.check + space.s1 + 1,
     borderWidth: 1,
-    borderColor: color.line,
+    borderColor: color.controlLine,
     alignItems: 'center',
     justifyContent: 'center',
   },

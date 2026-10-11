@@ -1,6 +1,6 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
+import { Alert, Platform, StyleSheet, View } from 'react-native';
 
 import { ActionPill } from '@/components/ActionPill';
 import { PushedHeader } from '@/components/Header';
@@ -13,6 +13,7 @@ import { joinAnd, scanFlow } from '@/data/helpers';
 import { SAMPLE_SCAN } from '@/data/seed';
 import { useStore } from '@/data/store';
 import type { ScanLine } from '@/data/types';
+import { haptics } from '@/hooks/haptics';
 import { useGoToTab } from '@/hooks/useGoToTab';
 import { useLayoutMotion } from '@/hooks/useLayoutMotion';
 import { color, radius, size, space } from '@/theme';
@@ -27,6 +28,39 @@ export default function ScanReview() {
   const [lines, setLines] = useState<ScanLine[]>(SAMPLE_SCAN);
   const [open, setOpen] = useState<string | null>(null);
 
+  // Leaving (back arrow, Retake photo, Android back) throws the edits away, so ask once if
+  // anything was renamed, moved or recounted. Adding the items leaves without asking.
+  const navigation = useNavigation();
+  const edited = lines.some((l, i) => {
+    const o = SAMPLE_SCAN[i];
+    return !o || l.id !== o.id || l.name !== o.name || l.place !== o.place || l.qty !== o.qty;
+  });
+  const guard = useRef({ edited, leaving: false });
+  useEffect(() => {
+    guard.current.edited = edited;
+  }, [edited]);
+  useEffect(
+    () =>
+      navigation.addListener('beforeRemove', (e) => {
+        if (!guard.current.edited || guard.current.leaving) return;
+        e.preventDefault();
+        const leave = () => {
+          guard.current.leaving = true;
+          navigation.dispatch(e.data.action);
+        };
+        if (Platform.OS === 'web') {
+          // React Native Web has no Alert.
+          if (window.confirm('Discard your changes?')) leave();
+          return;
+        }
+        Alert.alert('Discard your changes?', 'The names, places and amounts you changed won’t be kept.', [
+          { text: 'Keep editing', style: 'cancel' },
+          { text: 'Discard', style: 'destructive', onPress: leave },
+        ]);
+      }),
+    [navigation],
+  );
+
   const keep = lines.filter((l) => l.place !== 'skip');
   // Things on the To Buy list that this receipt covers (only shown in the app, not onboarding).
   const onList =
@@ -35,7 +69,10 @@ export default function ScanReview() {
       : [];
 
   const add = () => {
-    actions.addScanned(lines);
+    guard.current.leaving = true;
+    // In the app, Home shows "Added N items to your kitchen" with Undo; onboarding moves on to the next step.
+    actions.addScanned(lines, { undo: flow === 'app' });
+    haptics.success();
     if (flow === 'app') {
       goToTab('/');
     } else {
@@ -55,7 +92,8 @@ export default function ScanReview() {
         </>
       }
     >
-      <PushedHeader title={`We found ${lines.length} items`} onBack={() => router.back()} backLabel="Back to camera" />
+      {/* Retake photo (under the button) goes back to the camera; the arrow leaves the scan altogether. */}
+      <PushedHeader title={`We found ${lines.length} items`} onBack={() => router.dismiss(2)} backLabel="Close scan" />
       <Text variant="button" weight="regular" color="inkMuted">
         Corner Market · today, 6:42 pm. Tap a name to fix it, or a place to move it.
       </Text>

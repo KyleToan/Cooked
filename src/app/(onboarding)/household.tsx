@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
   on: { backgroundColor: color.beige, borderWidth: 1.5, borderColor: color.sageInk },
   off: { backgroundColor: color.surface, borderWidth: 1, borderColor: color.line },
   text: { flex: 1, gap: 3 },
-  radio: { width: RADIO, height: RADIO, borderRadius: radius.pill },
+  radio: { width: RADIO, height: RADIO, flexShrink: 0, borderRadius: radius.pill },
   radioOn: { borderWidth: 7, borderColor: color.sageInk },
-  radioOff: { borderWidth: 1.5, borderColor: color.checkBorder },
+  radioOff: { borderWidth: 1.5, borderColor: color.controlLine },
 });

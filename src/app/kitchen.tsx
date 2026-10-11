@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Share, StyleSheet, View } from 'react-native';
+import { ScrollView, Share, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { ActionPill } from '@/components/ActionPill';
 import { UndoBar } from '@/components/Controls';
@@ -13,11 +13,12 @@ import { PAPER } from '@/components/StickyNote';
 import { TabIsland } from '@/components/TabIsland';
 import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
+import { TextLink } from '@/components/TextLink';
 import { AddRow, TodoList } from '@/components/TodoList';
 import { count, isDueSoon, joinAnd, sortToBuy, toBuyProgress } from '@/data/helpers';
 import { useStore, useUndo } from '@/data/store';
 import type { Item, Place } from '@/data/types';
-import { useGoToTab } from '@/hooks/useGoToTab';
+import { haptics } from '@/hooks/haptics';
 import { useLayoutMotion } from '@/hooks/useLayoutMotion';
 import { color, radius, size, space, type ColorName } from '@/theme';
 
@@ -27,14 +28,19 @@ const TABS: { id: Tab; label: string; paper: ColorName }[] = [
   { id: 'fridge', label: 'Fridge', paper: PAPER.fridge },
   { id: 'pantry', label: 'Pantry', paper: PAPER.pantry },
   { id: 'freezer', label: 'Freezer', paper: PAPER.freezer },
-  { id: 'tobuy', label: 'To Buy', paper: 'sage' },
+  // To Buy isn't a place, so it has no paper. Picked, it gets the picker's sage-ink
+  // ring on white instead of a sage fill: sage fill is kept for the one action button.
+  { id: 'tobuy', label: 'To Buy', paper: 'surface' },
 ];
 
+/** Above this text size the four tabs no longer fit side by side, so they scroll sideways. */
+const TABS_SCROLL_SCALE = 1.35;
+
 /** Per place: what the first section is called and the add row's placeholder. */
-const PLACE_COPY: Record<Place, { soonTitle: string; soonIsDate: boolean; restTitle: string; add: string }> = {
-  fridge: { soonTitle: 'Use soon', soonIsDate: true, restTitle: 'In the fridge', add: 'Add to the fridge…' },
-  pantry: { soonTitle: 'Running low', soonIsDate: false, restTitle: 'In the pantry', add: 'Add to the pantry…' },
-  freezer: { soonTitle: 'Use soon', soonIsDate: true, restTitle: 'In the freezer', add: 'Add to the freezer…' },
+const PLACE_COPY: Record<Place, { soonTitle: string; soonIsDate: boolean; restTitle: string; add: string; where: string }> = {
+  fridge: { soonTitle: 'Use soon', soonIsDate: true, restTitle: 'In the fridge', add: 'Add to the fridge…', where: 'the fridge' },
+  pantry: { soonTitle: 'Running low', soonIsDate: false, restTitle: 'In the pantry', add: 'Add to the pantry…', where: 'the pantry' },
+  freezer: { soonTitle: 'Use soon', soonIsDate: true, restTitle: 'In the freezer', add: 'Add to the freezer…', where: 'the freezer' },
 };
 
 const isTab = (t: unknown): t is Tab => t === 'fridge' || t === 'pantry' || t === 'freezer' || t === 'tobuy';
@@ -45,6 +51,8 @@ export default function Kitchen() {
   const { state, actions } = useStore();
   const undo = useUndo('kitchen');
   const animate = useLayoutMotion();
+  const { fontScale } = useWindowDimensions();
+  const scrollTabs = fontScale > TABS_SCROLL_SCALE;
 
   const [tab, setTab] = useState<Tab>(isTab(params.tab) ? params.tab : 'fridge');
   const [query, setQuery] = useState('');
@@ -63,6 +71,7 @@ export default function Kitchen() {
   const matches = (name: string) => !q || name.toLowerCase().includes(q);
 
   const pick = (t: Tab) => {
+    if (t !== tab) haptics.select();
     setTab(t);
     setOpen(null);
     setQuery('');
@@ -71,10 +80,32 @@ export default function Kitchen() {
 
   const placeholder = tab === 'tobuy' ? 'Search your list' : `Search the ${tab}`;
 
+  const tabs = TABS.map((t) => {
+    const on = t.id === tab;
+    return (
+      <Tap
+        key={t.id}
+        accessibilityRole="tab"
+        accessibilityState={{ selected: on }}
+        onPress={() => pick(t.id)}
+        style={[
+          styles.tab,
+          scrollTabs ? styles.tabScroll : styles.tabFit,
+          on ? [t.id === 'tobuy' ? styles.tabOnRing : styles.tabOn, { backgroundColor: color[t.paper] }] : styles.tabOff,
+        ]}
+      >
+        <Text variant="button" weight={on ? 'semibold' : 'medium'} color={on ? 'ink' : 'inkMuted'} style={styles.tabLabel}>
+          {t.label}
+        </Text>
+      </Tap>
+    );
+  });
+
   return (
     <View style={styles.root}>
       <Screen
         island
+        raised={!!undo}
         gap={space.s5}
         overlay={
           <>
@@ -101,30 +132,30 @@ export default function Kitchen() {
 
         <SearchField placeholder={placeholder} value={query} onChangeText={setQuery} />
 
-        <View accessibilityRole="tablist" accessibilityLabel="Where" style={styles.tabs}>
-          {TABS.map((t) => {
-            const on = t.id === tab;
-            return (
-              <Tap
-                key={t.id}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: on }}
-                onPress={() => pick(t.id)}
-                style={[styles.tab, on ? [styles.tabOn, { backgroundColor: color[t.paper] }] : styles.tabOff]}
-              >
-                <Text variant="button" weight={on ? 'semibold' : 'medium'} color={on ? 'ink' : 'inkMuted'}>
-                  {t.label}
-                </Text>
-              </Tap>
-            );
-          })}
-        </View>
+        {scrollTabs ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            accessibilityRole="tablist"
+            accessibilityLabel="Where"
+            style={styles.tabsBleed}
+            contentContainerStyle={[styles.tabs, styles.tabsScrollContent]}
+          >
+            {tabs}
+          </ScrollView>
+        ) : (
+          <View accessibilityRole="tablist" accessibilityLabel="Where" style={styles.tabs}>
+            {tabs}
+          </View>
+        )}
 
         {tab === 'tobuy' ? (
-          <ToBuyTab matches={matches} others={others} />
+          <ToBuyTab matches={matches} others={others} query={query.trim()} clearQuery={() => setQuery('')} />
         ) : (
           <StockTab
             place={tab}
+            query={query.trim()}
+            clearQuery={() => setQuery('')}
             items={state.items.filter((i) => i.place === tab && matches(i.name))}
             open={open}
             setOpen={(id) => {
@@ -143,6 +174,8 @@ export default function Kitchen() {
 
 function StockTab({
   place,
+  query,
+  clearQuery,
   items,
   open,
   setOpen,
@@ -151,6 +184,9 @@ function StockTab({
   startQty,
 }: {
   place: Place;
+  /** The search, trimmed. */
+  query: string;
+  clearQuery: () => void;
   items: Item[];
   open: string | null;
   setOpen: (id: string | null) => void;
@@ -158,7 +194,7 @@ function StockTab({
   toggleSort: () => void;
   startQty: Record<string, number>;
 }) {
-  const goToTab = useGoToTab();
+  const router = useRouter();
   const { state, actions } = useStore();
   const copy = PLACE_COPY[place];
 
@@ -173,10 +209,17 @@ function StockTab({
     [items, sort],
   );
 
+  // Recipes, filtered to this item: back to the tabs if Kitchen was pushed, else switch.
+  const findRecipe = (name: string) => {
+    const href = { pathname: '/recipes', params: { q: name } } as const;
+    if (router.canDismiss()) router.dismissTo(href);
+    else router.navigate(href);
+  };
+
   const onList = (i: Item) => state.toBuy.some((t) => !t.done && t.name.toLowerCase() === i.name.toLowerCase());
 
   const row = (i: Item, inSoon: boolean) => {
-    const findRecipe = inSoon && copy.soonIsDate;
+    const recipeAction = inSoon && copy.soonIsDate;
     return (
       <KitchenRow
         key={i.id}
@@ -185,12 +228,30 @@ function StockTab({
         soon={inSoon && copy.soonIsDate}
         open={open === i.id}
         onToggleOpen={() => setOpen(open === i.id ? null : i.id)}
-        actionLabel={findRecipe ? 'Find a recipe that uses it' : onList(i) ? 'On your To Buy list' : 'Add to To Buy'}
-        onAction={() => (findRecipe ? goToTab('/recipes') : actions.addItemToBuy(i.id))}
+        actionLabel={recipeAction ? 'Find a recipe that uses it' : onList(i) ? 'On your To Buy list' : 'Add to To Buy'}
+        onAction={() => (recipeAction ? findRecipe(i.name) : actions.addItemToBuy(i.id))}
         onQty={(qty) => actions.setQty(i.id, qty, 'kitchen')}
+        onUseUp={() => actions.setQty(i.id, 0, 'kitchen')}
       />
     );
   };
+
+  if (query && items.length === 0) {
+    return (
+      <View style={styles.noMatch}>
+        <Text variant="caption" color="inkMuted">
+          No “{query}” in {copy.where}.
+        </Text>
+        <TextLink
+          label={`Add ${query} to ${copy.where}`}
+          onPress={() => {
+            actions.addItem(query, place);
+            clearQuery();
+          }}
+        />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.stock}>
@@ -211,12 +272,15 @@ function StockTab({
           right={
             <Tap
               accessibilityRole="button"
-              accessibilityLabel={`Sorted ${sort === 'az' ? 'A to Z' : 'by use-by date'}. Tap to change.`}
-              onPress={toggleSort}
+              accessibilityLabel={`Sort, ${sort === 'az' ? 'A to Z' : 'by use-by date'}. Changes the order.`}
+              onPress={() => {
+                haptics.select();
+                toggleSort();
+              }}
               style={styles.sort}
             >
               <Text variant="link" color="sageInk">
-                {sort === 'az' ? 'A–Z' : 'Use by'}
+                Sort: {sort === 'az' ? 'A–Z' : 'Use by'}
               </Text>
             </Tap>
           }
@@ -228,7 +292,18 @@ function StockTab({
   );
 }
 
-function ToBuyTab({ matches, others }: { matches: (name: string) => boolean; others: string[] }) {
+function ToBuyTab({
+  matches,
+  others,
+  query,
+  clearQuery,
+}: {
+  matches: (name: string) => boolean;
+  others: string[];
+  /** The search, trimmed. */
+  query: string;
+  clearQuery: () => void;
+}) {
   const { state, actions } = useStore();
   const progress = toBuyProgress(state.toBuy);
   const list = sortToBuy(state.toBuy.filter((t) => matches(t.name)));
@@ -239,6 +314,23 @@ function ToBuyTab({ matches, others }: { matches: (name: string) => boolean; oth
     const left = sortToBuy(state.toBuy).filter((t) => !t.done);
     Share.share({ message: ['To Buy', ...left.map((t) => `– ${t.name}`)].join('\n') });
   };
+
+  if (query && list.length === 0) {
+    return (
+      <View style={styles.noMatch}>
+        <Text variant="caption" color="inkMuted">
+          No “{query}” on your list.
+        </Text>
+        <TextLink
+          label={`Add ${query} to To Buy`}
+          onPress={() => {
+            actions.addToBuy(query);
+            clearQuery();
+          }}
+        />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.toBuy}>
@@ -260,11 +352,26 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   sync: { flexDirection: 'row', alignItems: 'center', gap: space.s1 + 2 },
   tabs: { flexDirection: 'row', gap: space.s2 },
-  tab: { flex: 1, height: size.targetMin, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
+  // Full-bleed so the scrolling tabs slide under the screen edge, not the gutter.
+  tabsBleed: { marginHorizontal: -space.s5, flexGrow: 0 },
+  tabsScrollContent: { paddingHorizontal: space.s5 },
+  tab: {
+    minHeight: size.targetMin,
+    paddingVertical: space.s2,
+    paddingHorizontal: space.s3,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabFit: { flex: 1, paddingHorizontal: space.s1 },
+  tabScroll: { paddingHorizontal: space.s4 },
+  tabLabel: { textAlign: 'center' },
   tabOn: { borderWidth: 1, borderColor: color.line },
+  tabOnRing: { borderWidth: 1.5, borderColor: color.sageInk },
   tabOff: { backgroundColor: color.surfaceSunken },
   stock: { gap: space.s5 + space.s1 + 2, paddingTop: space.s1 },
   list: { gap: space.s1 },
-  sort: { height: size.targetMin, justifyContent: 'center', paddingHorizontal: space.s1, marginRight: -space.s1 },
+  noMatch: { gap: space.s1, paddingTop: space.s2 },
+  sort: { minHeight: size.targetMin, justifyContent: 'center', paddingHorizontal: space.s1, marginRight: -space.s1 },
   toBuy: { paddingTop: space.s1 },
 });

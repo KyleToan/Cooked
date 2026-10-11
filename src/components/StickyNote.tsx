@@ -1,9 +1,19 @@
 import type { ReactNode } from 'react';
-import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import Animated, { ReduceMotion, interpolate, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { color, radius, shadow, size, space, type, type ColorName } from '@/theme';
 import { Tap } from './Tap';
 import { Text } from './Text';
+
+/** Note titles are handwriting on a small paper: they grow with Dynamic Type, but only a little. */
+export const NOTE_TITLE_MAX = 1.3;
+/** Critically damped and quick, so the note settles without wobbling. */
+const PRESS_SPRING = { duration: 220, dampingRatio: 1, reduceMotion: ReduceMotion.System } as const;
+/** How far a pressed note rises toward you. */
+const LIFT = 2;
+const LIFT_SCALE = 1.02;
 
 /** Paper color per kitchen place. */
 export const PAPER = { fridge: 'cornsilk', pantry: 'papaya', freezer: 'beige' } as const satisfies Record<string, ColorName>;
@@ -34,24 +44,66 @@ type KitchenNoteProps = {
   accessibilityLabel?: string;
 };
 
-/** One of the three small kitchen notes on Home: a link to that place's tab. */
+/**
+ * One of the three small kitchen notes on Home: a link to that place's tab.
+ * While pressed it straightens and lifts off the fridge door a little; with
+ * Reduce Motion on it just dims. Notes in a row stretch to the tallest one, so
+ * they stay the same height when text grows.
+ */
 export function KitchenNote({ label, count, flag, paper, tilt, onPress, accessibilityLabel }: KitchenNoteProps) {
-  return (
-    <Tap
-      accessibilityRole="link"
-      accessibilityLabel={accessibilityLabel ?? [label, count, flag].filter(Boolean).join(', ')}
-      onPress={onPress}
-      style={[styles.small, { backgroundColor: color[paper], transform: [{ rotate: `${tilt}deg` }] }]}
-    >
+  const reduced = useReducedMotion();
+  const press = useSharedValue(0);
+  const lifted = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: -LIFT * press.value },
+      { scale: interpolate(press.value, [0, 1], [1, LIFT_SCALE]) },
+      { rotate: `${tilt * (1 - press.value)}deg` },
+    ],
+  }));
+  const raisedShadow = useAnimatedStyle(() => ({ opacity: press.value }));
+
+  const body = (
+    <>
       <Tape width={40} />
-      <Text variant="noteTitle" color="noteInk" numberOfLines={1} adjustsFontSizeToFit>
+      <Text variant="noteTitle" color="noteInk" numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={NOTE_TITLE_MAX}>
         {label}
       </Text>
       <Text variant="noteBody" color="noteInkSoft">
         {count}
       </Text>
       {flag ? <UseSoonFlag text={flag} /> : null}
-    </Tap>
+    </>
+  );
+  const a11y = {
+    accessibilityRole: 'link' as const,
+    accessibilityLabel: accessibilityLabel ?? [label, count, flag].filter(Boolean).join(', '),
+  };
+
+  if (reduced) {
+    return (
+      <Tap {...a11y} onPress={onPress} style={[styles.small, { backgroundColor: color[paper], transform: [{ rotate: `${tilt}deg` }] }]}>
+        {body}
+      </Tap>
+    );
+  }
+  return (
+    <Pressable
+      {...a11y}
+      onPress={onPress}
+      onPressIn={() => {
+        press.set(withSpring(1, PRESS_SPRING));
+      }}
+      onPressOut={() => {
+        press.set(withSpring(0, PRESS_SPRING));
+      }}
+      style={styles.pressArea}
+    >
+      <Animated.View style={[styles.small, styles.fill, { backgroundColor: color[paper] }, lifted]}>
+        {/* A deeper shadow under the paper that fades in as the note lifts. */}
+        <Animated.View pointerEvents="none" style={[styles.raised, { backgroundColor: color[paper] }, raisedShadow]} />
+        {body}
+      </Animated.View>
+    </Pressable>
   );
 }
 
@@ -74,7 +126,7 @@ export function PaperNote({
   return (
     <View style={[styles.small, { backgroundColor: color[paper], transform: [{ rotate: `${tilt}deg` }] }, style]}>
       <Tape width={40} />
-      <Text variant="noteTitle" color="noteInk" numberOfLines={1} adjustsFontSizeToFit>
+      <Text variant="noteTitle" color="noteInk" numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={NOTE_TITLE_MAX}>
         {label}
       </Text>
       {body ? (
@@ -123,9 +175,22 @@ const styles = StyleSheet.create({
     opacity: TAPE_OPACITY,
     transform: [{ rotate: TAPE_TILT }],
   },
+  pressArea: { flex: 1 },
+  fill: { flex: 1 },
+  raised: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    borderRadius: radius.note,
+    borderBottomRightRadius: radius.control,
+    ...shadow.island,
+  },
   small: {
     flex: 1,
-    height: size.noteHeight,
+    // A minimum, not a fixed height: at large text sizes the note grows instead of clipping.
+    minHeight: size.noteHeight,
     paddingTop: space.s3 + 2,
     paddingHorizontal: space.s3,
     paddingBottom: space.s2 + 2,

@@ -33,10 +33,11 @@ npm run tokens              # regenerate the theme and icons after design/system
 npm run typecheck           # TypeScript
 npm run lint                # ESLint (eslint-config-expo)
 npm run doctor              # expo-doctor: dependency and config checks
+npm test                    # Jest tests in src/data/__tests__/
 npx expo install <package>  # add a package; always use this instead of npm install <package>
 ```
 
-Run `typecheck` and `lint` before every commit. There are no tests yet.
+Run `typecheck`, `lint` and `test` before every commit.
 
 To check screens in a browser, run `npx expo start --web`. The app starts in onboarding: any email works and the code is `481726`. Choose **I have an invite** and type `rivera-kitchen` to land in the sample kitchen the design screenshots show. In development, the **DEV error** button on Scan opens "Couldn't read this receipt".
 

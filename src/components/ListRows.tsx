@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
+import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 import { amountLabel, joinAnd, PLACE_LABEL } from '@/data/helpers';
 import type { Item, Place, Recipe, ScanLine } from '@/data/types';
+import { haptics } from '@/hooks/haptics';
 import { color, radius, size, space, type } from '@/theme';
 import { Chevron } from './Chevron';
 import { Stepper } from './Controls';
@@ -25,18 +27,33 @@ type KitchenRowProps = {
   actionLabel: string;
   onAction: () => void;
   onQty: (qty: number) => void;
+  /**
+   * Swiping the row left shows "Use up", which sets the amount to 0 (the same
+   * as stepping down to 0, so the undo bar shows). Also a VoiceOver action.
+   */
+  onUseUp?: () => void;
 };
 
-/** Name, meta line, amount and a chevron. Opens in place to a stepper. */
-export function KitchenRow({ item, startQty, soon, open, onToggleOpen, actionLabel, onAction, onQty }: KitchenRowProps) {
+/** Name, meta line, amount and a chevron. Opens in place to a stepper; swipes left to use up. */
+export function KitchenRow({ item, startQty, soon, open, onToggleOpen, actionLabel, onAction, onQty, onUseUp }: KitchenRowProps) {
   const amount = amountLabel(item, startQty);
-  return (
-    <View style={styles.divider}>
+  const swipe = useRef<SwipeableMethods>(null);
+  const canUseUp = !!onUseUp && item.qty > 0;
+
+  const markUsedUp = () => {
+    swipe.current?.close();
+    onUseUp?.();
+  };
+
+  const row = (
+    <View style={[styles.divider, styles.ground]}>
       <Tap
         accessibilityRole="button"
         accessibilityLabel={`${item.name}, ${item.meta}, ${amount}`}
         accessibilityHint={open ? 'Closes the amount' : 'Opens the amount'}
         accessibilityState={{ expanded: open }}
+        accessibilityActions={canUseUp ? [{ name: 'useUp', label: 'Use up' }] : undefined}
+        onAccessibilityAction={(e) => e.nativeEvent.actionName === 'useUp' && markUsedUp()}
         onPress={onToggleOpen}
         style={styles.kitchenRow}
       >
@@ -49,7 +66,7 @@ export function KitchenRow({ item, startQty, soon, open, onToggleOpen, actionLab
         <Text variant="button" color="inkMuted">
           {amount}
         </Text>
-        <Chevron direction={open ? 'up' : 'down'} />
+        <Chevron direction={open ? 'up' : 'down'} animated />
       </Tap>
       {open ? (
         <View style={styles.open}>
@@ -63,7 +80,34 @@ export function KitchenRow({ item, startQty, soon, open, onToggleOpen, actionLab
       ) : null}
     </View>
   );
+
+  if (!canUseUp) return row;
+  return (
+    <ReanimatedSwipeable
+      ref={swipe}
+      friction={2}
+      rightThreshold={USE_UP_WIDTH / 2}
+      overshootRight={false}
+      onSwipeableWillOpen={() => haptics.select()}
+      renderRightActions={() => (
+        <Tap
+          accessibilityRole="button"
+          accessibilityLabel={`Use up ${item.name}`}
+          onPress={markUsedUp}
+          style={styles.useUp}
+        >
+          <Text variant="link" color="ink">
+            Use up
+          </Text>
+        </Tap>
+      )}
+    >
+      {row}
+    </ReanimatedSwipeable>
+  );
 }
+
+const USE_UP_WIDTH = 96;
 
 /* ---------- Check-items row ---------- */
 
@@ -127,7 +171,10 @@ export function CheckItemRow({ line, open, onToggleOpen, onChange }: CheckRowPro
                   key={p}
                   accessibilityRole="radio"
                   accessibilityState={{ checked: on }}
-                  onPress={() => onChange({ ...line, place: p })}
+                  onPress={() => {
+                    if (!on) haptics.select();
+                    onChange({ ...line, place: p });
+                  }}
                   style={[styles.place, on ? [styles.placeOn, { backgroundColor: paper }] : styles.placeOff]}
                 >
                   <Text variant="caption" weight={on ? 'semibold' : 'medium'} color={on ? 'ink' : 'inkMuted'}>
@@ -163,7 +210,10 @@ type RecipeRowProps = {
   onToggleToBuy: () => void;
 };
 
-/** Name and time, what you have, the source, and "Add N to To Buy" when something's missing. */
+/** The pill shows when this few are missing, the same as the "Missing 1–2" filter. More than that is too much to shop for. */
+const MAX_MISSING_PILL = 2;
+
+/** Name and time, what you have, the source, and "Add N to To Buy" when one or two things are missing. */
 export function RecipeRow({ recipe, onOpen, onToggleToBuy }: RecipeRowProps) {
   const n = recipe.missing.length;
   const have =
@@ -188,7 +238,15 @@ export function RecipeRow({ recipe, onOpen, onToggleToBuy }: RecipeRowProps) {
           {recipe.sourceLine}
         </Text>
       </Tap>
-      {n > 0 ? <ToBuyToggle added={recipe.onToBuy} count={n} addedLabel="Added to To Buy" onPress={onToggleToBuy} /> : null}
+      {(n > 0 && n <= MAX_MISSING_PILL) || recipe.onToBuy ? (
+        <ToBuyToggle
+          added={recipe.onToBuy}
+          count={n}
+          addedLabel="Added to To Buy"
+          onPress={onToggleToBuy}
+          accessibilityLabel={`Add ${n} missing from ${recipe.title} to To Buy`}
+        />
+      ) : null}
     </View>
   );
 }
@@ -200,6 +258,7 @@ export function ToBuyToggle({
   addedLabel,
   onPress,
   icon = true,
+  accessibilityLabel,
 }: {
   added: boolean;
   count: number;
@@ -207,9 +266,23 @@ export function ToBuyToggle({
   onPress: () => void;
   /** The plus and check on Recipes. The Recipe screen's pill has no icon. */
   icon?: boolean;
+  /**
+   * What VoiceOver reads. It's a checkbox, so the label stays the same and the
+   * checked state says whether it's on the list. Name the recipe when there are several.
+   */
+  accessibilityLabel?: string;
 }) {
   return (
-    <Tap accessibilityRole="button" accessibilityState={{ selected: added }} onPress={onPress} style={styles.toggleHit}>
+    <Tap
+      accessibilityRole="checkbox"
+      accessibilityLabel={accessibilityLabel ?? `Add ${count} to To Buy`}
+      accessibilityState={{ checked: added }}
+      onPress={() => {
+        haptics.select();
+        onPress();
+      }}
+      style={styles.toggleHit}
+    >
       <View style={[styles.toggle, added ? styles.toggleOn : styles.toggleOff]}>
         {icon ? <Icon name={added ? 'check' : 'add'} size={TOGGLE_ICON} color={added ? 'sageInk' : 'ink'} /> : null}
         <Text variant={icon ? 'caption' : 'link'} weight="semibold" color={added ? 'sageInk' : 'ink'}>
@@ -232,13 +305,23 @@ const styles = StyleSheet.create({
     gap: space.s2 + 2,
     paddingVertical: space.s2,
   },
+  ground: { backgroundColor: color.surface },
+  useUp: {
+    width: USE_UP_WIDTH,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: color.surfaceSunken,
+    borderBottomWidth: 1,
+    borderBottomColor: color.lineSoft,
+  },
   open: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: space.s3 },
   action: { minHeight: size.targetMin, justifyContent: 'center' },
   checkRow: { minHeight: size.rowHeight + space.s1, flexDirection: 'row', alignItems: 'center', gap: space.s3 },
   nameInput: { ...type.body, paddingVertical: 2, paddingHorizontal: 0, borderBottomWidth: 1, outlineWidth: 0 },
-  tagHit: { height: size.targetMin, justifyContent: 'center' },
+  tagHit: { minHeight: size.targetMin, justifyContent: 'center' },
   tag: {
-    height: size.targetMin - space.s2 - 2,
+    minHeight: size.targetMin - space.s2 - 2,
+    paddingVertical: space.s1,
     paddingHorizontal: space.s3,
     flexDirection: 'row',
     alignItems: 'center',
@@ -250,16 +333,25 @@ const styles = StyleSheet.create({
   tagSkip: { backgroundColor: color.surface },
   picker: { gap: space.s2 + 2, paddingBottom: space.s3 + 2 },
   places: { flexDirection: 'row', gap: space.s1 + 2 },
-  place: { flex: 1, height: size.targetMin, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
+  place: {
+    flex: 1,
+    minHeight: size.targetMin,
+    paddingVertical: space.s1,
+    paddingHorizontal: space.s1,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   placeOn: { borderWidth: 1.5, borderColor: color.sageInk },
   placeOff: { backgroundColor: color.surfaceSunken },
   howMany: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   recipe: { gap: space.s1, paddingTop: space.s3 + 2, paddingBottom: space.s2 + 2 },
   recipeText: { gap: space.s1 + 2 },
   recipeTop: { flexDirection: 'row', alignItems: 'baseline', gap: space.s3 },
-  toggleHit: { alignSelf: 'flex-start', height: size.targetMin, justifyContent: 'center' },
+  toggleHit: { alignSelf: 'flex-start', minHeight: size.targetMin, justifyContent: 'center' },
   toggle: {
-    height: size.targetMin - space.s2,
+    minHeight: size.targetMin - space.s2,
+    paddingVertical: space.s1,
     paddingHorizontal: space.s3,
     flexDirection: 'row',
     alignItems: 'center',

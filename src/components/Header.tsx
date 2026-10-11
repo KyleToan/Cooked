@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { color, radius, size, space } from '@/theme';
+import { color, radius, size, space, type } from '@/theme';
 import { Icon } from './Icon';
 import { Tap } from './Tap';
 import { Text } from './Text';
@@ -60,7 +60,7 @@ export function PushedHeader({ title, onBack, backLabel = 'Back', right, below }
         <Text variant="titleLg" accessibilityRole="header" style={styles.pushedTitle}>
           {title}
         </Text>
-        {right}
+        {right ? <View style={styles.pushedRight}>{right}</View> : null}
       </View>
       {below}
     </View>
@@ -91,7 +91,7 @@ export function SectionHeader({
     <View style={styles.section}>
       <View style={styles.sectionLeft}>
         {icon}
-        <Text variant="sectionTitle" accessibilityRole="header">
+        <Text variant="sectionTitle" accessibilityRole="header" style={styles.shrink}>
           {title}
         </Text>
         {meta ? (
@@ -106,8 +106,9 @@ export function SectionHeader({
 }
 
 const styles = StyleSheet.create({
-  greetingRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
-  titles: { gap: space.s1, flexShrink: 1 },
+  greetingRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: space.s3 },
+  // Takes the room left by the account button, so a long title or large text wraps instead of clipping.
+  titles: { gap: space.s1, flex: 1 },
   account: {
     width: size.targetMin,
     height: size.targetMin,
@@ -119,9 +120,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   pushed: { gap: space.s1 },
-  pushedRow: { flexDirection: 'row', alignItems: 'center', gap: space.s1, marginLeft: -space.s3 },
-  pushedTitle: { flex: 1 },
+  // Top-aligned so a title that wraps at large text keeps the arrow beside its first line.
+  pushedRow: { flexDirection: 'row', alignItems: 'flex-start', gap: space.s1, marginLeft: -space.s3 },
+  // Centers a one-line title on the 44pt back button: (44 - 36) / 2.
+  pushedTitle: { flex: 1, paddingTop: (size.targetMin - type.titleLg.lineHeight) / 2 },
   back: { width: size.targetMin, height: size.targetMin, alignItems: 'center', justifyContent: 'center' },
   section: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.s3 },
-  sectionLeft: { flexDirection: 'row', alignItems: 'baseline', gap: space.s2, flexShrink: 1 },
+  pushedRight: { minHeight: size.targetMin, justifyContent: 'center' },
+  sectionLeft: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', gap: space.s2, flexShrink: 1 },
+  shrink: { flexShrink: 1 },
 });

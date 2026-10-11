@@ -24,8 +24,10 @@ export default function Account() {
   const router = useRouter();
   const { state, actions } = useStore();
   const [deleting, setDeleting] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [name, setName] = useState(state.user.name);
+  const [lastName, setLastName] = useState(state.user.lastName ?? '');
 
   const user = state.user;
   const method = state.session.signIn ?? 'email';
@@ -35,6 +37,7 @@ export default function Account() {
   const version = (Constants.expoConfig?.version ?? '1.0').split('.').slice(0, 2).join('.');
 
   // Logging out or deleting the account goes back to Welcome (the onboarding guard takes over).
+  // Everything only lives on this phone until there's a backend, so both clear the kitchen and ask first.
   const leave = () => actions.reset();
 
   return (
@@ -71,6 +74,7 @@ export default function Account() {
         <SectionHeader title="Your details" />
         <SettingsRow label="Name" value={fullName} onPress={() => {
             setName(user.name);
+            setLastName(user.lastName ?? '');
             setEditingName(true);
           }} />
         <SettingsRow label="Email" value={email} />
@@ -86,7 +90,7 @@ export default function Account() {
       </View>
 
       <AccountEnding
-        onLogOut={leave}
+        onLogOut={() => setLoggingOut(true)}
         onDelete={() => setDeleting(true)}
         version={`Cooked ${version} · signed in with ${SIGNED_IN_WITH[method]}`}
       />
@@ -103,15 +107,30 @@ export default function Account() {
         <TextLink label="Delete account" color="errorInk" variant="button" align="center" onPress={leave} />
       </Sheet>
 
+      <Sheet visible={loggingOut} onClose={() => setLoggingOut(false)} showClose={false} title="Log out?">
+        <Text variant="button" weight="regular" color="inkMuted">
+          Your kitchen is only saved on this phone for now, so logging out clears it: every item, list and recipe.
+        </Text>
+        <ActionPill label="Stay logged in" variant="primary" height="bottom" onPress={() => setLoggingOut(false)} />
+        <TextLink label="Log out" color="errorInk" variant="button" align="center" onPress={leave} />
+      </Sheet>
+
       <Sheet visible={editingName} onClose={() => setEditingName(false)} title="Your name">
         <Field label="First name" value={name} onChangeText={setName} autoFocus textContentType="givenName" autoCapitalize="words" />
+        <Field
+          label="Last name (optional)"
+          value={lastName}
+          onChangeText={setLastName}
+          textContentType="familyName"
+          autoCapitalize="words"
+        />
         <ActionPill
           label="Save"
           variant="primary"
           height="bottom"
           disabled={!name.trim()}
           onPress={() => {
-            actions.setName(name);
+            actions.setName(name, lastName.trim());
             setEditingName(false);
           }}
         />

@@ -82,7 +82,9 @@ function Outline({ label, logo, onPress }: { label: string; logo?: ReactNode; on
   return (
     <Tap accessibilityRole="button" onPress={onPress} style={styles.outline}>
       {logo}
-      <Text weight="medium">{label}</Text>
+      <Text weight="medium" style={styles.outlineLabel}>
+        {label}
+      </Text>
     </Tap>
   );
 }
@@ -111,7 +113,9 @@ const styles = StyleSheet.create({
   buttons: { gap: space.s3 },
   apple: { height: BUTTON_H, width: '100%' },
   outline: {
-    height: BUTTON_H,
+    minHeight: BUTTON_H,
+    paddingVertical: space.s2,
+    paddingHorizontal: space.s5,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -120,6 +124,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: color.line,
   },
+  outlineLabel: { flexShrink: 1, textAlign: 'center' },
   or: { flexDirection: 'row', alignItems: 'center', gap: space.s3, paddingVertical: space.s1 },
   rule: { flex: 1, height: 1, backgroundColor: color.line },
 });

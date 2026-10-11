@@ -19,6 +19,8 @@ const RECEIPT: [string, string][] = [
 const ART_H = 330;
 const RECEIPT_W = 200;
 const GUIDE = 30;
+/** The receipt is a fixed-size drawing (hidden from VoiceOver), so its text barely grows. */
+const ART_TEXT_MAX = 1.2;
 
 /** Scan your first receipt, or skip it. */
 export default function FirstScan() {
@@ -51,24 +53,24 @@ export default function FirstScan() {
     >
       <View style={styles.art} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
         <View style={styles.receipt}>
-          <Text variant="micro" weight="semibold">
+          <Text variant="micro" maxFontSizeMultiplier={ART_TEXT_MAX} weight="semibold">
             Corner Market
           </Text>
           {RECEIPT.map(([name, price]) => (
             <View key={name} style={styles.line}>
-              <Text variant="micro" weight="regular" color="inkMuted">
+              <Text variant="micro" maxFontSizeMultiplier={ART_TEXT_MAX} weight="regular" color="inkMuted">
                 {name}
               </Text>
-              <Text variant="micro" weight="regular" color="inkMuted">
+              <Text variant="micro" maxFontSizeMultiplier={ART_TEXT_MAX} weight="regular" color="inkMuted">
                 {price}
               </Text>
             </View>
           ))}
           <View style={[styles.line, styles.total]}>
-            <Text variant="micro" weight="semibold">
+            <Text variant="micro" maxFontSizeMultiplier={ART_TEXT_MAX} weight="semibold">
               Total
             </Text>
-            <Text variant="micro" weight="semibold">
+            <Text variant="micro" maxFontSizeMultiplier={ART_TEXT_MAX} weight="semibold">
               15.15
             </Text>
           </View>

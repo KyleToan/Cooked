@@ -69,5 +69,5 @@ const styles = StyleSheet.create({
     borderRadius: radius.control,
     backgroundColor: color.surfaceSunken,
   },
-  box: { width: PREVIEW_BOX, height: PREVIEW_BOX, borderRadius: radius.check - 1, borderWidth: 1.5, borderColor: color.checkBorder },
+  box: { width: PREVIEW_BOX, height: PREVIEW_BOX, borderRadius: radius.check - 1, borderWidth: 1.5, borderColor: color.controlLine },
 });
