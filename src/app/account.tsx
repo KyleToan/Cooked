@@ -1,12 +1,126 @@
-import { View } from 'react-native';
+import Constants from 'expo-constants';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { Linking, StyleSheet, View } from 'react-native';
 
+import { ActionPill } from '@/components/ActionPill';
+import { Field } from '@/components/Controls';
+import { PushedHeader, SectionHeader } from '@/components/Header';
+import { Screen } from '@/components/Screen';
+import { AccountEnding, Avatar, SettingsRow } from '@/components/Settings';
+import { Sheet } from '@/components/Sheet';
 import { Text } from '@/components/Text';
+import { TextLink } from '@/components/TextLink';
+import { joinAnd } from '@/data/helpers';
+import { useStore } from '@/data/store';
+import { size, space } from '@/theme';
 
-// Stub for Phase 1; built in a later phase.
-export default function Screen() {
+const SIGN_IN = { email: 'Email code', phone: 'Text code', apple: 'Apple', google: 'Google' } as const;
+const SIGNED_IN_WITH = { email: 'email', phone: 'phone', apple: 'Apple', google: 'Google' } as const;
+const PROFILE = size.controlHeight + space.s2;
+
+/** Profile, Kitchen, Your details, Help and privacy, Log out, Delete account. */
+export default function Account() {
+  const router = useRouter();
+  const { state, actions } = useStore();
+  const [deleting, setDeleting] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [name, setName] = useState(state.user.name);
+
+  const user = state.user;
+  const method = state.session.signIn ?? 'email';
+  const email = user.email ?? state.session.contact;
+  const fullName = [user.name, user.lastName].filter(Boolean).join(' ');
+  const others = state.kitchen.people.filter((p) => p.id !== user.id).map((p) => p.name);
+  const version = (Constants.expoConfig?.version ?? '1.0').split('.').slice(0, 2).join('.');
+
+  // Logging out or deleting the account goes back to Welcome (the onboarding guard takes over).
+  const leave = () => actions.reset();
+
   return (
-    <View style={{ flex: 1, alignItems: 'flex-start', justifyContent: 'center', padding: 20 }}>
-      <Text variant="titleLg">Account</Text>
-    </View>
+    <Screen>
+      <PushedHeader title="Account" onBack={() => router.back()} backLabel="Back to home" />
+
+      <View style={styles.profile}>
+        <Avatar name={user.name} paper="papaya" diameter={PROFILE} />
+        <View style={styles.grow}>
+          <Text variant="body" weight="semibold">
+            {fullName}
+          </Text>
+          <Text variant="caption" color="inkMuted">
+            {email}
+          </Text>
+        </View>
+      </View>
+
+      <View>
+        <SectionHeader title="Kitchen" />
+        <SettingsRow
+          label={state.kitchen.name}
+          description={others.length ? `You and ${joinAnd(others)} · invite, remove, leave` : 'Just you · invite, leave'}
+          onPress={() => router.push('/household')}
+        />
+        <SettingsRow
+          label="Notifications"
+          description="To Buy changes and a daily use-soon nudge"
+          onPress={() => router.push('/notifications')}
+        />
+      </View>
+
+      <View>
+        <SectionHeader title="Your details" />
+        <SettingsRow label="Name" value={fullName} onPress={() => {
+            setName(user.name);
+            setEditingName(true);
+          }} />
+        <SettingsRow label="Email" value={email} />
+        <SettingsRow label="Sign-in" value={SIGN_IN[method]} />
+        <SettingsRow label="Units" value="Cups and ounces" />
+      </View>
+
+      <View>
+        <SectionHeader title="Help and privacy" />
+        <SettingsRow label="Help and feedback" onPress={() => Linking.openURL('https://cooked.app/help')} />
+        <SettingsRow label="Privacy policy" onPress={() => Linking.openURL('https://cooked.app/privacy')} />
+        <SettingsRow label="Terms" onPress={() => Linking.openURL('https://cooked.app/terms')} />
+      </View>
+
+      <AccountEnding
+        onLogOut={leave}
+        onDelete={() => setDeleting(true)}
+        version={`Cooked ${version} · signed in with ${SIGNED_IN_WITH[method]}`}
+      />
+
+      <Sheet visible={deleting} onClose={() => setDeleting(false)} showClose={false} title="Delete your account?">
+        <Text variant="button" weight="regular" color="inkMuted">
+          Your sign-in and name are removed for good.{' '}
+          {others.length
+            ? `${state.kitchen.name} stays for ${joinAnd(others)}, with everything in it. `
+            : ''}
+          This can’t be undone.
+        </Text>
+        <ActionPill label="Keep my account" variant="primary" height="bottom" onPress={() => setDeleting(false)} />
+        <TextLink label="Delete account" color="errorInk" variant="button" align="center" onPress={leave} />
+      </Sheet>
+
+      <Sheet visible={editingName} onClose={() => setEditingName(false)} title="Your name">
+        <Field label="First name" value={name} onChangeText={setName} autoFocus textContentType="givenName" autoCapitalize="words" />
+        <ActionPill
+          label="Save"
+          variant="primary"
+          height="bottom"
+          disabled={!name.trim()}
+          onPress={() => {
+            actions.setName(name);
+            setEditingName(false);
+          }}
+        />
+      </Sheet>
+    </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  grow: { flex: 1, minWidth: 0, gap: 2 },
+  profile: { flexDirection: 'row', alignItems: 'center', gap: space.s3 + 2 },
+});

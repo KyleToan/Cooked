@@ -85,6 +85,7 @@ type Action =
   | { type: 'newInviteLink' }
   | { type: 'leaveKitchen' }
   | { type: 'setNotification'; key: NotificationKey; on: boolean }
+  | { type: 'setUseSoonTime'; time: string }
   | { type: 'signIn'; method: NonNullable<Session['signIn']>; contact?: string }
   | { type: 'setName'; name: string }
   | { type: 'choosePath'; path: KitchenPath }
@@ -261,6 +262,8 @@ function reducer(s: State, a: Action): State {
       return { ...s, kitchen: newKitchen(s.user), items: [], toBuy: [], recipes: [], undo: null };
     case 'setNotification':
       return { ...s, notifications: { ...s.notifications, [a.key]: a.on } };
+    case 'setUseSoonTime':
+      return { ...s, notifications: { ...s.notifications, useSoonTime: a.time } };
     case 'signIn':
       return { ...s, session: { ...s.session, signIn: a.method, contact: a.contact ?? '' } };
     case 'setName': {
@@ -310,6 +313,7 @@ function makeActions(dispatch: (a: Action) => void) {
     newInviteLink: () => dispatch({ type: 'newInviteLink' }),
     leaveKitchen: () => dispatch({ type: 'leaveKitchen' }),
     setNotification: (key: NotificationKey, on: boolean) => dispatch({ type: 'setNotification', key, on }),
+    setUseSoonTime: (time: string) => dispatch({ type: 'setUseSoonTime', time }),
     signIn: (method: NonNullable<Session['signIn']>, contact?: string) => dispatch({ type: 'signIn', method, contact }),
     setName: (name: string) => dispatch({ type: 'setName', name }),
     choosePath: (path: KitchenPath) => dispatch({ type: 'choosePath', path }),
