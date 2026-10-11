@@ -19,7 +19,7 @@ The feel: calm, white, uncluttered, with one warm, homemade touch (sticky notes 
 
 - iPhone app first, designed at 390 × 844. Native iOS expectations apply: back gestures, Sign in with Apple, the system share sheet and keyboard.
 - Tech stack: React Native with Expo (SDK 57), TypeScript and Expo Router, with over-the-air updates through EAS Update. See `AGENTS.md` for the folder layout and commands.
-- State of the code: the project, theme, fonts and icons are set up, and a temporary theme check screen opens first. No Cooked screens are built yet.
+- State of the code: every screen, state and flow in `design/screens/README.md` is built, running on local sample data with no backend. See "What's built and what's faked" below.
 
 ## Screens
 
@@ -65,6 +65,20 @@ The full design system is in `design/system/` and at https://claude.ai/artifact/
 | --- | --- | --- |
 | Cooked design system | https://claude.ai/artifact/9uaDBLc2WkxCCJrooL3gki | Source of truth for the look. Copy in `design/system/`. |
 | Cooked canvas | https://claude.ai/artifact/4Y3vzFjNNfX7kS88MV3mGV | Every screen. Copy in `design/screens/`. |
+
+## What's built and what's faked
+
+Built (branch `build-screens`): onboarding (all three paths, Apple and Google, email or phone with a code), Home and the empty first-run Home, Your Kitchen with all four tabs, Recipes, Recipe, Import a recipe (loading, found and error states), Scan with the real camera, Check your scan, Couldn't read this receipt, Account with the delete sheet, Rivera kitchen, and Notifications. Every action changes the local store, and everything that removes something can be undone.
+
+Faked until there's a backend:
+
+- **Sign-in.** Any email or number works and the code is always `481726`. Apple's button is Apple's own on iOS, but no real Apple or Google sign-in happens.
+- **Accounts and sync.** Everything lives in memory and resets when the app restarts, including having finished onboarding. Sam never changes anything.
+- **Kitchens.** Just me and Me and my household start a new, empty kitchen that the first scan fills. Joining only works with the code `rivera-kitchen`, which loads the sample Rivera kitchen.
+- **Receipt reading (OCR).** The camera takes a real photo (or you pick one), but Check your scan always shows the 7 sample Corner Market items. The Fridge, Pantry, Freezer and Recipe modes do the same.
+- **Recipe import.** A link containing "shakshuka", or pasted text with an ingredient list, finds Shakshuka after a short wait. Any other link shows "No recipe on that page".
+- **Notifications.** The switches and send time are kept in memory; nothing is sent.
+- **Help, Privacy and Terms** open `cooked.app` pages that don't exist yet.
 
 ## Open questions
 

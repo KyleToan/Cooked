@@ -9,8 +9,13 @@ Rules for any AI agent (Claude Code, Cursor, Copilot, etc.) working in this repo
 | Path | What it is |
 | --- | --- |
 | `src/app/` | Screens. Every file is a route (Expo Router); `_layout.tsx` files are navigators. Only screens go here. |
-| `src/components/` | Reusable views. `Text` and `Icon` are the base pieces; build the design system components here. |
-| `src/theme/` | The theme. `tokens.ts` and `fonts.ts` are **generated**; import everything from `@/theme`. |
+| `src/app/(onboarding)/` | Welcome to Ready. The root layout shows this group until onboarding is finished (`Stack.Protected`). |
+| `src/app/(tabs)/` | Home and Recipes, with the tab island as the tab bar. Scan in the island opens `scan.tsx` full screen. |
+| `src/app/*.tsx` | Pushed screens (`kitchen`, `recipe/[id]`, `account`, `household`, `notifications`), the Import sheet (`import`), and the full-screen `scan`, `scan-review` and `scan-unreadable`, which take `?flow=app`, `onb` or `onbsolo`. |
+| `src/components/` | Reusable views, one file per design system component: `Screen`, `ActionPill`, `TextLink`, `Header` (greeting, pushed, section), `SearchField`, `StickyNote`, `TodoList`, `ListRows`, `Controls` (switches, filter pills, stepper, undo bar, field, checkbox), `Sheet`, `Settings`, `TabIsland`, `Loader`, `Onboarding`, `Camera`. `Text`, `Icon`, `Tap` and `Chevron` are the base pieces. |
+| `src/data/` | The data model (`types.ts`), sample data (`seed.ts`), helpers (greeting, use soon, counts) and the local store (`store.tsx`). Every change goes through the `actions` in `store.tsx`, so a backend can replace it. |
+| `src/hooks/` | `useReducedMotion`, `useLayoutMotion`, `useGoToTab`. |
+| `src/theme/` | The theme. `tokens.ts` and `fonts.ts` are **generated**; import everything from `@/theme`. `brand.ts` holds Apple and Google brand colors for the sign-in buttons only. |
 | `scripts/build-tokens.mjs` | Generates `src/theme/tokens.ts`, `src/theme/fonts.ts` and `src/components/icon-data.ts` from `design/system/`. |
 | `design/` | The design spec: design system, every screen as a prototype and a screenshot. Read `design/README.md` first. Nothing in it ships. |
 | `assets/` | App icon, splash and favicon (Expo placeholders for now). |
@@ -32,6 +37,8 @@ npx expo install <package>  # add a package; always use this instead of npm inst
 ```
 
 Run `typecheck` and `lint` before every commit. There are no tests yet.
+
+To check screens in a browser, run `npx expo start --web`. The app starts in onboarding: any email works and the code is `481726`. Choose **I have an invite** and type `rivera-kitchen` to land in the sample kitchen the design screenshots show. In development, the **DEV error** button on Scan opens "Couldn't read this receipt".
 
 ### Updates and builds (EAS)
 
