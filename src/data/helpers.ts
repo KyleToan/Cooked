@@ -1,4 +1,4 @@
-import type { Item, Place, Recipe, ToBuyItem } from './types';
+import type { Item, Place, Recipe, ScanFlow, ToBuyItem } from './types';
 
 /** "Up late" before 5am, "Good morning" before noon, "Good afternoon" before 5pm, "Good evening" after. */
 export function timeOfDay(date = new Date()): string {
@@ -16,9 +16,14 @@ export function greeting(name: string, date = new Date()): string {
 /** Food that needs using in the next two days, or that's been flagged (leftovers). */
 export const USE_SOON_DAYS = 2;
 
-export function isUseSoon(item: Item): boolean {
-  if (item.qty === 0) return false;
+/** Whether it's due soon by date, whatever is left of it. Decides the Use soon section in Kitchen. */
+export function isDueSoon(item: Item): boolean {
   return item.useSoon ?? item.daysLeft <= USE_SOON_DAYS;
+}
+
+/** Due soon and still there: the "2 use soon" flag and the recipe labels. */
+export function isUseSoon(item: Item): boolean {
+  return item.qty > 0 && isDueSoon(item);
 }
 
 export function inStock(items: Item[], place?: Place): Item[] {
@@ -44,7 +49,15 @@ export function joinAnd(words: string[]): string {
 export function amountLabel(item: Item, startQty?: number): string {
   if (item.qty === 0) return 'Used up';
   if (item.amountText && (startQty === undefined || item.qty === startQty)) return item.amountText;
-  return item.unit ? `${item.qty} ${item.unit}` : `× ${item.qty}`;
+  return item.unit ? `${item.qty} ${plural(item.unit, item.qty)}` : `× ${item.qty}`;
+}
+
+const IRREGULAR: Record<string, string> = { loaf: 'loaves' };
+
+/** "1 loaf", "2 loaves"; "1 bunch", "2 bunches". Units already in the plural stay as they are. */
+export function plural(unit: string, n: number): string {
+  if (n === 1 || unit.endsWith('s')) return unit;
+  return IRREGULAR[unit] ?? (/(ch|sh|x)$/.test(unit) ? `${unit}es` : `${unit}s`);
 }
 
 export function toBuyProgress(list: ToBuyItem[]): { done: number; total: number } {
@@ -80,4 +93,9 @@ let nextId = 0;
 export function makeId(prefix: string): string {
   nextId += 1;
   return `${prefix}-${Date.now().toString(36)}-${nextId}`;
+}
+
+/** Where the scan screens were opened from: the app, or onboarding (household or just me). */
+export function scanFlow(f: unknown): ScanFlow {
+  return f === 'onb' || f === 'onbsolo' ? f : 'app';
 }

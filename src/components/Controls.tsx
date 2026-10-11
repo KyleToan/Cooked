@@ -1,5 +1,5 @@
 import { forwardRef, useState } from 'react';
-import { ScrollView, StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
+import { ScrollView, StyleSheet, TextInput, View, type StyleProp, type TextInputProps, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { color, radius, shadow, size, space, type } from '@/theme';
@@ -171,7 +171,8 @@ export function UndoBar({ text, onUndo, island = true }: { text: string; onUndo:
 
 /* ---------- Field ---------- */
 
-type FieldProps = TextInputProps & {
+type FieldProps = Omit<TextInputProps, 'style'> & {
+  style?: StyleProp<ViewStyle>;
   label: string;
   error?: string;
 };

@@ -29,7 +29,23 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      "expo-splash-screen"
+      "expo-splash-screen",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Cooked uses the camera to scan your receipts and what’s in your kitchen.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Cooked reads the receipt photos and screenshots you pick.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ]
     ],
     "runtimeVersion": {
       "policy": "fingerprint"

@@ -2,7 +2,8 @@
 // through the `actions` object at the bottom. A backend can replace this file
 // later without the screens changing.
 
-import { createContext, useContext, useMemo, useReducer, type ReactNode } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { createContext, useCallback, useContext, useMemo, useReducer, type ReactNode } from 'react';
 
 import { guessPlace, makeId } from './helpers';
 import {
@@ -79,7 +80,7 @@ type Action =
   | { type: 'madeRecipe'; id: string }
   | { type: 'importRecipe' }
   | { type: 'undo' }
-  | { type: 'clearUndo' }
+  | { type: 'clearUndo'; scope: string }
   | { type: 'renameKitchen'; name: string }
   | { type: 'removePerson'; id: string }
   | { type: 'newInviteLink' }
@@ -184,8 +185,10 @@ function reducer(s: State, a: Action): State {
         // Bought it, so it comes off To Buy.
         toBuy = toBuy.map((t) => (!t.done && sameName(t.name, line.name) ? { ...t, done: true } : t));
       }
-      const kitchen = { ...s.kitchen, syncNote: 'Synced just now from a receipt' };
-      return { ...s, items, toBuy, kitchen, undo: null };
+      const kitchen = { ...s.kitchen, syncedAgo: 'just now' };
+      const added = a.lines.filter((l) => l.place !== 'skip' && l.name.trim()).length;
+      const session = { ...s.session, firstScanCount: added };
+      return { ...s, items, toBuy, kitchen, session, undo: null };
     }
     case 'toggleRecipeToBuy': {
       const recipe = s.recipes.find((r) => r.id === a.id);
@@ -227,7 +230,7 @@ function reducer(s: State, a: Action): State {
       if (!s.undo) return s;
       return { ...s, ...s.undo.snapshot, undo: null };
     case 'clearUndo':
-      return s.undo ? { ...s, undo: null } : s;
+      return s.undo?.scope === a.scope ? { ...s, undo: null } : s;
     case 'renameKitchen': {
       const name = a.name.trim();
       return name ? { ...s, kitchen: { ...s.kitchen, name } } : s;
@@ -244,7 +247,7 @@ function reducer(s: State, a: Action): State {
       // The others keep the kitchen; you start a new, empty one.
       return {
         ...s,
-        kitchen: { ...SEED_KITCHEN, name: kitchenName(s.user), people: [s.user], syncNote: '' },
+        kitchen: { ...SEED_KITCHEN, name: kitchenName(s.user), people: [s.user], syncedAgo: '' },
         items: [],
         toBuy: [],
         undo: null,
@@ -265,7 +268,7 @@ function reducer(s: State, a: Action): State {
     }
     case 'skipFirstScan':
       // Nothing scanned yet: start from the empty, first-run kitchen.
-      return { ...s, items: [], toBuy: [], kitchen: { ...s.kitchen, syncNote: '' } };
+      return { ...s, items: [], toBuy: [], kitchen: { ...s.kitchen, syncedAgo: '' } };
     case 'finishOnboarding':
       return { ...s, session: { ...s.session, onboarded: true }, undo: null };
     case 'reset':
@@ -289,7 +292,7 @@ function makeActions(dispatch: (a: Action) => void) {
     madeRecipe: (id: string) => dispatch({ type: 'madeRecipe', id }),
     importRecipe: () => dispatch({ type: 'importRecipe' }),
     undo: () => dispatch({ type: 'undo' }),
-    clearUndo: () => dispatch({ type: 'clearUndo' }),
+    clearUndo: (scope: string) => dispatch({ type: 'clearUndo', scope }),
     renameKitchen: (name: string) => dispatch({ type: 'renameKitchen', name }),
     removePerson: (id: string) => dispatch({ type: 'removePerson', id }),
     newInviteLink: () => dispatch({ type: 'newInviteLink' }),
@@ -318,9 +321,10 @@ export function useStore(): Store {
   return store;
 }
 
-/** The undo for one screen, or null. */
+/** The undo for one screen, or null. It goes away when you leave the screen. */
 export function useUndo(scope: string): Undo | null {
-  const { state } = useStore();
+  const { state, actions } = useStore();
+  useFocusEffect(useCallback(() => () => actions.clearUndo(scope), [actions, scope]));
   return state.undo?.scope === scope ? state.undo : null;
 }
 

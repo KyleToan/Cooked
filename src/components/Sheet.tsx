@@ -3,7 +3,7 @@ import { Animated, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet,
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-import { color, radius, size, space } from '@/theme';
+import { color, size, space } from '@/theme';
 import { Icon } from './Icon';
 import { Tap } from './Tap';
 import { Text } from './Text';
@@ -11,7 +11,6 @@ import { Text } from './Text';
 const SCRIM = 0.32;
 const GRABBER_W = 40;
 const GRABBER_H = 5;
-const CLOSE = 36;
 const SHEET_RADIUS = space.s6;
 
 type Props = {
@@ -19,6 +18,8 @@ type Props = {
   onClose: () => void;
   /** `title-lg` on the left. */
   title?: string;
+  /** What happened or what to do, under the title. */
+  subtitle?: string;
   /** The grey close circle on the right. Confirm sheets leave it out. */
   showClose?: boolean;
   /** Render inside a Modal (a sheet over a screen). Route sheets like Import render inline. */
@@ -28,9 +29,15 @@ type Props = {
 };
 
 /** A panel that slides up over a 32% ink scrim. Tapping the scrim closes it. */
-export function Sheet({ children, onClose, title, showClose = true, visible = true, inline, accessibilityLabel }: Props) {
+export function Sheet({ children, onClose, title, subtitle, showClose = true, visible = true, inline, accessibilityLabel }: Props) {
   const content = (
-    <SheetBody onClose={onClose} title={title} showClose={showClose} accessibilityLabel={accessibilityLabel ?? title}>
+    <SheetBody
+      onClose={onClose}
+      title={title}
+      subtitle={subtitle}
+      showClose={showClose}
+      accessibilityLabel={accessibilityLabel ?? title}
+    >
       {children}
     </SheetBody>
   );
@@ -42,7 +49,7 @@ export function Sheet({ children, onClose, title, showClose = true, visible = tr
   );
 }
 
-function SheetBody({ children, onClose, title, showClose, accessibilityLabel }: Omit<Props, 'visible' | 'inline'>) {
+function SheetBody({ children, onClose, title, subtitle, showClose, accessibilityLabel }: Omit<Props, 'visible' | 'inline'>) {
   const insets = useSafeAreaInsets();
   const reduced = useReducedMotion();
   const [rise] = useState(() => new Animated.Value(0));
@@ -71,9 +78,16 @@ function SheetBody({ children, onClose, title, showClose, accessibilityLabel }: 
           <View style={styles.grabber} />
           {title ? (
             <View style={styles.header}>
-              <Text variant="titleLg" accessibilityRole="header" style={styles.title}>
-                {title}
-              </Text>
+              <View style={styles.title}>
+                <Text variant="titleLg" accessibilityRole="header">
+                  {title}
+                </Text>
+                {subtitle ? (
+                  <Text variant="button" weight="regular" color="inkMuted">
+                    {subtitle}
+                  </Text>
+                ) : null}
+              </View>
               {showClose ? <CloseButton onPress={onClose} /> : null}
             </View>
           ) : null}
@@ -84,13 +98,11 @@ function SheetBody({ children, onClose, title, showClose, accessibilityLabel }: 
   );
 }
 
-/** A 36pt grey circle with a cross, inside a 44pt hit area. */
+/** The cross in a 44pt hit area, as the Import prototype draws it. */
 export function CloseButton({ onPress, label = 'Close' }: { onPress: () => void; label?: string }) {
   return (
     <Tap accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={styles.closeHit}>
-      <View style={styles.close}>
-        <Icon name="close" size={size.iconSm} />
-      </View>
+      <Icon name="close" size={size.iconSm + 2} />
     </Tap>
   );
 }
@@ -114,14 +126,13 @@ const styles = StyleSheet.create({
     backgroundColor: color.checkBorder,
   },
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: space.s3 },
-  title: { flex: 1 },
-  closeHit: { width: size.targetMin, height: size.targetMin, alignItems: 'center', justifyContent: 'center', marginRight: -space.s1 },
-  close: {
-    width: CLOSE,
-    height: CLOSE,
-    borderRadius: radius.pill,
-    backgroundColor: color.surfaceSunken,
+  title: { flex: 1, gap: space.s1 + 2 },
+  closeHit: {
+    width: size.targetMin,
+    height: size.targetMin,
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: -space.s1,
+    marginTop: -space.s1,
   },
 });

@@ -1,0 +1,74 @@
+// Pieces only the camera screens use. The camera is the one place see-through
+// dark controls are allowed, because they sit over a live feed.
+
+import type { ReactNode } from 'react';
+import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import Svg, { Circle, Path, Rect } from 'react-native-svg';
+
+import { color, size } from '@/theme';
+
+const GLASS = 0.4;
+
+/** A dark see-through backing for a control over the camera feed. */
+export function Glass({ style, children, on }: { style?: StyleProp<ViewStyle>; children?: ReactNode; on?: boolean }) {
+  return (
+    <View style={[styles.glassBox, style]}>
+      <View style={[StyleSheet.absoluteFill, on ? styles.on : styles.glass]} />
+      {children}
+    </View>
+  );
+}
+
+const CORNER = 40;
+const CORNER_W = 3;
+const CORNER_R = 12;
+
+/** The four white corner guides the receipt fits inside. */
+export function CornerGuides({ style, faded }: { style?: StyleProp<ViewStyle>; faded?: boolean }) {
+  return (
+    <View pointerEvents="none" style={[style, faded && styles.faded]}>
+      <View style={[styles.corner, styles.tl]} />
+      <View style={[styles.corner, styles.tr]} />
+      <View style={[styles.corner, styles.bl]} />
+      <View style={[styles.corner, styles.br]} />
+    </View>
+  );
+}
+
+/*
+ * Photos and Flash are drawn in the AppScan prototype but aren't among the 20
+ * icons in design/system/icons. These are the prototype's own shapes, kept to
+ * this screen. See Decisions.md.
+ */
+const GLYPH = 22;
+
+export function PhotosGlyph({ tint = color.onInk }: { tint?: string }) {
+  return (
+    <Svg width={GLYPH} height={GLYPH} viewBox="0 0 24 24" fill="none" stroke={tint} strokeWidth={size.iconStroke} strokeLinecap="round" strokeLinejoin="round">
+      <Rect x="3.5" y="5" width="17" height="14" rx="2" />
+      <Path d="M3.5 16l5-4.5 4 3.5 3-2.5 5 4" />
+      <Circle cx="15.5" cy="9.5" r="1.4" />
+    </Svg>
+  );
+}
+
+export function FlashGlyph({ tint = color.onInk }: { tint?: string }) {
+  return (
+    <Svg width={GLYPH} height={GLYPH} viewBox="0 0 24 24" fill="none" stroke={tint} strokeWidth={size.iconStroke} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M13 3L5 13h6l-1 8 8-10h-6z" />
+    </Svg>
+  );
+}
+
+const styles = StyleSheet.create({
+  glassBox: { overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
+  glass: { backgroundColor: color.ink, opacity: GLASS },
+  on: { backgroundColor: color.onInk },
+  faded: { opacity: 0.35 },
+  corner: { position: 'absolute', width: CORNER, height: CORNER, borderColor: color.onInk },
+  tl: { left: 0, top: 0, borderTopWidth: CORNER_W, borderLeftWidth: CORNER_W, borderTopLeftRadius: CORNER_R },
+  tr: { right: 0, top: 0, borderTopWidth: CORNER_W, borderRightWidth: CORNER_W, borderTopRightRadius: CORNER_R },
+  bl: { left: 0, bottom: 0, borderBottomWidth: CORNER_W, borderLeftWidth: CORNER_W, borderBottomLeftRadius: CORNER_R },
+  br: { right: 0, bottom: 0, borderBottomWidth: CORNER_W, borderRightWidth: CORNER_W, borderBottomRightRadius: CORNER_R },
+});
+

@@ -20,8 +20,8 @@ export type Kitchen = {
   inviteCode: string;
   /** True once "Make a new link" has been used, so the screen can say so. */
   newLink: boolean;
-  /** "Synced 2h ago from a receipt". */
-  syncNote: string;
+  /** "2h ago", "just now"; empty before the first scan. Home says "Synced 2h ago from a receipt". */
+  syncedAgo: string;
 };
 
 export type Item = {
@@ -77,10 +77,12 @@ export type Recipe = {
   /** "Open the original on somekitchenblog.com" on the recipe. */
   sourceLink: string;
   imported: boolean;
+  /** The page it came from, when there is one. */
+  url?: string;
   /** The total count on the list ("You have 6 of 8"). */
   need: number;
   have: number;
-  /** Lower case, as the list sentence uses them ("Missing tomatoes and feta"). */
+  /** What you still need ("Tomatoes", "Feta"). The list sentence lower-cases them. */
   missing: string[];
   /** The ingredients you have, shown on the recipe. Empty when only the list data exists. */
   ingredients: Ingredient[];
@@ -119,3 +121,6 @@ export type ScanLine = {
   place: Place | 'skip';
   qty: number;
 };
+
+/** Where Scan, Check your scan and Couldn't read this receipt were opened from. */
+export type ScanFlow = 'app' | 'onb' | 'onbsolo';

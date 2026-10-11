@@ -18,7 +18,7 @@ export const SEED_KITCHEN: Kitchen = {
   people: [ALEX, SAM],
   inviteCode: 'rivera-kitchen',
   newLink: false,
-  syncNote: 'Synced 2h ago from a receipt',
+  syncedAgo: '2h ago',
 };
 
 /** The code "Make a new link" switches to (AppHousehold). */
@@ -67,6 +67,7 @@ export const SHAKSHUKA: Recipe = {
   sourceLine: 'Imported from somekitchenblog.com',
   sourceLink: 'Open the original on somekitchenblog.com',
   imported: true,
+  url: 'https://somekitchenblog.com/shakshuka',
   need: 8,
   have: 6,
   missing: ['Tomatoes', 'Feta'],
@@ -166,6 +167,18 @@ export const SEED_RECIPES: Recipe[] = [
     steps: [],
     onToBuy: false,
   },
+];
+
+/** What the import finds on the Shakshuka page, checked against the kitchen (AppImport). */
+export const IMPORT_FOUND: { name: string; have: boolean }[] = [
+  { name: 'Eggs', have: true },
+  { name: 'Tomatoes', have: false },
+  { name: 'Onion', have: true },
+  { name: 'Red pepper', have: true },
+  { name: 'Garlic', have: true },
+  { name: 'Cumin', have: true },
+  { name: 'Feta', have: false },
+  { name: 'Olive oil', have: true },
 ];
 
 /** Oil and spices stay in the pantry when you make something. */
