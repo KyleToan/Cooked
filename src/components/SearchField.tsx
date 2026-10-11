@@ -41,5 +41,5 @@ const styles = StyleSheet.create({
     borderColor: color.line,
     backgroundColor: color.surface,
   },
-  input: { ...type.body, flex: 1, minWidth: 0, color: color.ink, paddingVertical: 0 },
+  input: { ...type.body, flex: 1, minWidth: 0, color: color.ink, paddingVertical: 0, outlineWidth: 0 },
 });

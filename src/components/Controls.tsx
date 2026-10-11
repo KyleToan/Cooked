@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
     gap: 2,
     borderRadius: radius.control,
   },
-  fieldInput: { ...type.body, color: color.ink, padding: 0 },
+  fieldInput: { ...type.body, color: color.ink, padding: 0, outlineWidth: 0 },
   checkHit: {
     width: size.targetMin,
     height: size.targetMin,

@@ -82,6 +82,19 @@ export default function Home() {
     />
   );
 
+  const toBuySection =
+    state.toBuy.length === 0 ? (
+      <View style={styles.emptyToBuy}>
+        <SectionHeader title="To Buy" />
+        <Text variant="caption" color="inkMuted">
+          Your shared list is empty. Add the first thing you’re out of, and everyone in your kitchen will see it.
+        </Text>
+        <AddRow placeholder="Add an item…" label="Add an item" onSubmit={actions.addToBuy} />
+      </View>
+    ) : (
+      toBuyList
+    );
+
   return (
     <Screen
       island
@@ -129,21 +142,7 @@ export default function Home() {
               <TextLink label="Or add items by hand" onPress={() => openKitchen('fridge')} />
             </BigNote>
           </View>
-          {state.toBuy.length === 0 ? (
-            <View style={styles.emptyToBuy}>
-              <SectionHeader title="To Buy" />
-              <Text variant="caption" color="inkMuted">
-                Your shared list is empty. Add the first thing you’re out of, and everyone in your kitchen will see it.
-              </Text>
-              <AddRow
-                placeholder="Add an item…"
-                label="Add an item"
-                onSubmit={(name) => actions.addToBuy(name)}
-              />
-            </View>
-          ) : (
-            toBuyList
-          )}
+          {toBuySection}
         </>
       ) : (
         <>
@@ -179,7 +178,7 @@ export default function Home() {
             </View>
           </View>
 
-          {toBuyList}
+          {toBuySection}
         </>
       )}
     </Screen>

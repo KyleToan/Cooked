@@ -132,5 +132,5 @@ const styles = StyleSheet.create({
   },
   rowText: { flex: 1, minWidth: 0, gap: 2, paddingVertical: space.s2 },
   add: { height: size.rowHeight, flexDirection: 'row', alignItems: 'center', gap: space.s3 + 2 },
-  addInput: { ...type.body, flex: 1, minWidth: 0, color: color.ink, paddingVertical: 0 },
+  addInput: { ...type.body, flex: 1, minWidth: 0, color: color.ink, paddingVertical: 0, outlineWidth: 0 },
 });

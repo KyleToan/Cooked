@@ -9,7 +9,6 @@ import { guessPlace, makeId } from './helpers';
 import {
   ALEX,
   NEW_INVITE_CODE,
-  SAM,
   SEED_ITEMS,
   SEED_KITCHEN,
   SEED_NOTIFICATIONS,
@@ -58,7 +57,7 @@ const DEFAULT_DAYS: Record<Place, number> = { fridge: 7, pantry: 180, freezer: 9
 
 export function initialState(): State {
   return {
-    session: { onboarded: false, signIn: null, contact: '', path: null, firstScanCount: 0 },
+    session: { onboarded: false, signIn: null, contact: '', path: null, lastScan: { fridge: [], pantry: [], freezer: [] } },
     user: ALEX,
     kitchen: SEED_KITCHEN,
     items: SEED_ITEMS,
@@ -99,8 +98,17 @@ const withUndo = (s: State, text: string, scope: string): Undo => ({ text, scope
 
 const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
-/** A kitchen named after the person: "Rivera kitchen". */
-const kitchenName = (user: Person) => `${user.lastName || user.name} kitchen`;
+/** A new, empty kitchen named after the person: "Rivera kitchen", cooked.app/join/rivera-kitchen. */
+const newKitchen = (user: Person): Kitchen => {
+  const family = user.lastName || user.name;
+  return {
+    name: `${family} kitchen`,
+    people: [{ ...user, note: 'Made this kitchen' }],
+    inviteCode: `${family.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-kitchen`,
+    newLink: false,
+    syncedAgo: '',
+  };
+};
 
 function reducer(s: State, a: Action): State {
   switch (a.type) {
@@ -186,8 +194,9 @@ function reducer(s: State, a: Action): State {
         toBuy = toBuy.map((t) => (!t.done && sameName(t.name, line.name) ? { ...t, done: true } : t));
       }
       const kitchen = { ...s.kitchen, syncedAgo: 'just now' };
-      const added = a.lines.filter((l) => l.place !== 'skip' && l.name.trim()).length;
-      const session = { ...s.session, firstScanCount: added };
+      const lastScan: Record<Place, string[]> = { fridge: [], pantry: [], freezer: [] };
+      for (const l of a.lines) if (l.place !== 'skip' && l.name.trim()) lastScan[l.place].push(l.name.trim());
+      const session = { ...s.session, lastScan };
       return { ...s, items, toBuy, kitchen, session, undo: null };
     }
     case 'toggleRecipeToBuy': {
@@ -241,17 +250,15 @@ function reducer(s: State, a: Action): State {
       const kitchen = { ...s.kitchen, people: s.kitchen.people.filter((p) => p.id !== a.id) };
       return { ...s, kitchen, undo: withUndo(s, `${person.name} was removed.`, 'household') };
     }
-    case 'newInviteLink':
-      return { ...s, kitchen: { ...s.kitchen, inviteCode: NEW_INVITE_CODE, newLink: true } };
+    case 'newInviteLink': {
+      // A fresh code kills the old link. The sample kitchen's next code is the one in the design.
+      const family = s.kitchen.inviteCode.replace(/-kitchen$|-[a-z0-9]{4}$/, '');
+      const fresh = s.kitchen.inviteCode === SEED_KITCHEN.inviteCode ? NEW_INVITE_CODE : `${family}-${Math.random().toString(36).slice(2, 6)}`;
+      return { ...s, kitchen: { ...s.kitchen, inviteCode: fresh, newLink: true } };
+    }
     case 'leaveKitchen':
       // The others keep the kitchen; you start a new, empty one.
-      return {
-        ...s,
-        kitchen: { ...SEED_KITCHEN, name: kitchenName(s.user), people: [s.user], syncedAgo: '' },
-        items: [],
-        toBuy: [],
-        undo: null,
-      };
+      return { ...s, kitchen: newKitchen(s.user), items: [], toBuy: [], recipes: [], undo: null };
     case 'setNotification':
       return { ...s, notifications: { ...s.notifications, [a.key]: a.on } };
     case 'signIn':
@@ -262,13 +269,18 @@ function reducer(s: State, a: Action): State {
       return { ...s, user, kitchen: { ...s.kitchen, people } };
     }
     case 'choosePath': {
-      // Until there's a backend every path lands in the sample kitchen. Just me drops Sam.
-      const people = a.path === 'solo' ? [s.user] : [s.user, SAM];
-      return { ...s, session: { ...s.session, path: a.path }, kitchen: { ...s.kitchen, people } };
+      const session = { ...s.session, path: a.path };
+      if (a.path === 'join') {
+        // Until there's a backend, the only kitchen to join is the sample Rivera kitchen.
+        const people = [s.user, ...SEED_KITCHEN.people.filter((p) => p.id !== s.user.id)];
+        return { ...s, session, kitchen: { ...SEED_KITCHEN, people }, items: SEED_ITEMS, toBuy: SEED_TO_BUY, recipes: SEED_RECIPES };
+      }
+      // Just me or a household: a new, empty kitchen. The first scan fills it.
+      return { ...s, session, kitchen: newKitchen(s.user), items: [], toBuy: [], recipes: [] };
     }
     case 'skipFirstScan':
-      // Nothing scanned yet: start from the empty, first-run kitchen.
-      return { ...s, items: [], toBuy: [], kitchen: { ...s.kitchen, syncedAgo: '' } };
+      // Nothing scanned yet: Home opens as the empty, first-run Home.
+      return { ...s, items: [], kitchen: { ...s.kitchen, syncedAgo: '' } };
     case 'finishOnboarding':
       return { ...s, session: { ...s.session, onboarded: true }, undo: null };
     case 'reset':

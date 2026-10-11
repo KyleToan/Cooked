@@ -55,6 +55,38 @@ export function KitchenNote({ label, count, flag, paper, tilt, onPress, accessib
   );
 }
 
+/** A note that isn't a link: Welcome's notes and what was put away on Ready. */
+export function PaperNote({
+  label,
+  body,
+  flag,
+  paper,
+  tilt,
+  style,
+}: {
+  label: string;
+  body?: string;
+  flag?: string;
+  paper: ColorName;
+  tilt: number;
+  style?: StyleProp<ViewStyle>;
+}) {
+  return (
+    <View style={[styles.small, { backgroundColor: color[paper], transform: [{ rotate: `${tilt}deg` }] }, style]}>
+      <Tape width={40} />
+      <Text variant="noteTitle" color="noteInk" numberOfLines={1} adjustsFontSizeToFit>
+        {label}
+      </Text>
+      {body ? (
+        <Text variant="noteBody" color="noteInkSoft">
+          {body}
+        </Text>
+      ) : null}
+      {flag ? <UseSoonFlag text={flag} /> : null}
+    </View>
+  );
+}
+
 /** "2 use soon" in bronze handwriting with a bronze underline. */
 export function UseSoonFlag({ text }: { text: string }) {
   return (

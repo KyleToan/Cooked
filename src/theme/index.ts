@@ -7,6 +7,7 @@ import { type as typeStyles } from './tokens';
 export { color, type, space, radius, size, shadow } from './tokens';
 export type { ColorName, TypeName } from './tokens';
 export { fontFaces } from './fonts';
+export { brand } from './brand';
 
 /**
  * Albert Sans weights, taken from the type styles that already use them, so a

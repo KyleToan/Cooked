@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
   open: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: space.s3 },
   action: { minHeight: size.targetMin, justifyContent: 'center' },
   checkRow: { minHeight: size.rowHeight + space.s1, flexDirection: 'row', alignItems: 'center', gap: space.s3 },
-  nameInput: { ...type.body, paddingVertical: 2, paddingHorizontal: 0, borderBottomWidth: 1 },
+  nameInput: { ...type.body, paddingVertical: 2, paddingHorizontal: 0, borderBottomWidth: 1, outlineWidth: 0 },
   tagHit: { height: size.targetMin, justifyContent: 'center' },
   tag: {
     height: size.targetMin - space.s2 - 2,
