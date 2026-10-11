@@ -1,0 +1,411 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "AppAccount.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 40,
+      "title": "Account",
+      "w": 390,
+      "x": 0,
+      "y": 5708
+    },
+    "AppAccountDelete.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 40,
+      "title": "Account – delete",
+      "w": 390,
+      "x": 470,
+      "y": 5708
+    },
+    "AppHome.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 40,
+      "title": "Home",
+      "w": 390,
+      "x": 0,
+      "y": 1845
+    },
+    "AppHomeEmpty.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 40,
+      "title": "Home – empty kitchen",
+      "w": 390,
+      "x": 470,
+      "y": 1845
+    },
+    "AppHousehold.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 40,
+      "title": "Household",
+      "w": 390,
+      "x": 940,
+      "y": 5708
+    },
+    "AppImport.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 40,
+      "title": "Import a recipe",
+      "w": 390,
+      "x": 5640,
+      "y": 1845
+    },
+    "AppImportError.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 40,
+      "title": "Import – no recipe found",
+      "w": 390,
+      "x": 6110,
+      "y": 1845
+    },
+    "AppKitchen.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 40,
+      "title": "Kitchen – Fridge",
+      "w": 390,
+      "x": 2350,
+      "y": 1845
+    },
+    "AppKitchenFreezer.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 40,
+      "title": "Kitchen – Freezer",
+      "w": 390,
+      "x": 3290,
+      "y": 1845
+    },
+    "AppKitchenPantry.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 40,
+      "title": "Kitchen – Pantry",
+      "w": 390,
+      "x": 2820,
+      "y": 1845
+    },
+    "AppKitchenToBuy.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 40,
+      "title": "Kitchen – To Buy",
+      "w": 390,
+      "x": 3760,
+      "y": 1845
+    },
+    "AppNotifications.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 40,
+      "title": "Notifications",
+      "w": 390,
+      "x": 1410,
+      "y": 5708
+    },
+    "AppRecipe.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 40,
+      "title": "Recipe – Shakshuka",
+      "w": 390,
+      "x": 4700,
+      "y": 1845
+    },
+    "AppRecipeTonight.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 40,
+      "title": "Recipe – Tonight",
+      "w": 390,
+      "x": 5170,
+      "y": 1845
+    },
+    "AppRecipes.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 40,
+      "title": "Recipes",
+      "w": 390,
+      "x": 4230,
+      "y": 1845
+    },
+    "AppScan.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 40,
+      "title": "Scan",
+      "w": 390,
+      "x": 940,
+      "y": 1845
+    },
+    "AppScanReview.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 40,
+      "title": "Scan – check items",
+      "w": 390,
+      "x": 1410,
+      "y": 1845
+    },
+    "AppScanUnreadable.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 40,
+      "title": "Scan – couldn’t read",
+      "w": 390,
+      "x": 1880,
+      "y": 1845
+    },
+    "CookedIsland.dc.html": {
+      "h": 68,
+      "is_interactive": true,
+      "radius": 34,
+      "title": "Tab island (component)",
+      "w": 300,
+      "x": 6580,
+      "y": 1845
+    },
+    "CookedKeyboard.dc.html": {
+      "h": 291,
+      "is_interactive": true,
+      "title": "iPhone keyboard (component)",
+      "w": 390,
+      "x": 6960,
+      "y": 1845
+    },
+    "Onb1Welcome.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 40,
+      "title": "1 Welcome",
+      "w": 390,
+      "x": 0,
+      "y": 3132
+    },
+    "Onb2SignIn.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 40,
+      "title": "2 Log in or sign up",
+      "w": 390,
+      "x": 470,
+      "y": 3132
+    },
+    "Onb3Email.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 40,
+      "title": "3 Email or phone",
+      "w": 390,
+      "x": 940,
+      "y": 3132
+    },
+    "Onb4Code.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 40,
+      "title": "4 Code",
+      "w": 390,
+      "x": 1410,
+      "y": 3132
+    },
+    "Onb4CodeWrong.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 40,
+      "title": "4 Code – wrong",
+      "w": 390,
+      "x": 1880,
+      "y": 3132
+    },
+    "Onb5Name.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 40,
+      "title": "5 Name",
+      "w": 390,
+      "x": 2350,
+      "y": 3132
+    },
+    "Onb6Household.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 40,
+      "title": "6 Who you cook with",
+      "w": 390,
+      "x": 2820,
+      "y": 3132
+    },
+    "Onb6bInviteCode.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 40,
+      "title": "6b Join with an invite",
+      "w": 390,
+      "x": 3290,
+      "y": 3132
+    },
+    "Onb7Invite.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 40,
+      "title": "8 Invite",
+      "w": 390,
+      "x": 5170,
+      "y": 3132
+    },
+    "Onb8Scan.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 40,
+      "title": "7 First scan",
+      "w": 390,
+      "x": 3760,
+      "y": 3132
+    },
+    "Onb8ScanSolo.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 40,
+      "title": "7 First scan (just me)",
+      "w": 390,
+      "x": 3760,
+      "y": 4420
+    },
+    "Onb9Ready.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 40,
+      "title": "9 Kitchen ready",
+      "w": 390,
+      "x": 5640,
+      "y": 3132
+    },
+    "OnbCamera.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 40,
+      "title": "7a Camera",
+      "w": 390,
+      "x": 4230,
+      "y": 3132
+    },
+    "OnbCameraSolo.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 40,
+      "title": "7a Camera (just me)",
+      "w": 390,
+      "x": 4230,
+      "y": 4420
+    },
+    "OnbCheck.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 40,
+      "title": "7b Check items",
+      "w": 390,
+      "x": 4700,
+      "y": 3132
+    },
+    "OnbCheckSolo.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 40,
+      "title": "7b Check items (just me) → Ready",
+      "w": 390,
+      "x": 4700,
+      "y": 4420
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-10-07T19:05:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "account": {
+      "kind": "title1",
+      "maxW": 1800,
+      "text": "Account and household",
+      "w": 240,
+      "x": 0,
+      "y": 5456
+    },
+    "appscreens": {
+      "kind": "title1",
+      "maxW": 7350,
+      "text": "App screens",
+      "w": 240,
+      "x": 0,
+      "y": 1593
+    },
+    "onboarding": {
+      "kind": "title1",
+      "maxW": 6110,
+      "text": "Onboarding",
+      "w": 240,
+      "x": 0,
+      "y": 2880
+    },
+    "solopath": {
+      "kind": "title1",
+      "maxW": 1410,
+      "text": "Onboarding: just me",
+      "w": 240,
+      "x": 3760,
+      "y": 4168
+    }
+  },
+  "order": [
+    "AppHome.dc.html",
+    "AppHomeEmpty.dc.html",
+    "AppScan.dc.html",
+    "AppScanReview.dc.html",
+    "AppScanUnreadable.dc.html",
+    "AppKitchen.dc.html",
+    "AppKitchenPantry.dc.html",
+    "AppKitchenFreezer.dc.html",
+    "AppKitchenToBuy.dc.html",
+    "AppRecipes.dc.html",
+    "AppRecipe.dc.html",
+    "AppRecipeTonight.dc.html",
+    "AppImport.dc.html",
+    "AppImportError.dc.html",
+    "CookedIsland.dc.html",
+    "CookedKeyboard.dc.html",
+    "Onb1Welcome.dc.html",
+    "Onb2SignIn.dc.html",
+    "Onb3Email.dc.html",
+    "Onb4Code.dc.html",
+    "Onb4CodeWrong.dc.html",
+    "Onb5Name.dc.html",
+    "Onb6Household.dc.html",
+    "Onb6bInviteCode.dc.html",
+    "Onb8Scan.dc.html",
+    "OnbCamera.dc.html",
+    "OnbCheck.dc.html",
+    "Onb7Invite.dc.html",
+    "Onb9Ready.dc.html",
+    "Onb8ScanSolo.dc.html",
+    "OnbCameraSolo.dc.html",
+    "OnbCheckSolo.dc.html",
+    "AppAccount.dc.html",
+    "AppAccountDelete.dc.html",
+    "AppHousehold.dc.html",
+    "AppNotifications.dc.html"
+  ],
+  "pages": [],
+  "title": "Cooked Scan Screen"
+}

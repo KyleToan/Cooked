@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cooked – Check your scan</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;500;600;700&amp;family=Alumni+Sans:wght@300;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#56663A;text-decoration:none}a:hover{color:#3F4B2A}
+button,input{font-family:inherit}
+.ck-name{border:none;outline:none;padding:2px 0;margin:0;background:transparent;font-size:16px;width:100%;border-bottom:1px solid transparent}
+.ck-name:focus{border-bottom-color:#56663A}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #FFFFFF; color: #1A1A18; font-family: 'Albert Sans', system-ui, sans-serif">
+  <div style="position: absolute; left: 0; top: 0; width: 390px; height: 844px; box-sizing: border-box; overflow-y: auto; padding: 52px 20px 180px; display: flex; flex-direction: column; gap: 18px">
+    <div style="display: flex; align-items: center; gap: 4px; margin-left: -12px">
+      <a href="{{backHref}}" aria-label="Back to camera" style="width: 44px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #1A1A18">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>
+      </a>
+      <h1 style="margin: 0; font-family: 'Alumni Sans', sans-serif; font-size: 36px; font-weight: 700; line-height: 1; letter-spacing: -0.005em">We found 7 items</h1>
+    </div>
+    <p style="margin: 0; font-size: 15px; line-height: 1.4; color: #6E6E68">Corner Market · today, 6:42 pm. Tap a name to fix it, or a place to move it.</p>
+
+    <sc-if value="{{showListNote}}" hint-placeholder-val="{{ true }}">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; background: #F4F4F1; font-size: 14px; line-height: 1.4">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#56663A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+      <span>Bread was on your To Buy list. We’ll tick it off.</span>
+    </div>
+    </sc-if>
+
+    <div style="display: flex; flex-direction: column">
+      <sc-for list="{{items}}" as="it" hint-placeholder-count="7">
+        <div style="border-bottom: 1px solid #F1F1EE">
+          <div style="display: flex; align-items: center; gap: 12px; min-height: 60px">
+            <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+              <input class="ck-name" type="text" value="{{it.name}}" aria-label="{{it.nameAria}}" style="{{it.nameStyle}}">
+              <span style="font-size: 12px; color: #6E6E68">{{it.detail}}</span>
+            </span>
+            <button onClick="{{it.toggle}}" aria-expanded="{{it.expanded}}" aria-label="{{it.aria}}" style="{{it.tagStyle}}">
+              {{it.where}}
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="{{it.chev}}"></path></svg>
+            </button>
+          </div>
+          <sc-if value="{{it.open}}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; gap: 10px; padding: 0 0 14px">
+              <div role="radiogroup" aria-label="Where it goes" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px">
+                <sc-for list="{{it.places}}" as="p" hint-placeholder-count="4">
+                  <button role="radio" aria-checked="{{p.checked}}" onClick="{{p.pick}}" style="{{p.style}}">{{p.label}}</button>
+                </sc-for>
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between">
+                <span style="font-size: 14px; color: #6E6E68">How many</span>
+                <span style="display: flex; align-items: center; height: 44px; border-radius: 22px; background: #F4F4F1">
+                  <button onClick="{{it.dec}}" aria-label="One fewer" style="width: 44px; height: 44px; border: none; background: transparent; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#56663A" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14"></path></svg></button>
+                  <span style="min-width: 24px; text-align: center; font-size: 15px; font-weight: 600">{{it.qty}}</span>
+                  <button onClick="{{it.inc}}" aria-label="One more" style="width: 44px; height: 44px; border: none; background: transparent; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#56663A" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></button>
+                </span>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 0; bottom: 0; width: 390px; box-sizing: border-box; padding: 16px 20px 30px; background: #FFFFFF; border-top: 1px solid #ECECE8; display: flex; flex-direction: column; gap: 4px">
+    <a href="{{doneHref}}" style="height: 52px; border-radius: 26px; background: #CCD5AE; color: #1A1A18; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600">{{cta}}</a>
+    <a href="{{backHref}}" style="height: 44px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600">Retake photo</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"flow":{"editor":"enum","options":["app","onb","onbsolo"],"default":"app"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { where: {}, qty: {}, open: null };
+  }
+  renderVals() {
+    const ORDER = ['Fridge', 'Pantry', 'Freezer', 'Skip'];
+    const PAPER = { Fridge: '#FEFAE0', Pantry: '#FAEDCD', Freezer: '#E9EDC9' };
+    const I = [
+      ['m', 'Milk 2%', '$3.49', 'Fridge', 1],
+      ['e', 'Eggs', '$4.29', 'Fridge', 12],
+      ['b', 'Basil', '$2.99', 'Fridge', 1],
+      ['s', 'Spaghetti', '$1.89', 'Pantry', 1],
+      ['r', 'Bread', '$3.79', 'Pantry', 1],
+      ['p', 'Frozen peas', '$2.49', 'Freezer', 1],
+      ['t', 'Paper towels', 'Not food · $5.99', 'Skip', 1]
+    ];
+    const { where: w, qty, open } = this.state;
+    const items = I.map(([id, name, price, def, q0]) => {
+      const cur = w[id] || def;
+      const q = qty[id] ?? q0;
+      const skip = cur === 'Skip';
+      const isOpen = open === id;
+      return {
+        name, open: isOpen, expanded: isOpen ? 'true' : 'false', qty: q,
+        detail: skip || q === 1 ? price : q + ' · ' + price,
+        nameAria: 'Item name, ' + name,
+        where: cur,
+        chev: isOpen ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6',
+        aria: name + ' goes to ' + cur + '. Change place or amount.',
+        nameStyle: skip ? 'color: #8C8C86;' : 'color: #1A1A18;',
+        tagStyle: 'flex-shrink: 0; display: flex; align-items: center; gap: 4px; height: 44px; padding: 0 12px; box-sizing: border-box; border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-left: none; border-right: none; background-clip: padding-box; border-radius: 999px; cursor: pointer; font-size: 13px; font-weight: 600; ' + (skip ? 'background-color: #FFFFFF; color: #6E6E68; box-shadow: inset 0 0 0 1px #ECECE8;' : 'background-color: ' + PAPER[cur] + '; color: #1A1A18; box-shadow: inset 0 0 0 1px rgba(26,26,24,0.14);'),
+        toggle: () => this.setState({ open: isOpen ? null : id }),
+        dec: () => this.setState({ qty: { ...qty, [id]: Math.max(1, q - 1) } }),
+        inc: () => this.setState({ qty: { ...qty, [id]: q + 1 } }),
+        places: ORDER.map((p) => {
+          const on = p === cur;
+          return {
+            label: p, checked: on ? 'true' : 'false',
+            style: 'height: 44px; border-radius: 22px; border: none; cursor: pointer; font-size: 13px; ' + (on ? 'background: ' + (PAPER[p] || '#FFFFFF') + '; box-shadow: inset 0 0 0 1.5px #56663A; font-weight: 600; color: #1A1A18;' : 'background: #F4F4F1; font-weight: 500; color: #6E6E68;'),
+            pick: () => this.setState({ where: { ...w, [id]: p } })
+          };
+        })
+      };
+    });
+    const n = items.filter((x) => x.where !== 'Skip').length;
+    return {
+      items,
+      showListNote: (this.props.flow ?? 'app') === 'app',
+      backHref: ({ app: 'AppScan.dc.html', onb: 'OnbCamera.dc.html', onbsolo: 'OnbCameraSolo.dc.html' })[this.props.flow ?? 'app'],
+      doneHref: ({ app: 'AppHome.dc.html', onb: 'Onb7Invite.dc.html', onbsolo: 'Onb9Ready.dc.html' })[this.props.flow ?? 'app'],
+      cta: 'Add ' + n + ' items to your kitchen'
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cooked – iPhone keyboard</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{text-decoration:none}
+</style>
+</helmet>
+<div aria-hidden="true" style="width: 390px; height: 291px; box-sizing: border-box; padding: 0 3px 34px; background: #D1D3D9; display: flex; flex-direction: column; font-family: -apple-system, 'Albert Sans', system-ui, sans-serif; color: #1A1A18">
+  <div style="height: 44px; display: flex; align-items: center; justify-content: center">
+    <sc-if value="{{hasLink}}" hint-placeholder-val="{{ false }}">
+      <a href="{{href}}" style="height: 40px; padding: 0 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #1A1A18; line-height: 1.15">
+        <sc-if value="{{hasHint}}" hint-placeholder-val="{{ false }}"><span style="font-size: 11px; color: #4A4A42">{{hint}}</span></sc-if>
+        <span style="font-size: 16px; font-weight: 600; letter-spacing: 0.02em">{{suggest}}</span>
+      </a>
+    </sc-if>
+    <sc-if value="{{plainSuggest}}" hint-placeholder-val="{{ false }}">
+      <span style="font-size: 16px">{{suggest}}</span>
+    </sc-if>
+  </div>
+  <sc-if value="{{isNumbers}}" hint-placeholder-val="{{ false }}">
+    <div style="flex: 1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(4, minmax(0, 1fr)); gap: 6px; padding: 0 3px">
+      <sc-for list="{{pad}}" as="k" hint-placeholder-count="12">
+        <span style="{{k.style}}">{{k.label}}</span>
+      </sc-for>
+    </div>
+  </sc-if>
+  <sc-if value="{{isLetters}}" hint-placeholder-val="{{ true }}">
+    <div style="flex: 1; display: flex; flex-direction: column; gap: 11px; padding: 4px 0 0">
+      <sc-for list="{{rows}}" as="r" hint-placeholder-count="4">
+        <div style="{{r.style}}">
+          <sc-for list="{{r.keys}}" as="k" hint-placeholder-count="10">
+            <span style="{{k.style}}">{{k.label}}</span>
+          </sc-for>
+        </div>
+      </sc-for>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"layout":{"editor":"enum","options":["letters","email","numbers"],"default":"letters"},"suggest":{"editor":"text","default":""},"hint":{"editor":"text","default":""},"href":{"editor":"text","default":""},"$preview":{"width":390,"height":291}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const layout = this.props.layout ?? 'letters';
+    const suggest = this.props.suggest ?? '';
+    const href = this.props.href ?? '';
+    const white = 'background: #FFFFFF; box-shadow: 0 1px 0 rgba(0,0,0,0.3);';
+    const grey = 'background: #ABB0BC; box-shadow: 0 1px 0 rgba(0,0,0,0.3);';
+    const key = (label, opts) => ({
+      label,
+      style: 'height: 42px; border-radius: 5px; display: flex; align-items: center; justify-content: center; ' + (opts && opts.grey ? grey : white) + ' font-size: ' + (opts && opts.small ? '15px' : '22px') + '; flex: ' + ((opts && opts.flex) || '1') + ' 1 0; min-width: 0'
+    });
+    const letters = (s) => s.split('').map((c) => key(c));
+    const bottom = layout === 'email'
+      ? [key('123', { grey: true, small: true, flex: '1.3' }), key('space', { small: true, flex: '3.2' }), key('@', { flex: '0.9' }), key('.', { flex: '0.9' }), key('return', { grey: true, small: true, flex: '1.9' })]
+      : [key('123', { grey: true, small: true, flex: '1.3' }), key('space', { small: true, flex: '5' }), key('return', { grey: true, small: true, flex: '1.9' })];
+    const rowStyle = (pad) => 'display: flex; gap: 6px; padding: 0 ' + pad + 'px';
+    const PAD = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'];
+    return {
+      isNumbers: layout === 'numbers', isLetters: layout !== 'numbers',
+      suggest, href, hint: this.props.hint ?? '',
+      hasHint: !!(this.props.hint), hasLink: !!(suggest && href), plainSuggest: !!(suggest && !href),
+      rows: [
+        { style: rowStyle(0), keys: letters('qwertyuiop') },
+        { style: rowStyle(19), keys: letters('asdfghjkl') },
+        { style: rowStyle(0), keys: [key('⇧', { grey: true, flex: '1.4' })].concat(letters('zxcvbnm'), [key('⌫', { grey: true, flex: '1.4' })]) },
+        { style: rowStyle(0), keys: bottom }
+      ],
+      pad: PAD.map((k) => ({
+        label: k,
+        style: 'border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 24px; ' + (k && k !== '⌫' ? white : 'background: transparent;')
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

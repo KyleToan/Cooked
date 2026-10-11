@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cooked – Your Kitchen</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;500;600;700&amp;family=Alumni+Sans:wght@300;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#56663A;text-decoration:none}a:hover{color:#3F4B2A}
+button,input{font-family:inherit}
+input::placeholder{color:#8C8C86}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #FFFFFF; color: #1A1A18; font-family: 'Albert Sans', system-ui, sans-serif">
+  <div style="position: absolute; left: 0; top: 0; width: 390px; height: 844px; box-sizing: border-box; overflow-y: auto; padding: 52px 20px 130px; display: flex; flex-direction: column; gap: 20px">
+
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <div style="display: flex; align-items: center; gap: 4px; margin-left: -12px">
+        <a href="AppHome.dc.html" aria-label="Back to home" style="width: 44px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #1A1A18">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>
+        </a>
+        <h1 style="margin: 0; font-family: 'Alumni Sans', sans-serif; font-size: 36px; font-weight: 700; line-height: 1; letter-spacing: -0.005em">Your Kitchen</h1>
+      </div>
+      <span style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: #6E6E68">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12a7.5 7.5 0 0 1-12.8 5.3M4.5 12A7.5 7.5 0 0 1 17.3 6.7"></path><path d="M17.5 3.5v3.4h-3.4M6.5 20.5v-3.4h3.4"></path></svg>
+        Shared with Sam · synced 2h ago
+      </span>
+    </div>
+
+    <label style="display: flex; align-items: center; gap: 12px; height: 50px; flex-shrink: 0; box-sizing: border-box; padding: 0 16px; border-radius: 16px; border: 1px solid #ECECE8; background: #FFFFFF">
+      <input type="search" placeholder="{{placeholder}}" aria-label="{{placeholder}}" style="flex: 1; min-width: 0; border: none; background: transparent; font-size: 16px; color: #1A1A18; outline: none; padding: 0">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1A1A18" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4 4"></path></svg>
+    </label>
+
+    <div role="tablist" aria-label="Where" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px">
+      <sc-for list="{{tabs}}" as="t" hint-placeholder-count="4">
+        <button role="tab" aria-selected="{{t.selected}}" onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</button>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{isStock}}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-direction: column; gap: 26px; padding-top: 4px">
+
+        <sc-if value="{{hasSoon}}" hint-placeholder-val="{{ true }}">
+          <section style="display: flex; flex-direction: column; gap: 4px">
+            <div style="display: flex; align-items: center; gap: 8px; padding-bottom: 4px">
+              <sc-if value="{{soonIsDate}}" hint-placeholder-val="{{ true }}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8A5A2B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7.5"></circle><path d="M12 10v3.5l2.5 1.5M10 2.5h4M12 2.5V6"></path></svg>
+              </sc-if>
+              <h2 style="margin: 0; font-family: 'Alumni Sans', sans-serif; font-size: 28px; font-weight: 600; line-height: 1.05">{{soonTitle}}</h2>
+            </div>
+            <sc-for list="{{soon}}" as="it" hint-placeholder-count="2">
+              <div style="border-bottom: 1px solid #F1F1EE">
+                <button onClick="{{it.toggleOpen}}" aria-expanded="{{it.expanded}}" style="width: 100%; min-height: 60px; display: flex; align-items: center; gap: 10px; padding: 8px 0; border: none; background: transparent; text-align: left; cursor: pointer; color: #1A1A18">
+                  <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+                    <span style="font-size: 16px">{{it.name}}</span>
+                    <span style="{{it.metaStyle}}">{{it.meta}}</span>
+                  </span>
+                  <span style="font-size: 15px; font-weight: 500; color: #6E6E68">{{it.qtyLabel}}</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8C8C86" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0"><path d="{{it.chev}}"></path></svg>
+                </button>
+                <sc-if value="{{it.open}}" hint-placeholder-val="{{ false }}">
+                  <div style="display: flex; align-items: center; justify-content: space-between; padding: 0 0 12px">
+                    <a href="AppRecipes.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600">{{it.actionLabel}}</a>
+                    <span style="display: flex; align-items: center; height: 44px; border-radius: 22px; background: #F4F4F1">
+                      <button onClick="{{it.dec}}" aria-label="Use one" style="width: 44px; height: 44px; border: none; background: transparent; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#56663A" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14"></path></svg></button>
+                      <span style="min-width: 24px; text-align: center; font-size: 15px; font-weight: 600">{{it.qty}}</span>
+                      <button onClick="{{it.inc}}" aria-label="Add one" style="width: 44px; height: 44px; border: none; background: transparent; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#56663A" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></button>
+                    </span>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </section>
+        </sc-if>
+
+        <section style="display: flex; flex-direction: column; gap: 4px">
+          <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 4px">
+            <div style="display: flex; align-items: baseline; gap: 10px">
+              <h2 style="margin: 0; font-family: 'Alumni Sans', sans-serif; font-size: 28px; font-weight: 600; line-height: 1.05">{{restTitle}}</h2>
+              <span style="font-size: 13px; color: #6E6E68">{{restCount}}</span>
+            </div>
+            <button onClick="{{toggleSort}}" aria-label="{{sortAria}}" style="display: flex; align-items: center; gap: 4px; height: 44px; margin-right: -4px; padding: 0 4px; border: none; background: transparent; cursor: pointer; font-size: 14px; font-weight: 600; color: #56663A">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M4 17l3 3 3-3M17 20V4M14 7l3-3 3 3"></path></svg>
+              {{sortLabel}}
+            </button>
+          </div>
+          <sc-for list="{{rest}}" as="it" hint-placeholder-count="4">
+            <div style="border-bottom: 1px solid #F1F1EE">
+              <button onClick="{{it.toggleOpen}}" aria-expanded="{{it.expanded}}" style="width: 100%; min-height: 60px; display: flex; align-items: center; gap: 10px; padding: 8px 0; border: none; background: transparent; text-align: left; cursor: pointer; color: #1A1A18">
+                <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+                  <span style="font-size: 16px">{{it.name}}</span>
+                  <span style="font-size: 13px; color: #6E6E68">{{it.meta}}</span>
+                </span>
+                <span style="font-size: 15px; font-weight: 500; color: #6E6E68">{{it.qtyLabel}}</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8C8C86" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0"><path d="{{it.chev}}"></path></svg>
+              </button>
+              <sc-if value="{{it.open}}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 0 0 12px">
+                  <button onClick="{{it.addToList}}" style="min-height: 44px; border: none; background: transparent; padding: 0; cursor: pointer; font-size: 14px; font-weight: 600; color: #56663A">{{it.listLabel}}</button>
+                  <span style="display: flex; align-items: center; height: 44px; border-radius: 22px; background: #F4F4F1">
+                    <button onClick="{{it.dec}}" aria-label="Use one" style="width: 44px; height: 44px; border: none; background: transparent; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#56663A" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14"></path></svg></button>
+                    <span style="min-width: 24px; text-align: center; font-size: 15px; font-weight: 600">{{it.qty}}</span>
+                    <button onClick="{{it.inc}}" aria-label="Add one" style="width: 44px; height: 44px; border: none; background: transparent; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#56663A" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></button>
+                  </span>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+          <label style="display: flex; align-items: center; gap: 12px; height: 56px">
+            <span style="width: 24px; height: 24px; box-sizing: border-box; flex-shrink: 0; border-radius: 7px; border: 1.5px dashed #CFCFC9; display: flex; align-items: center; justify-content: center; color: #56663A"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></span>
+            <input type="text" placeholder="{{addPlaceholder}}" aria-label="{{addPlaceholder}}" style="flex: 1; min-width: 0; border: none; outline: none; padding: 0; background: transparent; font-size: 16px; color: #1A1A18">
+          </label>
+        </section>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isList}}" hint-placeholder-val="{{ false }}">
+      <section style="display: flex; flex-direction: column; gap: 12px; padding-top: 4px">
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px">
+            <div style="display: flex; align-items: baseline; gap: 10px">
+              <h2 style="margin: 0; font-family: 'Alumni Sans', sans-serif; font-size: 28px; font-weight: 600; line-height: 1.05">To Buy</h2>
+              <span style="font-size: 13px; color: #6E6E68">{{progress}}</span>
+            </div>
+          <button aria-label="Share list" style="flex-shrink: 0; height: 44px; padding: 0 14px; box-sizing: border-box; border-top: 4px solid transparent; border-bottom: 4px solid transparent; border-left: none; border-right: none; background-clip: padding-box; border-radius: 999px; background-color: #F4F4F1; color: #1A1A18; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#56663A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M8 8l4-4 4 4"></path><path d="M5 13v5.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V13"></path></svg>
+            Share
+          </button>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.45; color: #6E6E68">Sam sees this list too. Scan your receipt after shopping and we’ll tick things off for you.</p>
+        </div>
+        <div style="height: 4px; border-radius: 4px; background: #F1F1EE; overflow: hidden"><div style="{{barFill}}"></div></div>
+        <div style="display: flex; flex-direction: column">
+          <sc-for list="{{shop}}" as="s" hint-placeholder-count="6">
+            <div style="display: flex; align-items: center; gap: 4px; min-height: 56px; border-bottom: 1px solid #F1F1EE">
+              <button onClick="{{s.toggle}}" aria-label="{{s.aria}}" aria-pressed="{{s.pressed}}" style="width: 44px; height: 44px; margin-left: -10px; flex-shrink: 0; border: none; background: transparent; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center">
+                <span style="{{s.boxStyle}}">
+                  <sc-if value="{{s.done}}" hint-placeholder-val="{{ false }}">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+                  </sc-if>
+                </span>
+              </button>
+              <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 8px 0">
+                <span style="{{s.nameStyle}}">{{s.name}}</span>
+                <span style="font-size: 12px; color: #6E6E68">{{s.note}}</span>
+              </span>
+              <span style="font-size: 13px; color: #6E6E68">{{s.where}}</span>
+            </div>
+          </sc-for>
+          <label style="display: flex; align-items: center; gap: 14px; height: 56px">
+            <span style="width: 24px; height: 24px; box-sizing: border-box; flex-shrink: 0; border-radius: 7px; border: 1.5px dashed #CFCFC9; display: flex; align-items: center; justify-content: center; color: #56663A"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></span>
+            <input type="text" placeholder="Add an item…" aria-label="Add an item to To Buy" style="flex: 1; min-width: 0; border: none; outline: none; padding: 0; background: transparent; font-size: 16px; color: #1A1A18">
+          </label>
+        </div>
+      </section>
+    </sc-if>
+  </div>
+
+  <sc-if value="{{hasUndo}}" hint-placeholder-val="{{ false }}">
+    <div role="status" style="position: absolute; left: 20px; bottom: 108px; width: 350px; height: 52px; box-sizing: border-box; padding: 0 6px 0 18px; border-radius: 26px; background: #FFFFFF; border: 1px solid #ECECE8; box-shadow: 0 10px 30px rgba(26,26,24,0.10); display: flex; align-items: center; justify-content: space-between; font-size: 15px">
+      <span>{{undoText}}</span>
+      <button onClick="{{undo}}" style="height: 44px; padding: 0 14px; border: none; background: transparent; cursor: pointer; font-size: 15px; font-weight: 600; color: #56663A">Undo</button>
+    </div>
+  </sc-if>
+
+  <div style="position: absolute; left: 45px; bottom: 28px; width: 300px; height: 68px">
+    <dc-import name="CookedIsland" active="home" hint-size="300px,68px"></dc-import>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"tab":{"editor":"enum","options":["fridge","pantry","freezer","tobuy"],"default":"fridge"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { tab: null, qty: {}, open: null, sort: 'az', listed: {}, done: { b: true, o: true }, last: null };
+  }
+  renderVals() {
+    const tab = this.state.tab || this.props.tab || 'fridge';
+    const TABS = [['fridge', 'Fridge', '#FEFAE0'], ['pantry', 'Pantry', '#FAEDCD'], ['freezer', 'Freezer', '#E9EDC9'], ['tobuy', 'To Buy', '#CCD5AE']];
+    // [id, name, meta, qty, unit, daysLeft, amountText?]
+    const DATA = {
+      fridge: {
+        soonTitle: 'Use soon', soonIsDate: true, restTitle: 'In the fridge', total: 6, add: 'Add to the fridge…',
+        soon: [['f1', 'Spinach', 'Best by tomorrow', 1, 'bag', 1], ['f2', 'Chicken thighs', 'Best in 2 days', 1, 'pack', 2]],
+        rest: [['f3', 'Milk 2%', 'Best in 3 days', 1, 'carton', 3], ['f4', 'Eggs', 'Best in 9 days', 8, 'eggs', 9], ['f5', 'Greek yogurt', 'Sam used the last one · 9:40 am', 0, 'tubs', 5], ['f6', 'Cheddar', 'Best in 3 weeks', 1, 'block', 21], ['f7', 'Basil', 'Best in 4 days', 1, 'bunch', 4]]
+      },
+      pantry: {
+        soonTitle: 'Running low', soonIsDate: false, restTitle: 'In the pantry', total: 5, add: 'Add to the pantry…',
+        soon: [['p1', 'Rice', 'Bought 3 weeks ago', 1, 'cup', 0, 'About 1 cup']],
+        rest: [['p2', 'Chickpeas', 'Canned', 3, 'cans', 400], ['p3', 'Flour', 'Opened in May', 1, 'bag', 120], ['p4', 'Olive oil', 'About half left', 1, 'bottle', 200], ['p5', 'Spaghetti', 'From today’s receipt', 2, 'boxes', 300], ['p6', 'Bread', 'Best in 3 days', 1, 'loaf', 3]]
+      },
+      freezer: {
+        soonTitle: 'Use soon', soonIsDate: true, restTitle: 'In the freezer', total: 3, add: 'Add to the freezer…',
+        soon: [['z1', 'Chili leftovers', 'Frozen 3 months ago', 2, 'tubs', 7]],
+        rest: [['z2', 'Frozen peas', 'From today’s receipt', 1, 'bag', 180], ['z3', 'Ice cream', 'Opened', 1, 'tub', 60], ['z4', 'Salmon fillets', 'Frozen a month ago', 4, 'fillets', 60]]
+      }
+    };
+    const SHOP = [
+      { id: 't', name: 'Tomatoes', note: 'For Shakshuka', where: 'Fridge' },
+      { id: 'f', name: 'Feta', note: 'For Shakshuka', where: 'Fridge' },
+      { id: 'r', name: 'Rice', note: 'Running low', where: 'Pantry' },
+      { id: 'y', name: 'Frozen berries', note: 'Added by Sam', where: 'Freezer' },
+      { id: 'b', name: 'Bread', note: 'Added by Sam', where: 'Pantry' },
+      { id: 'o', name: 'Olive oil', note: 'Running low', where: 'Pantry' }
+    ];
+    const { qty, open, sort, listed, done, last } = this.state;
+    const isList = tab === 'tobuy';
+    const d = isList ? null : DATA[tab];
+    const mapItem = (isSoon) => ([id, name, meta, q0, unit, days, amount]) => {
+      const q = qty[id] ?? q0;
+      const isOpen = open === id;
+      return {
+        name, meta, qty: q, open: isOpen, expanded: isOpen ? 'true' : 'false',
+        chev: isOpen ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6',
+        metaStyle: 'font-size: 13px; ' + (isSoon && d.soonIsDate ? 'font-weight: 600; color: #8A5A2B;' : 'color: #6E6E68;'),
+        qtyLabel: q === 0 ? 'Used up' : amount ? (q === q0 ? amount : q + ' ' + unit) : (unit ? q + ' ' + unit : '× ' + q),
+        actionLabel: d && d.soonIsDate ? 'Find a recipe that uses it' : 'Add to To Buy',
+        listLabel: listed[id] ? 'On your To Buy list' : 'Add to To Buy',
+        toggleOpen: () => this.setState({ open: isOpen ? null : id }),
+        addToList: () => this.setState({ listed: { ...listed, [id]: true } }),
+        dec: () => this.setState({ qty: { ...qty, [id]: Math.max(0, q - 1) }, last: q === 1 ? { kind: 'qty', id, prev: 1, name } : last }),
+        inc: () => this.setState({ qty: { ...qty, [id]: q + 1 } })
+      };
+    };
+    let rest = d ? d.rest.slice() : [];
+    rest.sort(sort === 'az' ? (a, b) => a[1].localeCompare(b[1]) : (a, b) => a[5] - b[5]);
+    const left = SHOP.filter((s) => !done[s.id]).length;
+    return {
+      placeholder: isList ? 'Search your list' : 'Search the ' + tab,
+      isList, isStock: !isList,
+      hasSoon: !!(d && d.soon.length), soonIsDate: !!(d && d.soonIsDate),
+      soonTitle: d ? d.soonTitle : '', restTitle: d ? d.restTitle : '',
+      restCount: d ? d.total + ' items' : '',
+      addPlaceholder: d ? d.add : '',
+      soon: d ? d.soon.map(mapItem(true)) : [],
+      rest: rest.map(mapItem(false)),
+      sortLabel: sort === 'az' ? 'A–Z' : 'Use by',
+      sortAria: 'Sorted ' + (sort === 'az' ? 'A to Z' : 'by use-by date') + '. Tap to change.',
+      toggleSort: () => this.setState({ sort: sort === 'az' ? 'useby' : 'az' }),
+      hasUndo: !!last,
+      undoText: last ? (last.kind === 'qty' ? last.name + ' used up' : last.name + ' ticked off') : '',
+      undo: () => {
+        if (!last) return;
+        if (last.kind === 'qty') this.setState({ qty: { ...qty, [last.id]: last.prev }, last: null });
+        else this.setState({ done: { ...done, [last.id]: false }, last: null });
+      },
+      tabs: TABS.map(([id, label, bg]) => {
+        const on = id === tab;
+        return {
+          label, selected: on ? 'true' : 'false',
+          style: 'height: 44px; border-radius: 22px; padding: 0; border: none; font-size: 15px; cursor: pointer; ' + (on ? 'background: ' + bg + '; box-shadow: inset 0 0 0 1px rgba(26,26,24,0.12); font-weight: 600; color: #1A1A18;' : 'background: #F4F4F1; font-weight: 500; color: #6E6E68;'),
+          pick: () => this.setState({ tab: id, open: null, last: null })
+        };
+      }),
+      progress: (SHOP.length - left) + ' of ' + SHOP.length + ' done',
+      barFill: 'height: 4px; border-radius: 4px; background: #6F7D45; width: ' + Math.round(((SHOP.length - left) / SHOP.length) * 100) + '%;',
+      shop: SHOP.slice().sort((x, y) => (!!done[x.id]) - (!!done[y.id])).map((s) => {
+        const dn = !!done[s.id];
+        return {
+          name: s.name, where: s.where, note: dn ? 'Got it' : s.note, done: dn,
+          pressed: dn ? 'true' : 'false', aria: 'Mark ' + s.name + ' as bought',
+          boxStyle: 'width: 24px; height: 24px; box-sizing: border-box; border-radius: 7px; display: flex; align-items: center; justify-content: center; ' + (dn ? 'background: #56663A; border: 1.5px solid #56663A;' : 'background: transparent; border: 1.5px solid #B5B5AF;'),
+          nameStyle: 'font-size: 16px; ' + (dn ? 'color: #8C8C86; text-decoration: line-through;' : 'color: #1A1A18;'),
+          toggle: () => this.setState({ done: { ...done, [s.id]: !dn }, last: dn ? null : { kind: 'tick', id: s.id, name: s.name } })
+        };
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,176 @@
+{
+  "v": 3,
+  "assetGroups": {
+    "Icons": {
+      "name": "Icons",
+      "tile": "xs",
+      "order": [
+        "home.svg",
+        "scan.svg",
+        "receipt.svg",
+        "fridge.svg",
+        "pantry.svg",
+        "freezer.svg",
+        "to-buy.svg",
+        "recipes.svg",
+        "import.svg",
+        "search.svg",
+        "add.svg",
+        "check.svg",
+        "household.svg",
+        "account.svg",
+        "back.svg",
+        "close.svg",
+        "use-soon.svg",
+        "loading.svg",
+        "syncing.svg",
+        "cooking.svg"
+      ],
+      "files": {
+        "home.svg": {
+          "name": "home.svg",
+          "blob": "8979fd6719627bd76e15a995864c6184",
+          "size": 270,
+          "type": "image/svg+xml"
+        },
+        "scan.svg": {
+          "name": "scan.svg",
+          "blob": "473d0e9ca49cd75e1f8f67ced6fffe20",
+          "size": 373,
+          "type": "image/svg+xml"
+        },
+        "receipt.svg": {
+          "name": "receipt.svg",
+          "blob": "fe5c2994fd2eecb116e40e07055866e7",
+          "size": 287,
+          "type": "image/svg+xml"
+        },
+        "fridge.svg": {
+          "name": "fridge.svg",
+          "blob": "4200702f4c21715fe43cda98f17480bb",
+          "size": 282,
+          "type": "image/svg+xml"
+        },
+        "pantry.svg": {
+          "name": "pantry.svg",
+          "blob": "666fe2580817d412f3c9c61ebe6f863f",
+          "size": 364,
+          "type": "image/svg+xml"
+        },
+        "freezer.svg": {
+          "name": "freezer.svg",
+          "blob": "dcd00d498981a34b5db3ebc6dc3611f7",
+          "size": 303,
+          "type": "image/svg+xml"
+        },
+        "to-buy.svg": {
+          "name": "to-buy.svg",
+          "blob": "5349dd24dfd3903538fb4f9efa3cd501",
+          "size": 333,
+          "type": "image/svg+xml"
+        },
+        "recipes.svg": {
+          "name": "recipes.svg",
+          "blob": "f0d2696b5c1355715afcb409c8bbf1d1",
+          "size": 289,
+          "type": "image/svg+xml"
+        },
+        "import.svg": {
+          "name": "import.svg",
+          "blob": "f8d865b401a8ea46a2853299f19e00c3",
+          "size": 318,
+          "type": "image/svg+xml"
+        },
+        "search.svg": {
+          "name": "search.svg",
+          "blob": "45e1f202b60763061e34b0ebe200557c",
+          "size": 253,
+          "type": "image/svg+xml"
+        },
+        "add.svg": {
+          "name": "add.svg",
+          "blob": "9383e4e6f36d5ce75eebde97056333db",
+          "size": 218,
+          "type": "image/svg+xml"
+        },
+        "check.svg": {
+          "name": "check.svg",
+          "blob": "b94e05cb9ebfac97fe801108db5e39f6",
+          "size": 224,
+          "type": "image/svg+xml"
+        },
+        "household.svg": {
+          "name": "household.svg",
+          "blob": "1beae0225707ee7908e9c0d5b4db1355",
+          "size": 371,
+          "type": "image/svg+xml"
+        },
+        "account.svg": {
+          "name": "account.svg",
+          "blob": "c4c7370be86c73837006505fdb069049",
+          "size": 285,
+          "type": "image/svg+xml"
+        },
+        "back.svg": {
+          "name": "back.svg",
+          "blob": "8aa3bf0c8dcb520edf83a425896e7392",
+          "size": 216,
+          "type": "image/svg+xml"
+        },
+        "close.svg": {
+          "name": "close.svg",
+          "blob": "e42cde662a91b0fdb10686f24b3b3846",
+          "size": 222,
+          "type": "image/svg+xml"
+        },
+        "use-soon.svg": {
+          "name": "use-soon.svg",
+          "blob": "d494615855c8b825113d6d7f6e8e5bd9",
+          "size": 281,
+          "type": "image/svg+xml"
+        },
+        "loading.svg": {
+          "name": "loading.svg",
+          "blob": "604d72f4fb5fb970a41ad1352c9402ce",
+          "size": 282,
+          "type": "image/svg+xml"
+        },
+        "syncing.svg": {
+          "name": "syncing.svg",
+          "blob": "2d95b8b8b0465ffb78d13ad4fbfb0eba",
+          "size": 324,
+          "type": "image/svg+xml"
+        },
+        "cooking.svg": {
+          "name": "cooking.svg",
+          "blob": "d014dda0ff12826ef05f80ffd1b2229c",
+          "size": 412,
+          "type": "image/svg+xml"
+        }
+      }
+    }
+  },
+  "blobs": {},
+  "createdOnFiles": {
+    "at": "2026-10-09T01:56:00Z",
+    "v": 1
+  },
+  "docs": {
+    "readme": "project/README.md",
+    "sections": []
+  },
+  "groups": [
+    "Icons"
+  ],
+  "lastChange": {
+    "at": "2026-10-11T13:58:00Z",
+    "by": "Claude",
+    "note": "Section titles: semibold (600), underline removed",
+    "via": "Claude"
+  },
+  "layout": "files",
+  "libraries": [],
+  "namespace": "Cooked",
+  "sections": {},
+  "title": "Cooked"
+}

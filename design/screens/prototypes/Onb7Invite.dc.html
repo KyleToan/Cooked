@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cooked – Invite your household</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;500;600;700&amp;family=Alumni+Sans:wght@300;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#56663A;text-decoration:none}a:hover{color:#3F4B2A}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #FFFFFF; color: #1A1A18; font-family: 'Albert Sans', system-ui, sans-serif">
+  <div style="position: absolute; left: 24px; top: 56px; width: 342px; display: flex; flex-direction: column; gap: 20px">
+    <a href="Onb8Scan.dc.html" aria-label="Back" style="width: 44px; height: 44px; display: flex; align-items: center; color: #1A1A18">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>
+    </a>
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <h1 style="margin: 0; font-family: 'Alumni Sans', sans-serif; font-size: 36px; font-weight: 700; line-height: 1">Invite your household</h1>
+      <p style="margin: 0; font-size: 15px; line-height: 1.4; color: #6E6E68">Send the link by text or anywhere else. They’ll see the fridge, pantry, freezer and To Buy, and can add to them.</p>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px; height: 58px; box-sizing: border-box; padding: 0 8px 0 16px; border-radius: 14px; border: 1px solid #ECECE8">
+      <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+        <span style="font-size: 12px; color: #6E6E68">Invite link</span>
+        <span style="font-size: 15px">cooked.app/join/rivera-kitchen</span>
+      </span>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <span style="font-size: 13px; font-weight: 600; color: #6E6E68">In this kitchen</span>
+      <div style="display: flex; align-items: center; gap: 12px">
+        <span style="width: 36px; height: 36px; border-radius: 50%; background: #FAEDCD; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600; color: #2A2A26">A</span>
+        <span style="display: flex; flex-direction: column; gap: 1px"><span style="font-size: 15px; font-weight: 500">Alex</span><span style="font-size: 13px; color: #6E6E68">You</span></span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px">
+        <span style="width: 36px; height: 36px; box-sizing: border-box; border-radius: 50%; border: 1.5px dashed #CFCFC9"></span>
+        <span style="font-size: 14px; color: #6E6E68">{{otherStatus}}</span>
+      </div>
+    </div>
+  </div>
+  <div style="position: absolute; left: 24px; bottom: 40px; width: 342px; display: flex; flex-direction: column; gap: 12px">
+    <button onClick="{{share}}" style="height: 52px; border-radius: 26px; border: none; background: #CCD5AE; color: #1A1A18; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 16px; font-weight: 600">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1A1A18" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M8 8l4-4 4 4"></path><path d="M5 13v5.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V13"></path></svg>
+      {{shareLabel}}
+    </button>
+    <a href="Onb9Ready.dc.html" style="min-height: 44px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600">{{skipLabel}}</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { shared: false };
+  }
+  renderVals() {
+    return {
+      shareLabel: this.state.shared ? 'Share again' : 'Share invite link',
+      skipLabel: this.state.shared ? 'Done' : 'Skip for now',
+      otherStatus: this.state.shared ? 'Link sent. People show up here when they join.' : 'No one else yet',
+      share: () => this.setState({ shared: true })
+    };
+  }
+}
+</script>
+</body>
+</html>

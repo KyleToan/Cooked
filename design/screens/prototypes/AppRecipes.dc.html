@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cooked – Recipes</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;500;600;700&amp;family=Alumni+Sans:wght@300;600;700&amp;family=Caveat:wght@400;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#56663A;text-decoration:none}a:hover{color:#3F4B2A}
+button,input{font-family:inherit}
+input::placeholder{color:#8C8C86}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #FFFFFF; color: #1A1A18; font-family: 'Albert Sans', system-ui, sans-serif">
+  <div style="position: absolute; left: 0; top: 0; width: 390px; height: 844px; box-sizing: border-box; overflow-y: auto; padding: 60px 20px 130px; display: flex; flex-direction: column; gap: 24px">
+
+    <div style="display: flex; align-items: flex-end; justify-content: space-between">
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <span style="font-size: 15px; font-weight: 500; color: #6E6E68">5 saved · 2 you can make now</span>
+        <h1 style="margin: 0; font-family: 'Alumni Sans', sans-serif; font-size: 48px; font-weight: 700; line-height: 0.95; letter-spacing: -0.005em">Recipes</h1>
+      </div>
+      <a href="AppImport.dc.html" style="height: 44px; padding: 0 16px; border-radius: 999px; background: #F4F4F1; color: #1A1A18; display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 500">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#56663A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"></path><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path></svg>
+        Import
+      </a>
+    </div>
+
+    <label style="display: flex; align-items: center; gap: 12px; height: 50px; flex-shrink: 0; box-sizing: border-box; padding: 0 16px; border-radius: 16px; border: 1px solid #ECECE8; background: #FFFFFF">
+      <input type="search" placeholder="Search recipes or an ingredient" aria-label="Search recipes or an ingredient" style="flex: 1; min-width: 0; border: none; background: transparent; font-size: 16px; color: #1A1A18; outline: none; padding: 0">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1A1A18" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4 4"></path></svg>
+    </label>
+
+    <section style="display: flex; flex-direction: column; gap: 10px">
+      <h2 style="margin: 0; font-family: 'Alumni Sans', sans-serif; font-size: 28px; font-weight: 600; line-height: 1.05">Tonight</h2>
+      <div style="position: relative; margin: 8px 2px 0; padding: 20px 18px 18px; background: #FEFAE0; border-radius: 3px 3px 16px 3px; box-shadow: 0 1px 1px rgba(26,26,24,0.06), 0 8px 16px -6px rgba(26,26,24,0.18); transform: rotate(-0.8deg); display: flex; flex-direction: column; gap: 8px">
+        <span style="position: absolute; top: -9px; left: 50%; width: 52px; height: 17px; margin-left: -26px; transform: rotate(-3deg); background: rgba(255,255,255,0.65); border: 1px solid rgba(26,26,24,0.06)"></span>
+        <a href="AppRecipeTonight.dc.html" style="font-family: 'Caveat', cursive; font-size: 30px; font-weight: 700; line-height: 1; color: #2A2A26">Spinach &amp; chicken pasta</a>
+        <span style="font-size: 13px; color: #4A4A42">30 min · 2 servings · you have all 8 things</span>
+        <span style="display: flex; align-items: center; gap: 6px; font-size: 14px; line-height: 1.4; color: #2A2A26">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A5A2B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0"><circle cx="12" cy="13.5" r="7.5"></circle><path d="M12 10v3.5l2.5 1.5M10 2.5h4M12 2.5V6"></path></svg>
+          <span>Uses the spinach and chicken that need using soon.</span>
+        </span>
+        <a href="AppRecipeTonight.dc.html" style="align-self: flex-start; margin-top: 4px; height: 44px; padding: 0 18px; border-radius: 999px; background: #CCD5AE; color: #1A1A18; display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1A1A18" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11h16v2.5A6.5 6.5 0 0 1 13.5 20h-3A6.5 6.5 0 0 1 4 13.5z"></path><path d="M2.5 11h19M9 7.5c0-1.2 1-1.5 1-2.7M14 7.5c0-1.2 1-1.5 1-2.7"></path></svg>
+          Cook this
+        </a>
+      </div>
+    </section>
+
+    <section style="display: flex; flex-direction: column; gap: 6px">
+      <div style="display: flex; gap: 8px; overflow-x: auto; margin: 0 -20px; padding: 0 20px">
+        <sc-for list="{{filters}}" as="f" hint-placeholder-count="4">
+          <button onClick="{{f.pick}}" aria-pressed="{{f.selected}}" style="{{f.style}}">{{f.label}}</button>
+        </sc-for>
+      </div>
+
+      <div style="display: flex; flex-direction: column">
+        <sc-for list="{{recipes}}" as="r" hint-placeholder-count="4">
+          <div style="display: flex; flex-direction: column; gap: 4px; padding: 14px 0 10px; border-bottom: 1px solid #F1F1EE">
+            <a href="AppRecipe.dc.html" style="display: flex; align-items: flex-start; gap: 14px; color: #1A1A18">
+              <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px">
+                <span style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px">
+                  <span style="font-size: 17px; font-weight: 600">{{r.name}}</span>
+                  <span style="flex-shrink: 0; font-size: 13px; color: #6E6E68">{{r.time}}</span>
+                </span>
+                <span style="font-size: 14px; line-height: 1.45; color: #6E6E68">{{r.have}}</span>
+                <span style="font-size: 12px; color: #6E6E68">{{r.source}}</span>
+              </span>
+            </a>
+            <sc-if value="{{r.hasMissing}}" hint-placeholder-val="{{ true }}">
+              <button onClick="{{r.toggleList}}" aria-pressed="{{r.pressed}}" style="{{r.listStyle}}">
+                <sc-if value="{{r.added}}" hint-placeholder-val="{{ false }}">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+                </sc-if>
+                <sc-if value="{{r.notAdded}}" hint-placeholder-val="{{ true }}">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+                </sc-if>
+                {{r.listLabel}}
+              </button>
+            </sc-if>
+          </div>
+        </sc-for>
+        <sc-if value="{{isEmpty}}" hint-placeholder-val="{{ false }}">
+          <p style="margin: 0; padding: 18px 0; font-size: 14px; line-height: 1.45; color: #6E6E68">Nothing here yet. Import a recipe and we’ll check it against your kitchen.</p>
+        </sc-if>
+      </div>
+    </section>
+  </div>
+
+  <div style="position: absolute; left: 45px; bottom: 28px; width: 300px; height: 68px">
+    <dc-import name="CookedIsland" active="recipes" hint-size="300px,68px"></dc-import>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { filter: 'all', added: {} };
+  }
+  renderVals() {
+    const R = [
+      { id: 'sh', name: 'Shakshuka', time: '25 min', have: 6, need: 8, missing: ['tomatoes', 'feta'], source: 'Imported from somekitchenblog.com', imported: true },
+      { id: 'cc', name: 'Chickpea curry', time: '35 min', have: 9, need: 9, missing: [], source: 'Saved by Sam', imported: false },
+      { id: 'oo', name: 'Berry overnight oats', time: '10 min', have: 4, need: 5, missing: ['frozen berries'], source: 'Scanned from a cookbook', imported: false },
+      { id: 'pp', name: 'Pesto pasta', time: '20 min', have: 4, need: 7, missing: ['pine nuts', 'parmesan', 'garlic'], source: 'Imported from a link', imported: true }
+    ];
+    const F = [['all', 'All'], ['now', 'Can make now'], ['almost', 'Missing 1–2'], ['imported', 'Imported']];
+    const { filter: f, added } = this.state;
+    const shown = R.filter((r) => {
+      const miss = r.need - r.have;
+      return f === 'all' || (f === 'now' && miss === 0) || (f === 'almost' && miss > 0 && miss <= 2) || (f === 'imported' && r.imported);
+    });
+    const chip = 'height: 44px; box-sizing: border-box; border-top: 4px solid transparent; border-bottom: 4px solid transparent; border-left: none; border-right: none; background-clip: padding-box; border-radius: 999px; cursor: pointer; ';
+    return {
+      isEmpty: shown.length === 0,
+      filters: F.map(([id, label]) => {
+        const on = id === f;
+        return {
+          label, selected: on ? 'true' : 'false',
+          style: chip + 'padding: 0 14px; flex-shrink: 0; white-space: nowrap; font-size: 14px; ' + (on ? 'background-color: #CCD5AE; font-weight: 600; color: #1A1A18;' : 'background-color: #F4F4F1; font-weight: 500; color: #6E6E68;'),
+          pick: () => this.setState({ filter: id })
+        };
+      }),
+      recipes: shown.map((r) => {
+        const n = r.missing.length;
+        const a = !!added[r.id];
+        const list = r.missing.length > 1 ? r.missing.slice(0, -1).join(', ') + ' and ' + r.missing[r.missing.length - 1] : r.missing[0];
+        return {
+          name: r.name, time: r.time, source: r.source,
+          have: n === 0 ? 'You have all ' + r.need + ' things.' : 'You have ' + r.have + ' of ' + r.need + '. Missing ' + list + '.',
+          hasMissing: n > 0, added: a, notAdded: !a, pressed: a ? 'true' : 'false',
+          listLabel: a ? 'Added to To Buy' : 'Add ' + n + ' to To Buy',
+          listStyle: chip + 'align-self: flex-start; padding: 0 12px; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; ' + (a ? 'background-color: #FFFFFF; box-shadow: inset 0 0 0 1px #ECECE8; color: #56663A;' : 'background-color: #F4F4F1; color: #1A1A18;'),
+          toggleList: () => this.setState({ added: { ...added, [r.id]: !a } })
+        };
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

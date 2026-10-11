@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cooked – Your name</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;500;600;700&amp;family=Alumni+Sans:wght@300;600;700&amp;family=Caveat:wght@400;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#56663A;text-decoration:none}a:hover{color:#3F4B2A}
+input{font-family:inherit}
+input::placeholder{color:#8C8C86}
+.ck-field{border:1px solid #ECECE8}
+.ck-field:focus-within{border-color:#56663A;box-shadow:inset 0 0 0 0.5px #56663A}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #FFFFFF; color: #1A1A18; font-family: 'Albert Sans', system-ui, sans-serif">
+  <div style="position: absolute; left: 24px; top: 56px; width: 342px; display: flex; flex-direction: column; gap: 20px">
+    <a href="Onb4Code.dc.html" aria-label="Back" style="width: 44px; height: 44px; display: flex; align-items: center; color: #1A1A18">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>
+    </a>
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <h1 style="margin: 0; font-family: 'Alumni Sans', sans-serif; font-size: 36px; font-weight: 700; line-height: 1">What should we call you?</h1>
+    </div>
+    <label for="onb-name" class="ck-field" style="border: 1.5px solid #56663A; display: flex; flex-direction: column; justify-content: center; gap: 2px; height: 58px; box-sizing: border-box; padding: 0 16px; border-radius: 14px; ">
+      <span style="font-size: 12px; color: #6E6E68">First name</span>
+      <input id="onb-name" type="text" value="{{name}}" onChange="{{onName}}" style="border: none; outline: none; padding: 0; font-size: 16px; color: #1A1A18; background: transparent">
+    </label>
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <span style="font-size: 13px; font-weight: 600; color: #6E6E68">How it shows up</span>
+      <div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: #F4F4F1">
+        <span style="width: 20px; height: 20px; box-sizing: border-box; flex-shrink: 0; border-radius: 6px; border: 1.5px solid #CFCFC9"></span>
+        <span style="display: flex; flex-direction: column; gap: 1px">
+          <span style="font-size: 15px">Tomatoes</span>
+          <span style="font-size: 12px; color: #6E6E68">Added by {{shownName}}</span>
+        </span>
+      </div>
+    </div>
+    <a href="Onb6Household.dc.html" style="height: 52px; border-radius: 26px; background: #CCD5AE; color: #1A1A18; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600">Next</a>
+  </div>
+  <div style="position: absolute; left: 0; bottom: 0; width: 390px; height: 291px">
+    <dc-import name="CookedKeyboard" layout="letters" suggest="Alex" hint="" href="" hint-size="390px,291px"></dc-import>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { name: 'Alex' };
+  }
+  renderVals() {
+    const n = this.state.name;
+    return {
+      name: n,
+      shownName: n.trim() || 'you',
+      onName: (e) => this.setState({ name: e.target.value })
+    };
+  }
+}
+</script>
+</body>
+</html>

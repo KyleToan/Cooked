@@ -1,0 +1,28 @@
+---
+description: Cooked design rules for any UI work
+alwaysApply: true
+---
+
+# Building Cooked UI
+
+Before writing or changing any screen or component:
+
+1. Read `AGENTS.md`, `design/README.md` and `design/system/README.md`.
+2. Find the screen in `design/screens/README.md`. Open its screenshot in `design/screens/screenshots/` and its prototype in `design/screens/prototypes/`.
+3. Check the finished UI against `design/system/avoid-the-ai-look.md`. Anything on that list means it isn't done.
+
+## Rules
+
+- Every color, font, size, space, radius and shadow comes from the theme file built from `design/system/tokens.json`. Never hard-code a hex value or a font size in a view.
+- Fonts: Alumni Sans only for screen titles (700) and section headings (600, no underline), always 24px or bigger. Albert Sans for everything else. Caveat only on sticky notes.
+- One sage (`sage`) button per screen. Every other button is a grey `surface-sunken` pill or a `sage-ink` text link.
+- Bronze (`bronze`, `bronze-ink`) only marks food to use soon. Never use it for buttons, links or progress.
+- Destructive actions are `error-ink` text buttons, never filled.
+- No black buttons, black cards or a black tab island.
+- Lists are flat rows with `line-soft` dividers, not cards.
+- Tap targets are at least 44pt, even when the drawn control is smaller.
+- Use only the 20 icons in `design/system/icons/`.
+- Use the system keyboard, share sheet, camera and Sign in with Apple. The prototypes fake these.
+- Copy comes from the prototype. Don't rewrite it or invent new copy without asking.
+- Build only what the prototype shows. If something is missing (a state, an edge case), make the smallest choice that fits the design system and log it in `Decisions.md`.
+- Where design files disagree, `design/system/README.md` and `design/system/tokens.json` win. See "Where the files disagree" in `design/README.md`.

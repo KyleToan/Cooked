@@ -1,99 +1,78 @@
 # Context
 
-Everything an agent or new contributor needs to know about Cooked. Rules for agents are in `AGENTS.md`; the decision history is in `Decisions.md`.
-
-> Note: this was written from the saved design artifacts. Claude can't see past chat conversations, so anything discussed only in chat isn't here yet. Add it to the "Notes from conversations" section.
+Everything an agent or new contributor needs to know about Cooked. Rules for agents are in `AGENTS.md`; the decision history is in `Decisions.md`; the design spec is in `design/`.
 
 ## What Cooked is
 
 Cooked is a shared kitchen app for a household. You:
 
-- **Scan** a receipt (or your fridge, pantry, food or a recipe) to stock your kitchen.
-- **Track** what's in your Fridge, Pantry and Freezer, with quantities and expiry dates.
-- **Import** recipes.
-- **Share one shopping list** with the people you live with.
+- **Scan** a grocery receipt (or your fridge, pantry, freezer, or a recipe) and Cooked puts each item where it lives.
+- **Track** what's in your Fridge, Pantry and Freezer, with quantities and what to use soon.
+- **Import** recipes from a link or pasted text and see what you already have for them.
+- **Share one To Buy list** with the people you live with.
 
-The feel: calm, white, uncluttered, with one warm, homemade touch (sticky notes on a fridge door). It should feel shared, not solo: "Added by Sam", a household button, a greeting with your name.
+It's also for people who cook alone (the "Just me" path in onboarding).
+
+The feel: calm, white, uncluttered, with one warm, homemade touch (sticky notes on a fridge door). It should feel shared, not solo: "Added by Sam", a household screen, a greeting with your name.
 
 ## Platform
 
-- Mobile app, designed at iPhone size (390 × 844).
+- iPhone app first, designed at 390 × 844. Native iOS expectations apply: back gestures, Sign in with Apple, the system share sheet and keyboard.
 - Tech stack: not chosen yet. Record it in `Decisions.md` when it is.
 
 ## Screens
 
-### Home (approved: "Home – minimal")
+Every screen is designed. `design/screens/README.md` lists them all with their states and where each one goes; `design/screens/screenshots/` has a picture of each.
 
-1. Greeting ("Good evening, Alex") and title "Cooked", account button on the right.
-2. Search field.
-3. Two action pills: **Scan** and **Import**.
-4. **Your Kitchen**: 2×2 grid of sticky notes: Fridge, Pantry, Freezer, List, each with a count ("12 items", "3 to buy") and maybe one urgent note ("2 expiring!").
-5. **To Buy**: shared shopping list card with progress ("1 of 3 done"), checkboxes, notes ("For Shakshuka", "Added by Sam") and location tags. "Add an item…" row at the bottom.
-6. Floating tab island: Home, Scan, Recipes.
-
-### Scan
-
-- Full-screen live camera with corner guides and a capture button.
-- Prompt: "Point your camera at your fridge, pantry, food, receipt, or recipe."
-- Mode picker: Fridge, Pantry, Freezer, Receipt (default), Recipe. The hint changes with the mode ("Scan a receipt to stock up", "Adding to Fridge", "Import a recipe").
-- Close button and a share-with-household button. Dark see-through controls are allowed here only.
-
-### Import
-
-- A pop-up sheet over Home for importing a recipe.
-
-### Kitchen: Fridge, Pantry, Freezer
-
-- Tabs for Fridge, Pantry, Freezer and Shopping list; search per location.
-- Filters, e.g. Fridge: All, Expiring soon, Produce, Dairy, Meat & fish, Leftovers. Pantry: Running low, Grains & pasta, Canned, Baking, Spices. Freezer: Meat & fish, Veggies, Meals, Desserts.
-- Each item: initial as a placeholder image, name, "N left · Expires in X days" (urgent ones highlighted), and a "Use" button that takes one away.
-- Sorting: Expiring first (Fridge/Freezer), A–Z (Pantry).
-
-### Shopping list
-
-- Items with a reason and location ("For Shakshuka · Fridge", "Running low · Pantry", "Added by household").
-- Mark as bought; bought items cross out. Filters: To buy, Bought, From recipes. Sort by aisle. "Add item".
-
-### Recipes
-
-- A main tab. Not designed yet.
-
-Note: the Kitchen and Shopping list mockups were made **before** the design system. Their layout and features are still the plan, but they use the old look (grey background, black pills, 5-tab bar). Rebuild them with the design system: white background, soft grey pills, bronze accent, tab island.
+- **App:** Home (and an empty first-run Home), Scan, Check your scan, Couldn't read this receipt, Your Kitchen (Fridge, Pantry, Freezer and To Buy tabs), Recipes, Recipe, Import a recipe (and its error), Account (and the delete-account sheet), Rivera kitchen (household), Notifications.
+- **Onboarding:** Welcome, Log in or sign up (Apple, Google, email or phone with a code, no password), Your name, Who you cook with (Just me / Me and my household / I have an invite), Join a kitchen, Scan your first receipt, camera and check items, Invite your household, Your kitchen is ready.
 
 ## Design
 
-The full design system is in `AGENTS.md` and at https://claude.ai/artifact/9uaDBLc2WkxCCJrooL3gki. In short:
+The full design system is in `design/system/` and at https://claude.ai/artifact/9uaDBLc2WkxCCJrooL3gki. In short:
 
-- White background, ink text, **Light Bronze** as the only accent.
-- **Instrument Sans** for UI, **Caveat** handwriting only on sticky notes.
-- Soft grey pill buttons, no black buttons.
-- Sticky notes in Cornsilk, Papaya, Beige, Sage for kitchen locations.
+- White background, ink text.
+- **Sage** (`#CCD5AE`) is the action color: one sage button per screen, `sage-ink` links and icons. Grey pills for everything else.
+- **Bronze** only marks food to use soon. **Red** (`error-ink`) only for errors and destructive text.
+- **Alumni Sans** for titles (bold) and section headings (semibold), **Albert Sans** for everything else, **Caveat** handwriting only on sticky notes.
+- Sticky notes in Cornsilk (Fridge), Papaya (Pantry) and Beige (Freezer).
 - Floating tab island: Home, Scan, Recipes.
-- Every screen must pass the **Avoid the AI look** list.
+- 20 custom icons on a 24px grid.
+- Every screen must pass **Avoid the AI look** (`design/system/avoid-the-ai-look.md`).
+
+## How sharing works in the design
+
+- A household is a "kitchen" (e.g. "Rivera kitchen"). Everyone in it shares the fridge, pantry, freezer, To Buy and recipes.
+- You join with an invite link (`cooked.app/join/<kitchen>`) or the code at the end of it. A link works for one person and runs out after 7 days. "Make a new link" kills the old one.
+- People can be removed from the kitchen (the design shows Alex, who made it, removing Sam). What they added stays. Removing asks first and can be undone. Who is allowed to remove whom isn't decided yet.
+- Leaving a kitchen leaves it with the others and starts you a new, empty one. Deleting your account removes your sign-in and name; the kitchen stays for everyone else.
+- Activity is shown by name: "Added by Sam", "Sam used the last one · 9:40 am".
 
 ## Sample data used in designs
 
-- People: Alex (the user), Sam (housemate).
-- Fridge: Spinach, Milk, Eggs, Greek yogurt, Chicken thighs, Cheddar.
-- Pantry: Rice, Spaghetti, Chickpeas, Olive oil, Flour.
-- Freezer: Frozen peas, Salmon fillets, Chili (leftovers), Ice cream.
-- Shopping: Tomatoes, Feta (for Shakshuka), Bread, Rice, Frozen berries.
+- People: Alex Rivera (the user, alex.rivera@gmail.com), Sam (housemate, joined Oct 3). Kitchen: Rivera kitchen.
+- Fridge: Spinach, Chicken thighs (use soon), Basil, Cheddar, Eggs, Greek yogurt, Milk 2%.
+- Pantry: Rice, Bread, Chickpeas, Flour, Olive oil, Spaghetti.
+- Freezer: Chili leftovers, Frozen peas, Ice cream, Salmon fillets.
+- To Buy: Tomatoes and Feta (for Shakshuka), Frozen berries (added by Sam), Rice, Bread, Olive oil.
+- Recipes: Shakshuka (25 min, 2 servings, missing tomatoes and feta), Spinach & chicken pasta (tonight's pick, uses the use-soon items).
+- Receipt: Corner Market, 7 items, one of them (paper towels) skipped as not food.
 
 ## Design files
 
 | File | Link | What it is |
 | --- | --- | --- |
-| Cooked design system | https://claude.ai/artifact/9uaDBLc2WkxCCJrooL3gki | Source of truth for the look. |
-| Cooked Scan Screen canvas | https://claude.ai/artifact/4Y3vzFjNNfX7kS88MV3mGV | Mockups: Home, Import pop-up, Scan, Fridge, Pantry, Freezer, Shopping list, Home – minimal. |
+| Cooked design system | https://claude.ai/artifact/9uaDBLc2WkxCCJrooL3gki | Source of truth for the look. Copy in `design/system/`. |
+| Cooked canvas | https://claude.ai/artifact/4Y3vzFjNNfX7kS88MV3mGV | Every screen. Copy in `design/screens/`. |
 
 ## Open questions
 
-- Tech stack (native iOS, React Native, Flutter, web?).
-- Backend, accounts and how households share data.
-- How receipt and food scanning works (OCR / vision service).
-- How recipe import works (link, photo, paste).
-- Recipes screen design.
-- Notifications for expiring food?
+- Tech stack (native SwiftUI, React Native / Expo, Flutter?).
+- Backend, accounts and real-time sync for a shared kitchen.
+- How receipt scanning works (on-device OCR such as Apple Vision, or a service) and how items get sorted into fridge, pantry or freezer.
+- How recipe import works (fetching and parsing a page, or pasted text).
+- How "use soon" dates are worked out (typical shelf life per item, or entered by hand).
+- Push notifications: the design has To Buy changes, a daily use-soon nudge, someone joining and a weekly summary.
 
 ## Notes from conversations
 

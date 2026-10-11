@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cooked – Recipe</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;500;600;700&amp;family=Alumni+Sans:wght@300;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#56663A;text-decoration:none}a:hover{color:#3F4B2A}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #FFFFFF; color: #1A1A18; font-family: 'Albert Sans', system-ui, sans-serif">
+  <div style="position: absolute; left: 0; top: 0; width: 390px; height: 844px; box-sizing: border-box; overflow-y: auto; padding: 52px 20px 140px; display: flex; flex-direction: column; gap: 22px">
+
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <div style="display: flex; align-items: center; gap: 4px; margin-left: -12px">
+        <a href="AppRecipes.dc.html" aria-label="Back to recipes" style="width: 44px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #1A1A18">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>
+        </a>
+        <h1 style="margin: 0; font-family: 'Alumni Sans', sans-serif; font-size: 36px; font-weight: 700; line-height: 1; letter-spacing: -0.005em">{{title}}</h1>
+      </div>
+      <span style="font-size: 14px; color: #6E6E68">{{meta}}</span>
+    </div>
+
+    <sc-if value="{{hasPhoto}}" hint-placeholder-val="{{ true }}">
+      <div role="img" aria-label="{{photoAlt}}" style="height: 200px; flex-shrink: 0; border-radius: 16px; background: #F1F1EE; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: #8C8C86; font-size: 13px">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#B5B5AF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="14" rx="2"></rect><path d="M3.5 16l5-4.5 4 3.5 3-2.5 5 4"></path><circle cx="15.5" cy="9.5" r="1.4"></circle></svg>
+        [Photo from the recipe page]
+      </div>
+    </sc-if>
+
+    <sc-if value="{{hasMissing}}" hint-placeholder-val="{{ true }}">
+      <section style="display: flex; flex-direction: column; gap: 4px">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 4px">
+          <h2 style="margin: 0; font-family: 'Alumni Sans', sans-serif; font-size: 28px; font-weight: 600; line-height: 1.05">Missing</h2>
+          <button onClick="{{toggleList}}" aria-pressed="{{listPressed}}" style="{{listStyle}}">{{listLabel}}</button>
+        </div>
+        <sc-for list="{{missing}}" as="m" hint-placeholder-count="2">
+          <div style="display: flex; align-items: center; justify-content: space-between; min-height: 48px; border-bottom: 1px solid #F1F1EE; font-size: 16px">
+            <span>{{m.name}}</span>
+            <span style="{{m.style}}">{{m.state}}</span>
+          </div>
+        </sc-for>
+      </section>
+    </sc-if>
+
+    <section style="display: flex; flex-direction: column; gap: 4px">
+      <h2 style="margin: 0 0 4px; font-family: 'Alumni Sans', sans-serif; font-size: 28px; font-weight: 600; line-height: 1.05">You have</h2>
+      <sc-for list="{{have}}" as="h" hint-placeholder-count="6">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; border-bottom: 1px solid #F1F1EE">
+          <span style="display: flex; flex-direction: column; gap: 1px">
+            <span style="font-size: 16px">{{h.name}}</span>
+            <sc-if value="{{h.soon}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; font-weight: 600; color: #8A5A2B">Use soon</span></sc-if>
+          </span>
+          <span style="font-size: 13px; color: #6E6E68">{{h.where}}</span>
+        </div>
+      </sc-for>
+    </section>
+
+    <section style="display: flex; flex-direction: column; gap: 10px">
+      <h2 style="margin: 0; font-family: 'Alumni Sans', sans-serif; font-size: 28px; font-weight: 600; line-height: 1.05">Steps</h2>
+      <ol style="margin: 0; padding: 0 0 0 22px; display: flex; flex-direction: column; gap: 12px; font-size: 16px; line-height: 1.5">
+        <sc-for list="{{steps}}" as="st" hint-placeholder-count="4">
+          <li style="padding-left: 4px">{{st.text}}</li>
+        </sc-for>
+      </ol>
+      <a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600">{{sourceLink}}</a>
+    </section>
+  </div>
+
+  <div style="position: absolute; left: 0; bottom: 0; width: 390px; box-sizing: border-box; padding: 14px 20px 30px; background: #FFFFFF; border-top: 1px solid #ECECE8; display: flex; flex-direction: column; gap: 8px">
+    <sc-if value="{{notMade}}" hint-placeholder-val="{{ true }}">
+      <button onClick="{{make}}" style="height: 52px; border-radius: 26px; border: none; background: #CCD5AE; color: #1A1A18; cursor: pointer; font-size: 16px; font-weight: 600">I made this</button>
+    </sc-if>
+    <sc-if value="{{made}}" hint-placeholder-val="{{ false }}">
+      <div role="status" style="height: 52px; box-sizing: border-box; padding: 0 6px 0 18px; border-radius: 26px; border: 1px solid #ECECE8; display: flex; align-items: center; justify-content: space-between; font-size: 15px">
+        <span>{{madeText}}</span>
+        <button onClick="{{undo}}" style="height: 44px; padding: 0 14px; border: none; background: transparent; cursor: pointer; font-size: 15px; font-weight: 600; color: #56663A">Undo</button>
+      </div>
+    </sc-if>
+    <span style="text-align: center; font-size: 12px; color: #6E6E68">{{madeHint}}</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"recipe":{"editor":"enum","options":["shakshuka","pasta"],"default":"shakshuka"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { added: false, made: false };
+  }
+  renderVals() {
+    const RECIPES = {
+      shakshuka: {
+        title: 'Shakshuka', meta: '25 min · 2 servings', photo: true, source: 'Open the original on somekitchenblog.com',
+        missing: ['Tomatoes', 'Feta'],
+        have: [['Eggs', 'Fridge', false], ['Onion', 'Pantry', false], ['Red pepper', 'Fridge', false], ['Garlic', 'Pantry', false], ['Cumin', 'Pantry', false], ['Olive oil', 'Pantry', false]],
+        steps: ['Soften the onion and pepper in olive oil, about 8 minutes.', 'Add garlic and cumin, then the tomatoes. Simmer 10 minutes until thick.', 'Make 4 wells and crack in the eggs. Cover and cook 5 to 7 minutes.', 'Crumble feta on top and serve with bread.']
+      },
+      pasta: {
+        title: 'Spinach & chicken pasta', meta: '30 min · 2 servings · saved by Sam', photo: false, source: 'Saved by Sam from a cookbook',
+        missing: [],
+        have: [['Spinach', 'Fridge', true], ['Chicken thighs', 'Fridge', true], ['Spaghetti', 'Pantry', false], ['Garlic', 'Pantry', false], ['Cheddar', 'Fridge', false], ['Milk 2%', 'Fridge', false], ['Olive oil', 'Pantry', false], ['Basil', 'Fridge', false]],
+        steps: ['Boil the spaghetti in salted water.', 'Brown the chicken in olive oil, 6 to 7 minutes a side, then slice.', 'Soften the garlic, add milk and cheddar, and stir until smooth.', 'Stir in spinach until it wilts, then the pasta, chicken and basil.']
+      }
+    };
+    const STAPLES = ['Olive oil', 'Cumin'];
+    const r = RECIPES[this.props.recipe ?? 'shakshuka'] || RECIPES.shakshuka;
+    const { added, made } = this.state;
+    const n = r.missing.length;
+    return {
+      title: r.title, meta: r.meta, hasPhoto: r.photo, photoAlt: 'Photo of ' + r.title + ' from the recipe page',
+      sourceLink: r.source,
+      hasMissing: n > 0,
+      listLabel: added ? 'On To Buy' : 'Add ' + n + ' to To Buy',
+      listPressed: added ? 'true' : 'false',
+      listStyle: 'height: 44px; box-sizing: border-box; border-top: 4px solid transparent; border-bottom: 4px solid transparent; border-left: none; border-right: none; background-clip: padding-box; border-radius: 999px; padding: 0 14px; cursor: pointer; font-size: 14px; font-weight: 600; ' + (added ? 'background-color: #FFFFFF; box-shadow: inset 0 0 0 1px #ECECE8; color: #56663A;' : 'background-color: #F4F4F1; color: #1A1A18;'),
+      toggleList: () => this.setState({ added: !added }),
+      missing: r.missing.map((name) => ({
+        name, state: added ? 'On To Buy' : '',
+        style: 'font-size: 13px; ' + (added ? 'font-weight: 600; color: #56663A;' : 'color: #6E6E68;')
+      })),
+      have: r.have.map(([name, where, soon]) => ({ name, where, soon })),
+      steps: r.steps.map((text) => ({ text })),
+      notMade: !made, made,
+      madeText: 'Took ' + r.have.filter(([nm]) => !STAPLES.includes(nm)).length + ' things out of your kitchen',
+      madeHint: made ? 'Oil and spices stay in the pantry.' : 'We’ll take what you used out of your kitchen.',
+      make: () => this.setState({ made: true }),
+      undo: () => this.setState({ made: false })
+    };
+  }
+}
+</script>
+</body>
+</html>
