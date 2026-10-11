@@ -73,8 +73,9 @@ export default function Invite() {
 const styles = StyleSheet.create({
   grow: { flex: 1 },
   link: {
-    height: size.controlHeight + space.s3 - 2,
+    minHeight: size.controlHeight + space.s3 - 2,
     paddingHorizontal: space.s4,
+    paddingVertical: space.s2,
     justifyContent: 'center',
     gap: 2,
     borderRadius: radius.control,

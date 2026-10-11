@@ -67,6 +67,7 @@ export function ProgressBar({ value }: { value: number }) {
     <View
       style={styles.track}
       accessibilityRole="progressbar"
+      accessibilityLabel="To Buy progress"
       accessibilityValue={{ min: 0, max: 100, now: pct }}
     >
       <View style={[styles.fill, { width: `${pct}%` }]} />
@@ -77,7 +78,7 @@ export function ProgressBar({ value }: { value: number }) {
 export function TodoRow({ item, onToggle }: { item: ToBuyItem; onToggle: () => void }) {
   return (
     <View style={styles.row}>
-      <Checkbox checked={item.done} onPress={onToggle} label={`Mark ${item.name} as bought`} />
+      <Checkbox checked={item.done} onPress={onToggle} label={item.name} />
       <View style={styles.rowText}>
         <Text color={item.done ? 'inkOff' : 'ink'} strike={item.done}>
           {item.name}
@@ -131,6 +132,6 @@ const styles = StyleSheet.create({
     borderBottomColor: color.lineSoft,
   },
   rowText: { flex: 1, minWidth: 0, gap: 2, paddingVertical: space.s2 },
-  add: { height: size.rowHeight, flexDirection: 'row', alignItems: 'center', gap: space.s3 + 2 },
+  add: { minHeight: size.rowHeight, paddingVertical: space.s2, flexDirection: 'row', alignItems: 'center', gap: space.s3 + 2 },
   addInput: { ...type.body, flex: 1, minWidth: 0, color: color.ink, paddingVertical: 0, outlineWidth: 0 },
 });

@@ -1,8 +1,11 @@
 import { useRouter } from 'expo-router';
 import type { BottomTabBarProps } from 'expo-router/tabs';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Pressable, StyleSheet, View, type LayoutRectangle } from 'react-native';
+import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { haptics } from '@/hooks/haptics';
 import { useGoToTab } from '@/hooks/useGoToTab';
 import { color, radius, shadow, size, space } from '@/theme';
 import { Icon } from './Icon';
@@ -22,42 +25,94 @@ const TABS: Tab[] = [
 const ISLAND_ICON = 22;
 const MARK_WIDTH = 16;
 const MARK_HEIGHT = 2.5;
+const ISLAND_BORDER = 1;
+/** The island is chrome: its labels grow with Dynamic Type, but only a little, so the pill keeps its shape. */
+export const CHROME_TEXT_MAX = 1.3;
+
+/** Critically damped, about 0.3s; instant when the person has asked for less motion. */
+const SLIDE = { duration: 300, dampingRatio: 1, reduceMotion: ReduceMotion.System } as const;
+
+/** Distance from the bottom of the screen to the bottom of the island. */
+export function islandEdge(insetBottom: number) {
+  return Math.max(space.s6, insetBottom + space.s2);
+}
 
 /**
  * The floating tab island: Home, Scan and Recipes. Scan isn't a tab page; it
- * opens the camera full screen. Pushed screens like Kitchen show it too.
+ * opens the camera full screen, so it's a button, not a tab. Pushed screens
+ * like Kitchen show it too. The grey underscore slides to the picked tab.
  */
 export function TabIsland({ active }: { active: TabKey }) {
   const router = useRouter();
   const goToTab = useGoToTab();
   const insets = useSafeAreaInsets();
+  const [tabs, setTabs] = useState<Partial<Record<TabKey, LayoutRectangle>>>({});
+  const [markTop, setMarkTop] = useState<number | null>(null);
+
+  const target = tabs[active];
+  const x = useSharedValue(-1);
+  useEffect(() => {
+    if (!target) return;
+    // Layout x counts the island's border; an absolute child starts inside it.
+    const to = target.x - ISLAND_BORDER + (target.width - MARK_WIDTH) / 2;
+    // First placement doesn't animate; later ones slide.
+    x.value = x.value < 0 ? to : withSpring(to, SLIDE);
+  }, [target, x]);
+  const markStyle = useAnimatedStyle(() => ({ opacity: x.value < 0 ? 0 : 1, transform: [{ translateX: x.value }] }));
 
   return (
-    <View pointerEvents="box-none" style={[styles.wrap, { bottom: Math.max(space.s6, insets.bottom + space.s2) }]}>
+    <View pointerEvents="box-none" style={[styles.wrap, { bottom: islandEdge(insets.bottom) }]}>
       <View accessibilityRole="tablist" style={styles.island}>
         {TABS.map((tab) => {
           const on = tab.key === active;
           const onPress = () => {
             if (!tab.href) router.push('/scan');
-            else if (!on) goToTab(tab.href);
+            else if (!on) {
+              haptics.select();
+              goToTab(tab.href);
+            }
           };
           return (
             <Pressable
               key={tab.key}
-              accessibilityRole="tab"
+              accessibilityRole={tab.href ? 'tab' : 'button'}
               accessibilityLabel={tab.label}
-              accessibilityState={{ selected: on }}
+              accessibilityHint={tab.href ? undefined : 'Opens the camera'}
+              accessibilityState={tab.href ? { selected: on } : undefined}
               onPress={onPress}
+              onLayout={(e) => {
+                const l = e.nativeEvent.layout;
+                setTabs((t) => {
+                  const old = t[tab.key];
+                  return old && old.x === l.x && old.width === l.width && old.y === l.y ? t : { ...t, [tab.key]: l };
+                });
+              }}
               style={styles.tab}
             >
               <Icon name={tab.icon} size={ISLAND_ICON} color={on ? 'ink' : 'inkMuted'} />
-              <Text variant="micro" color={on ? 'ink' : 'inkMuted'} weight={on ? 'semibold' : 'medium'}>
+              <Text
+                variant="micro"
+                color={on ? 'ink' : 'inkMuted'}
+                weight={on ? 'semibold' : 'medium'}
+                numberOfLines={1}
+                maxFontSizeMultiplier={CHROME_TEXT_MAX}
+              >
                 {tab.label}
               </Text>
-              <View style={[styles.mark, on && styles.markOn]} />
+              {/* Keeps the room for the underscore; the one that moves is drawn over the island. */}
+              <View
+                style={styles.mark}
+                onLayout={tab.key === 'home' ? (e) => setMarkTop(e.nativeEvent.layout.y) : undefined}
+              />
             </Pressable>
           );
         })}
+        {target && markTop !== null ? (
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.mark, styles.markOn, { top: target.y - ISLAND_BORDER + markTop }, markStyle]}
+          />
+        ) : null}
       </View>
     </View>
   );
@@ -81,11 +136,11 @@ const styles = StyleSheet.create({
     gap: space.s1,
     borderRadius: radius.pill,
     backgroundColor: color.surface,
-    borderWidth: 1,
+    borderWidth: ISLAND_BORDER,
     borderColor: color.line,
     ...shadow.island,
   },
   tab: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2, borderRadius: radius.pill },
   mark: { width: MARK_WIDTH, height: MARK_HEIGHT, borderRadius: 2, marginTop: 1, backgroundColor: 'transparent' },
-  markOn: { backgroundColor: color.tabMark },
+  markOn: { position: 'absolute', left: 0, marginTop: 0, backgroundColor: color.tabMark },
 });

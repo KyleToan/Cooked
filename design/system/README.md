@@ -26,16 +26,17 @@ Every main screen follows the same skeleton, top to bottom, with a 20px side gut
 | Role | Token | Use |
 | --- | --- | --- |
 | Ground | `surface` | Every screen background |
-| Lines | `line`, `line-soft` | Field outlines and row dividers |
+| Lines | `line`, `line-soft`, `control-line` | `line` for the island, undo bar and quiet outlines; `line-soft` for row dividers; `control-line` (3.4:1) for the outline of anything you fill in or tick |
 | Text | `ink`, `ink-muted`, `ink-subtle` | Primary, secondary, placeholder |
 | Action | `sage` (button fill), `sage-ink` (links, icons, checked box), `progress` (bar) | The one action color |
 | Use soon | `bronze-ink`, `bronze` | Food that needs using soon, nothing else |
 | Error | `error-ink` | A wrong code or an unusable field |
-| Paper | `cornsilk`, `papaya`, `beige`, `sage` | Sticky notes and the picked Kitchen tab |
+| Paper | `cornsilk`, `papaya`, `beige`, `sage` | Sticky notes, the picked Fridge, Pantry or Freezer tab, picked choices and initials avatars. The picked To Buy tab is white with a `sage-ink` ring, so a sage fill always means the main button. |
 
 Rules:
 - **One sage button per screen.** Every other button is a grey `surface-sunken` pill or a `sage-ink` text link.
-- Use the paper colors for sticky notes, the picked Kitchen tab and picked choices. Never as page backgrounds.
+- Use the paper colors for sticky notes, the picked Kitchen tab, picked choices and people's initials avatars. Never as page backgrounds.
+- Text fields, the search field, unchecked checkboxes, radios and the dashed add box are outlined in `control-line` so they reach the 3:1 non-text contrast minimum. Focus is a 1.5pt `sage-ink` outline; an error is `error-ink`.
 - Bronze means "use this soon". Never use it for links, buttons or progress.
 - No black buttons, black cards or a black island.
 - **Destructive actions** (Delete account, Leave this kitchen, Remove someone) are `error-ink` text buttons, never filled. The sheet that confirms them makes the safe choice the sage button (“Keep my account”) and says what happens to the shared kitchen.
@@ -98,7 +99,7 @@ Each component's page has its exact spec and a live preview.
 2. Is there a title top left (with the back arrow on the same line on a pushed screen)?
 3. Is there exactly one sage button, with everything else grey or a `sage-ink` link?
 4. Is bronze only on food that needs using soon?
-5. Are paper colors used only on notes and picked tabs or choices?
+5. Are paper colors used only on notes, picked tabs or choices, and initials avatars?
 6. Is every tap target at least 44px?
 7. Can every action that removes something be undone, and does every flow that can fail have an error state?
 8. Does all small text that matters meet 4.5:1?

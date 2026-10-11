@@ -3,7 +3,7 @@
 
 import type { ReactNode } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
-import Svg, { Circle, Path, Rect } from 'react-native-svg';
+import Svg, { Circle, Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
 import { color, size } from '@/theme';
 
@@ -15,6 +15,32 @@ export function Glass({ style, children, on }: { style?: StyleProp<ViewStyle>; c
     <View style={[styles.glassBox, style]}>
       <View style={[StyleSheet.absoluteFill, on ? styles.on : styles.glass]} />
       {children}
+    </View>
+  );
+}
+
+const SCRIM = 0.45;
+
+/**
+ * An ink wash that fades from one edge, so white text and controls stay
+ * readable over a bright feed (a white receipt). Draw it under the controls;
+ * it never takes touches.
+ */
+export function Scrim({ edge, style }: { edge: 'top' | 'bottom'; style?: StyleProp<ViewStyle> }) {
+  const id = `scrim-${edge}`;
+  const top = edge === 'top';
+  return (
+    <View pointerEvents="none" style={style}>
+      <Svg width="100%" height="100%" preserveAspectRatio="none">
+        <Defs>
+          <LinearGradient id={id} x1="0" y1={top ? '0' : '1'} x2="0" y2={top ? '1' : '0'}>
+            <Stop offset="0" stopColor={color.noteInk} stopOpacity={SCRIM} />
+            <Stop offset="0.55" stopColor={color.noteInk} stopOpacity={SCRIM * 0.7} />
+            <Stop offset="1" stopColor={color.noteInk} stopOpacity={0} />
+          </LinearGradient>
+        </Defs>
+        <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${id})`} />
+      </Svg>
     </View>
   );
 }

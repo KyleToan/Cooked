@@ -3,9 +3,10 @@
 // later without the screens changing.
 
 import { useFocusEffect } from 'expo-router';
-import { createContext, useCallback, useContext, useMemo, useReducer, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, type ReactNode } from 'react';
 
 import { guessPlace, makeId } from './helpers';
+import { checkRecipe, checkRecipes, usedWhenMade } from './match';
 import {
   ALEX,
   NEW_INVITE_CODE,
@@ -14,7 +15,6 @@ import {
   SEED_NOTIFICATIONS,
   SEED_RECIPES,
   SEED_TO_BUY,
-  SHAKSHUKA,
   STAPLES,
 } from './seed';
 import type {
@@ -42,6 +42,9 @@ export type Undo = {
   snapshot: Snapshot;
 };
 
+/** How long an undo bar stays before it goes away by itself. */
+export const UNDO_MS = 6000;
+
 export type State = {
   session: Session;
   user: Person;
@@ -68,18 +71,19 @@ export function initialState(): State {
   };
 }
 
-type Action =
+export type Action =
   | { type: 'toggleToBuy'; id: string; scope: string }
   | { type: 'addToBuy'; name: string; place?: Place }
   | { type: 'addItem'; name: string; place: Place }
   | { type: 'setQty'; id: string; qty: number; scope: string }
   | { type: 'itemToBuy'; id: string }
-  | { type: 'addScanned'; lines: ScanLine[] }
+  | { type: 'addScanned'; lines: ScanLine[]; undo?: boolean }
   | { type: 'toggleRecipeToBuy'; id: string }
   | { type: 'madeRecipe'; id: string }
-  | { type: 'importRecipe' }
+  | { type: 'importRecipe'; recipe: Recipe }
   | { type: 'undo' }
   | { type: 'clearUndo'; scope: string }
+  | { type: 'expireUndo'; undo: Undo }
   | { type: 'renameKitchen'; name: string }
   | { type: 'removePerson'; id: string }
   | { type: 'newInviteLink' }
@@ -87,7 +91,7 @@ type Action =
   | { type: 'setNotification'; key: NotificationKey; on: boolean }
   | { type: 'setUseSoonTime'; time: string }
   | { type: 'signIn'; method: NonNullable<Session['signIn']>; contact?: string }
-  | { type: 'setName'; name: string }
+  | { type: 'setName'; name: string; lastName?: string }
   | { type: 'choosePath'; path: KitchenPath }
   | { type: 'skipFirstScan' }
   | { type: 'finishOnboarding' }
@@ -99,19 +103,23 @@ const withUndo = (s: State, text: string, scope: string): Undo => ({ text, scope
 
 const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
+/** "José Núñez" → "jose-nunez": accents dropped, anything else becomes one hyphen. */
+const slug = (name: string) =>
+  name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'my';
+
 /** A new, empty kitchen named after the person: "Rivera kitchen", cooked.app/join/rivera-kitchen. */
 const newKitchen = (user: Person): Kitchen => {
   const family = user.lastName || user.name;
   return {
     name: `${family} kitchen`,
     people: [{ ...user, note: 'Made this kitchen' }],
-    inviteCode: `${family.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-kitchen`,
+    inviteCode: `${slug(family)}-kitchen`,
     newLink: false,
     syncedAgo: '',
   };
 };
 
-function reducer(s: State, a: Action): State {
+export function reducer(s: State, a: Action): State {
   switch (a.type) {
     case 'toggleToBuy': {
       const item = s.toBuy.find((t) => t.id === a.id);
@@ -155,7 +163,7 @@ function reducer(s: State, a: Action): State {
       if (!item) return s;
       const qty = Math.max(0, a.qty);
       const items = s.items.map((i) => (i.id === a.id ? { ...i, qty } : i));
-      const undo = qty === 0 && item.qty > 0 ? withUndo(s, `${item.name} used up`, a.scope) : s.undo;
+      const undo = qty === 0 && item.qty > 0 ? withUndo(s, `${item.name} used up`, a.scope) : null;
       return { ...s, items, undo };
     }
     case 'itemToBuy': {
@@ -163,7 +171,7 @@ function reducer(s: State, a: Action): State {
       if (!item || s.toBuy.some((t) => !t.done && sameName(t.name, item.name))) return s;
       const note = item.runningLow ? 'Running low' : `Added by ${s.user.name}`;
       const row: ToBuyItem = { id: makeId('t'), name: item.name, note, place: item.place, done: false, addedBy: s.user.id };
-      return { ...s, toBuy: [...s.toBuy, row] };
+      return { ...s, toBuy: [...s.toBuy, row], undo: null };
     }
     case 'addScanned': {
       let items = s.items;
@@ -198,10 +206,13 @@ function reducer(s: State, a: Action): State {
       const lastScan: Record<Place, string[]> = { fridge: [], pantry: [], freezer: [] };
       for (const l of a.lines) if (l.place !== 'skip' && l.name.trim()) lastScan[l.place].push(l.name.trim());
       const session = { ...s.session, lastScan };
-      return { ...s, items, toBuy, kitchen, session, undo: null };
+      const added = a.lines.filter((l) => l.place !== 'skip' && l.name.trim()).length;
+      const undo = a.undo && added ? withUndo(s, `Added ${added} ${added === 1 ? 'item' : 'items'} to your kitchen`, 'home') : null;
+      return { ...s, items, toBuy, kitchen, session, undo };
     }
     case 'toggleRecipeToBuy': {
-      const recipe = s.recipes.find((r) => r.id === a.id);
+      const saved = s.recipes.find((r) => r.id === a.id);
+      const recipe = saved && checkRecipe(saved, s.items);
       if (!recipe || recipe.missing.length === 0) return s;
       const note = `For ${recipe.title}`;
       let toBuy: ToBuyItem[];
@@ -221,29 +232,31 @@ function reducer(s: State, a: Action): State {
         toBuy = [...s.toBuy, ...add];
       }
       const recipes = s.recipes.map((r) => (r.id === a.id ? { ...r, onToBuy: !r.onToBuy } : r));
-      return { ...s, toBuy, recipes };
+      return { ...s, toBuy, recipes, undo: null };
     }
     case 'madeRecipe': {
       const recipe = s.recipes.find((r) => r.id === a.id);
       if (!recipe) return s;
-      const used = recipe.ingredients.filter((g) => g.have && !STAPLES.includes(g.name));
-      const items = s.items.map((i) =>
-        i.qty > 0 && used.some((g) => g.place === i.place && sameName(g.name, i.name)) ? { ...i, qty: i.qty - 1 } : i,
-      );
+      const used = usedWhenMade(recipe, s.items, STAPLES);
+      const items = s.items.map((i) => (used.includes(i) ? { ...i, qty: i.qty - 1 } : i));
       return { ...s, items, undo: withUndo(s, `Made ${recipe.title}`, `recipe:${recipe.id}`) };
     }
     case 'importRecipe': {
-      if (s.recipes.some((r) => r.id === SHAKSHUKA.id)) return s;
-      return { ...s, recipes: [...s.recipes, SHAKSHUKA] };
+      const r = a.recipe;
+      if (s.recipes.some((x) => x.id === r.id || (r.url && x.url === r.url))) return s;
+      return { ...s, recipes: [...s.recipes, r] };
     }
     case 'undo':
       if (!s.undo) return s;
       return { ...s, ...s.undo.snapshot, undo: null };
     case 'clearUndo':
       return s.undo?.scope === a.scope ? { ...s, undo: null } : s;
+    case 'expireUndo':
+      // Only the undo that timed out; a newer one keeps its own time.
+      return s.undo === a.undo ? { ...s, undo: null } : s;
     case 'renameKitchen': {
       const name = a.name.trim();
-      return name ? { ...s, kitchen: { ...s.kitchen, name } } : s;
+      return name ? { ...s, kitchen: { ...s.kitchen, name }, undo: null } : s;
     }
     case 'removePerson': {
       const person = s.kitchen.people.find((p) => p.id === a.id);
@@ -255,7 +268,7 @@ function reducer(s: State, a: Action): State {
       // A fresh code kills the old link. The sample kitchen's next code is the one in the design.
       const family = s.kitchen.inviteCode.replace(/-kitchen$|-[a-z0-9]{4}$/, '');
       const fresh = s.kitchen.inviteCode === SEED_KITCHEN.inviteCode ? NEW_INVITE_CODE : `${family}-${Math.random().toString(36).slice(2, 6)}`;
-      return { ...s, kitchen: { ...s.kitchen, inviteCode: fresh, newLink: true } };
+      return { ...s, kitchen: { ...s.kitchen, inviteCode: fresh, newLink: true }, undo: null };
     }
     case 'leaveKitchen':
       // The others keep the kitchen; you start a new, empty one.
@@ -268,8 +281,9 @@ function reducer(s: State, a: Action): State {
       return { ...s, session: { ...s.session, signIn: a.method, contact: a.contact ?? '' } };
     case 'setName': {
       const user = { ...s.user, name: a.name.trim() || s.user.name };
+      if (a.lastName !== undefined) user.lastName = a.lastName.trim();
       const people = s.kitchen.people.map((p) => (p.id === user.id ? user : p));
-      return { ...s, user, kitchen: { ...s.kitchen, people } };
+      return { ...s, user, kitchen: { ...s.kitchen, people }, undo: null };
     }
     case 'choosePath': {
       const session = { ...s.session, path: a.path };
@@ -302,10 +316,11 @@ function makeActions(dispatch: (a: Action) => void) {
     addItem: (name: string, place: Place) => dispatch({ type: 'addItem', name, place }),
     setQty: (id: string, qty: number, scope: string) => dispatch({ type: 'setQty', id, qty, scope }),
     addItemToBuy: (id: string) => dispatch({ type: 'itemToBuy', id }),
-    addScanned: (lines: ScanLine[]) => dispatch({ type: 'addScanned', lines }),
+    /** With `undo: true`, Home shows "Added N items to your kitchen" with Undo. */
+    addScanned: (lines: ScanLine[], opts?: { undo?: boolean }) => dispatch({ type: 'addScanned', lines, undo: opts?.undo }),
     toggleRecipeToBuy: (id: string) => dispatch({ type: 'toggleRecipeToBuy', id }),
     madeRecipe: (id: string) => dispatch({ type: 'madeRecipe', id }),
-    importRecipe: () => dispatch({ type: 'importRecipe' }),
+    importRecipe: (recipe: Recipe) => dispatch({ type: 'importRecipe', recipe }),
     undo: () => dispatch({ type: 'undo' }),
     clearUndo: (scope: string) => dispatch({ type: 'clearUndo', scope }),
     renameKitchen: (name: string) => dispatch({ type: 'renameKitchen', name }),
@@ -315,7 +330,8 @@ function makeActions(dispatch: (a: Action) => void) {
     setNotification: (key: NotificationKey, on: boolean) => dispatch({ type: 'setNotification', key, on }),
     setUseSoonTime: (time: string) => dispatch({ type: 'setUseSoonTime', time }),
     signIn: (method: NonNullable<Session['signIn']>, contact?: string) => dispatch({ type: 'signIn', method, contact }),
-    setName: (name: string) => dispatch({ type: 'setName', name }),
+    /** Pass `last` to set the last name too; an empty string clears it. */
+    setName: (first: string, last?: string) => dispatch({ type: 'setName', name: first, lastName: last }),
     choosePath: (path: KitchenPath) => dispatch({ type: 'choosePath', path }),
     skipFirstScan: () => dispatch({ type: 'skipFirstScan' }),
     finishOnboarding: () => dispatch({ type: 'finishOnboarding' }),
@@ -327,7 +343,16 @@ function makeActions(dispatch: (a: Action) => void) {
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, initialState);
   const actions = useMemo(() => makeActions(dispatch), []);
-  const value = useMemo(() => ({ state, actions }), [state, actions]);
+  // Screens see recipes checked against the kitchen, with Tonight's pick marked.
+  const recipes = useMemo(() => checkRecipes(state.recipes, state.items), [state.recipes, state.items]);
+  // Undo bars go away by themselves after a few seconds, unless a newer one replaced them.
+  const undo = state.undo;
+  useEffect(() => {
+    if (!undo) return;
+    const timer = setTimeout(() => dispatch({ type: 'expireUndo', undo }), UNDO_MS);
+    return () => clearTimeout(timer);
+  }, [undo]);
+  const value = useMemo(() => ({ state: { ...state, recipes }, actions }), [state, recipes, actions]);
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
 

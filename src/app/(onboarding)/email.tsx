@@ -100,10 +100,12 @@ const styles = StyleSheet.create({
   grow: { flex: 1 },
   country: {
     width: COUNTRY_W,
-    height: size.controlHeight + space.s3 - 2,
+    // Grows with the phone field beside it at large text sizes.
+    minHeight: size.controlHeight + space.s3 - 2,
+    paddingVertical: space.s1,
     borderRadius: radius.control,
     borderWidth: 1,
-    borderColor: color.line,
+    borderColor: color.controlLine,
     alignItems: 'center',
     justifyContent: 'center',
   },

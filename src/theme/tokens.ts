@@ -13,6 +13,8 @@ export const color = {
   lineSoft: '#F1F1EE',
   /** Unchecked checkbox outline and dashed add-item box. */
   checkBorder: '#CFCFC9',
+  /** Outline of things you fill in or tick: unchecked checkbox, radio, dashed add box, text fields and the search field. 3.4:1 on surface, the 3:1 non-text minimum. Use line for dividers and the island. */
+  controlLine: '#8C8C86',
   /** Primary text, headings and default icon color. 17.6:1 on surface. */
   ink: '#1A1A18',
   /** Secondary text: row notes, tag text, helper copy. 5.2:1 on surface — safe for small text. */

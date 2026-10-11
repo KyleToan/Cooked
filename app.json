@@ -45,7 +45,9 @@
           "cameraPermission": false,
           "microphonePermission": false
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker",
+      "expo-image"
     ],
     "runtimeVersion": {
       "policy": "fingerprint"

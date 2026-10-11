@@ -45,7 +45,7 @@ export function ActionPill({
       disabled={disabled}
       style={[
         styles.pill,
-        { height: HEIGHT[height] },
+        { minHeight: HEIGHT[height] },
         fill && styles.fill,
         bottom && styles.wide,
         { backgroundColor: primary && !disabled ? color.sage : color.surfaceSunken },
@@ -57,7 +57,7 @@ export function ActionPill({
         variant={bottom ? 'body' : 'button'}
         weight={primary || bottom ? 'semibold' : 'medium'}
         color={disabled ? 'inkSubtle' : 'ink'}
-        numberOfLines={1}
+        style={styles.label}
       >
         {label}
       </Text>
@@ -76,9 +76,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: space.s2,
+    paddingVertical: space.s2,
     paddingHorizontal: space.s4,
     borderRadius: radius.pill,
   },
+  /** Wraps at the largest text sizes instead of clipping. */
+  label: { flexShrink: 1, textAlign: 'center' },
   compact: { paddingHorizontal: space.s4, alignSelf: 'flex-start' },
   fill: { flex: 1 },
   wide: { alignSelf: 'stretch' },

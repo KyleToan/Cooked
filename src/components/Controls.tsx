@@ -1,17 +1,44 @@
-import { forwardRef, useState } from 'react';
-import { ScrollView, StyleSheet, TextInput, View, type StyleProp, type TextInputProps, type ViewStyle } from 'react-native';
+import { forwardRef, useEffect, useRef, useState } from 'react';
+import {
+  ScrollView,
+  StyleSheet,
+  Switch as RNSwitch,
+  TextInput,
+  View,
+  type StyleProp,
+  type TextInputProps,
+  type ViewStyle,
+} from 'react-native';
+import Animated, {
+  FadeIn,
+  FadeOut,
+  ReduceMotion,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSpring,
+  withTiming,
+  type EntryExitAnimationFunction,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { haptics } from '@/hooks/haptics';
 import { color, radius, shadow, size, space, type } from '@/theme';
 import { Icon } from './Icon';
 import { Tap } from './Tap';
 import { Text } from './Text';
 
+/** Critically damped: settles in about 300ms with no overshoot. */
+const SPRING = { duration: 300, dampingRatio: 1 } as const;
+
 /* ---------- Segmented switch (Link / Text, Email / Phone) ---------- */
 
 export type Option<T extends string> = { value: T; label: string };
 
-/** A 48pt grey track; the picked side is a white 44pt pill. */
+const TRACK_PAD = 2;
+const SEG_GAP = space.s1;
+
+/** A 48pt grey track; the picked side is a white pill that slides between options. */
 export function Segmented<T extends string>({
   options,
   value,
@@ -23,8 +50,35 @@ export function Segmented<T extends string>({
   onChange: (value: T) => void;
   accessibilityLabel: string;
 }) {
+  const reduced = useReducedMotion();
+  const [width, setWidth] = useState(0);
+  const count = options.length;
+  const index = Math.max(0, options.findIndex((o) => o.value === value));
+  const segW = width ? (width - TRACK_PAD * 2 - SEG_GAP * (count - 1)) / count : 0;
+  const x = useSharedValue(0);
+  const laidOut = useRef(0);
+
+  useEffect(() => {
+    const to = index * (segW + SEG_GAP);
+    if (reduced || laidOut.current !== segW) {
+      // First layout, a resize or Reduce Motion: place the pill without moving it.
+      laidOut.current = segW;
+      x.set(to);
+    } else {
+      x.set(withSpring(to, SPRING));
+    }
+  }, [index, segW, reduced, x]);
+
+  const pill = useAnimatedStyle(() => ({ transform: [{ translateX: x.get() }] }));
+
   return (
-    <View accessibilityRole="tablist" accessibilityLabel={accessibilityLabel} style={styles.track}>
+    <View
+      accessibilityRole="tablist"
+      accessibilityLabel={accessibilityLabel}
+      style={styles.track}
+      onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+    >
+      {segW > 0 ? <Animated.View pointerEvents="none" style={[styles.segmentPill, { width: segW }, pill]} /> : null}
       {options.map((o) => {
         const on = o.value === value;
         return (
@@ -32,10 +86,14 @@ export function Segmented<T extends string>({
             key={o.value}
             accessibilityRole="tab"
             accessibilityState={{ selected: on }}
-            onPress={() => onChange(o.value)}
-            style={[styles.segment, on && styles.segmentOn]}
+            onPress={() => {
+              if (on) return;
+              haptics.select();
+              onChange(o.value);
+            }}
+            style={styles.segment}
           >
-            <Text variant="button" weight={on ? 'semibold' : 'medium'} color={on ? 'ink' : 'inkMuted'}>
+            <Text variant="button" weight={on ? 'semibold' : 'medium'} color={on ? 'ink' : 'inkMuted'} style={styles.center}>
               {o.label}
             </Text>
           </Tap>
@@ -47,31 +105,32 @@ export function Segmented<T extends string>({
 
 /* ---------- On / off switch ---------- */
 
-const SWITCH_W = 51;
-const SWITCH_H = 31;
-const KNOB = 27;
-
-/** iOS-sized switch inside a 44pt tap area. On: `sage-ink`. */
+/** The system switch inside a 44pt tap area, so it gets the platform's motion and haptics. On: `sage-ink`. */
 export function Switch({ value, onChange, label }: { value: boolean; onChange: (on: boolean) => void; label: string }) {
   return (
     <Tap
-      accessibilityRole="switch"
-      accessibilityLabel={label}
-      accessibilityState={{ checked: value }}
-      onPress={() => onChange(!value)}
-      drawn={SWITCH_H}
+      accessible={false}
+      onPress={() => {
+        haptics.select();
+        onChange(!value);
+      }}
       style={styles.switchHit}
     >
-      <View style={[styles.switchTrack, { backgroundColor: value ? color.sageInk : color.checkBorder }]}>
-        <View style={[styles.knob, { left: value ? SWITCH_W - KNOB - 2 : 2 }]} />
-      </View>
+      <RNSwitch
+        value={value}
+        onValueChange={onChange}
+        accessibilityLabel={label}
+        trackColor={{ true: color.sageInk, false: color.checkBorder }}
+        ios_backgroundColor={color.checkBorder}
+        thumbColor={color.surface}
+      />
     </Tap>
   );
 }
 
 /* ---------- Filter pills ---------- */
 
-/** Sideways-scrolling pills that bleed to the screen edge. Picked: `sage`. */
+/** Sideways-scrolling pills that bleed to the screen edge. Picked: white with a `sage-ink` outline, so the screen keeps one sage fill. */
 export function FilterPills<T extends string>({
   options,
   value,
@@ -90,10 +149,14 @@ export function FilterPills<T extends string>({
             key={o.value}
             accessibilityRole="button"
             accessibilityState={{ selected: on }}
-            onPress={() => onChange(o.value)}
+            onPress={() => {
+              if (on) return;
+              haptics.select();
+              onChange(o.value);
+            }}
             style={styles.filterHit}
           >
-            <View style={[styles.filter, { backgroundColor: on ? color.sage : color.surfaceSunken }]}>
+            <View style={[styles.filter, on ? styles.filterOn : styles.filterOff]}>
               <Text variant="link" weight={on ? 'semibold' : 'medium'} color={on ? 'ink' : 'inkMuted'}>
                 {o.label}
               </Text>
@@ -131,15 +194,32 @@ export function Stepper({
         accessibilityRole="button"
         accessibilityLabel={decLabel}
         disabled={value <= min}
-        onPress={() => onChange(Math.max(min, value - 1))}
+        onPress={() => {
+          haptics.select();
+          onChange(Math.max(min, value - 1));
+        }}
         style={styles.stepBtn}
       >
         <Minus />
       </Tap>
-      <Text variant="button" weight="semibold" style={styles.stepValue} accessibilityLiveRegion="polite">
+      <Text
+        variant="button"
+        weight="semibold"
+        style={styles.stepValue}
+        maxFontSizeMultiplier={STEP_MAX_SCALE}
+        accessibilityLiveRegion="polite"
+      >
         {value}
       </Text>
-      <Tap accessibilityRole="button" accessibilityLabel={incLabel} onPress={() => onChange(value + 1)} style={styles.stepBtn}>
+      <Tap
+        accessibilityRole="button"
+        accessibilityLabel={incLabel}
+        onPress={() => {
+          haptics.select();
+          onChange(value + 1);
+        }}
+        style={styles.stepBtn}
+      >
         <Icon name="add" size={STEP_ICON} color="sageInk" />
       </Tap>
     </View>
@@ -147,17 +227,57 @@ export function Stepper({
 }
 
 const STEP_ICON = 14;
+/** The count sits between two fixed 44pt buttons, so it grows only so far with Dynamic Type. */
+const STEP_MAX_SCALE = 1.5;
 
 /* ---------- Undo bar ---------- */
+
+const UNDO_RISE = 12;
+const UNDO_FADE = 200;
+
+/** Rises 12pt and fades in on a critically damped spring. */
+const undoIn: EntryExitAnimationFunction = () => {
+  'worklet';
+  return {
+    initialValues: { opacity: 0, transform: [{ translateY: UNDO_RISE }] },
+    animations: {
+      opacity: withTiming(1, { duration: UNDO_FADE }),
+      transform: [{ translateY: withSpring(0, SPRING) }],
+    },
+  };
+};
+
+/** The same path in reverse. */
+const undoOut: EntryExitAnimationFunction = () => {
+  'worklet';
+  return {
+    initialValues: { opacity: 1, transform: [{ translateY: 0 }] },
+    animations: {
+      opacity: withTiming(0, { duration: UNDO_FADE }),
+      transform: [{ translateY: withSpring(UNDO_RISE, SPRING) }],
+    },
+  };
+};
+
+/** With Reduce Motion the bar only fades. */
+const undoFadeIn = FadeIn.duration(UNDO_FADE).reduceMotion(ReduceMotion.Never);
+const undoFadeOut = FadeOut.duration(UNDO_FADE).reduceMotion(ReduceMotion.Never);
 
 /** Floats 12pt above the island (or above the bottom edge on screens without it). */
 export function UndoBar({ text, onUndo, island = true }: { text: string; onUndo: () => void; island?: boolean }) {
   const insets = useSafeAreaInsets();
+  const reduced = useReducedMotion();
   const edge = Math.max(space.s6, insets.bottom + space.s2);
   const bottom = island ? edge + size.islandHeight + space.s3 : edge;
   return (
-    <View accessibilityRole="alert" accessibilityLiveRegion="polite" style={[styles.undo, { bottom }]}>
-      <Text variant="button" numberOfLines={1} style={styles.undoText}>
+    <Animated.View
+      accessibilityRole="alert"
+      accessibilityLiveRegion="polite"
+      entering={reduced ? undoFadeIn : undoIn}
+      exiting={reduced ? undoFadeOut : undoOut}
+      style={[styles.undo, { bottom }]}
+    >
+      <Text variant="button" numberOfLines={2} style={styles.undoText}>
         {text}
       </Text>
       <Tap accessibilityRole="button" accessibilityLabel={`Undo: ${text}`} onPress={onUndo} style={styles.undoBtn}>
@@ -165,7 +285,7 @@ export function UndoBar({ text, onUndo, island = true }: { text: string; onUndo:
           Undo
         </Text>
       </Tap>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -180,7 +300,7 @@ type FieldProps = Omit<TextInputProps, 'style'> & {
 /** A 58pt outlined field with a small label above the value. Focus: `sage-ink`. Error: `error-ink`. */
 export const Field = forwardRef<TextInput, FieldProps>(function Field({ label, error, style, onFocus, onBlur, ...rest }, ref) {
   const [focused, setFocused] = useState(false);
-  const borderColor = error ? color.errorInk : focused ? color.sageInk : color.line;
+  const borderColor = error ? color.errorInk : focused ? color.sageInk : color.controlLine;
   return (
     <View style={styles.fieldWrap}>
       <View style={[styles.field, { borderColor, borderWidth: error || focused ? 1.5 : 1 }, style]}>
@@ -223,14 +343,17 @@ const BOX = 24;
 const CHECK_ICON = 13;
 const ADD_ICON = 12;
 
-/** The 24pt To Buy checkbox inside a 44pt hit area. Checked: `sage-ink` fill with a white check. */
+/** The 24pt To Buy checkbox inside a 44pt hit area. Checked: `sage-ink` fill with a white check. Pass just the item name as `label`. */
 export function Checkbox({ checked, onPress, label }: { checked: boolean; onPress: () => void; label: string }) {
   return (
     <Tap
       accessibilityRole="checkbox"
       accessibilityLabel={label}
       accessibilityState={{ checked }}
-      onPress={onPress}
+      onPress={() => {
+        haptics.select();
+        onPress();
+      }}
       style={styles.checkHit}
     >
       <View style={[styles.box, checked ? styles.boxOn : styles.boxOff]}>
@@ -251,39 +374,50 @@ export function AddBox() {
 
 const styles = StyleSheet.create({
   track: {
-    height: size.controlHeight,
-    padding: 2,
+    minHeight: size.controlHeight,
+    padding: TRACK_PAD,
     flexDirection: 'row',
-    gap: space.s1,
+    gap: SEG_GAP,
     borderRadius: radius.pill,
     backgroundColor: color.surfaceSunken,
   },
-  segment: { flex: 1, alignItems: 'center', justifyContent: 'center', borderRadius: radius.pill },
-  segmentOn: { backgroundColor: color.surface, ...shadow.card },
-  switchHit: { minWidth: size.targetMin, minHeight: size.targetMin, alignItems: 'center', justifyContent: 'center' },
-  switchTrack: { width: SWITCH_W, height: SWITCH_H, borderRadius: SWITCH_H / 2 },
-  knob: {
+  segment: {
+    flex: 1,
+    minHeight: size.controlHeight - TRACK_PAD * 2,
+    paddingVertical: space.s2,
+    paddingHorizontal: space.s2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.pill,
+  },
+  segmentPill: {
     position: 'absolute',
-    top: 2,
-    width: KNOB,
-    height: KNOB,
-    borderRadius: KNOB / 2,
+    top: TRACK_PAD,
+    bottom: TRACK_PAD,
+    left: TRACK_PAD,
+    borderRadius: radius.pill,
     backgroundColor: color.surface,
     ...shadow.card,
   },
+  center: { textAlign: 'center' },
+  switchHit: { minWidth: size.targetMin, minHeight: size.targetMin, alignItems: 'center', justifyContent: 'center' },
   bleed: { marginHorizontal: -space.s5, flexGrow: 0 },
   filters: { paddingHorizontal: space.s5, gap: space.s2 },
-  filterHit: { height: size.targetMin, justifyContent: 'center' },
+  filterHit: { minHeight: size.targetMin, justifyContent: 'center' },
   filter: {
-    height: size.targetMin - space.s2,
+    minHeight: size.targetMin - space.s2,
+    paddingVertical: space.s1 + 2,
     paddingHorizontal: space.s3 + 2,
     borderRadius: radius.pill,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  filterOn: { backgroundColor: color.surface, borderColor: color.sageInk },
+  filterOff: { backgroundColor: color.surfaceSunken, borderColor: color.surfaceSunken },
   minus: { width: 11, height: 2, borderRadius: 1, backgroundColor: color.sageInk },
   stepper: {
-    height: size.targetMin,
+    minHeight: size.targetMin,
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: radius.pill,
@@ -295,7 +429,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: space.s5,
     right: space.s5,
-    height: size.controlHeight + space.s1,
+    minHeight: size.controlHeight + space.s1,
+    paddingVertical: space.s1,
     paddingLeft: space.s4 + 2,
     paddingRight: space.s1 + 2,
     flexDirection: 'row',
@@ -308,10 +443,11 @@ const styles = StyleSheet.create({
     ...shadow.island,
   },
   undoText: { flexShrink: 1 },
-  undoBtn: { height: size.targetMin, paddingHorizontal: space.s3 + 2, justifyContent: 'center' },
+  undoBtn: { minHeight: size.targetMin, paddingHorizontal: space.s3 + 2, justifyContent: 'center' },
   fieldWrap: { gap: space.s2 },
   field: {
-    height: size.controlHeight + space.s3 - 2,
+    minHeight: size.controlHeight + space.s3 - 2,
+    paddingVertical: space.s2,
     paddingHorizontal: space.s4,
     justifyContent: 'center',
     gap: 2,
@@ -326,7 +462,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   box: { width: BOX, height: BOX, borderRadius: radius.check, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
-  boxOff: { borderColor: color.tabMark },
+  boxOff: { borderColor: color.controlLine },
   boxOn: { borderColor: color.sageInk, backgroundColor: color.sageInk },
   addBox: {
     width: BOX,
@@ -334,7 +470,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.check,
     borderWidth: 1.5,
     borderStyle: 'dashed',
-    borderColor: color.checkBorder,
+    borderColor: color.controlLine,
     alignItems: 'center',
     justifyContent: 'center',
   },

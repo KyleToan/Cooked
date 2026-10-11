@@ -65,9 +65,11 @@ export default function Home() {
     if (!q) return null;
     return [
       ...stock.filter((i) => i.name.toLowerCase().includes(q)).map((i) => ({ key: i.id, name: i.name, where: PLACE_LABEL[i.place], open: () => router.push({ pathname: '/kitchen', params: { tab: i.place } }) })),
+      // Still to get (not ticked off): opens the To Buy tab.
+      ...state.toBuy.filter((t) => !t.done && t.name.toLowerCase().includes(q)).map((t) => ({ key: t.id, name: t.name, where: 'To Buy', open: () => router.push({ pathname: '/kitchen', params: { tab: 'tobuy' } }) })),
       ...state.recipes.filter((r) => r.title.toLowerCase().includes(q)).map((r) => ({ key: r.id, name: r.title, where: 'Recipe', open: () => router.push({ pathname: '/recipe/[id]', params: { id: r.id } }) })),
     ];
-  }, [query, stock, state.recipes, router]);
+  }, [query, stock, state.toBuy, state.recipes, router]);
 
   const openKitchen = (tab: string) => router.push({ pathname: '/kitchen', params: { tab } });
 
@@ -98,6 +100,7 @@ export default function Home() {
   return (
     <Screen
       island
+      raised={!!undo}
       top="tab"
       overlay={undo ? <UndoBar text={undo.text} onUndo={actions.undo} /> : null}
     >
@@ -122,9 +125,18 @@ export default function Home() {
             </Tap>
           ))}
           {results.length === 0 ? (
-            <Text variant="caption" color="inkMuted" style={styles.noMatch}>
-              Nothing matches “{query.trim()}”.
-            </Text>
+            <View style={styles.noMatch}>
+              <Text variant="caption" color="inkMuted">
+                Nothing matches “{query.trim()}”.
+              </Text>
+              <TextLink
+                label={`Add ${query.trim()} to To Buy`}
+                onPress={() => {
+                  actions.addToBuy(query.trim());
+                  setQuery('');
+                }}
+              />
+            </View>
           ) : null}
         </View>
       ) : emptyKitchen ? (
@@ -189,7 +201,7 @@ export default function Home() {
 const styles = StyleSheet.create({
   grow: { flex: 1 },
   result: { minHeight: size.rowHeight, flexDirection: 'row', alignItems: 'center', gap: space.s3 },
-  noMatch: { paddingVertical: space.s4 },
+  noMatch: { gap: space.s1, paddingTop: space.s4 },
   kitchen: { gap: space.s3 + 2 },
   kitchenHead: { gap: space.s1 },
   sync: { flexDirection: 'row', alignItems: 'center', gap: space.s1 + 2 },

@@ -3,6 +3,8 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import { StyleSheet } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { StoreProvider, useStore } from '@/data/store';
@@ -22,12 +24,14 @@ export default function RootLayout() {
   if (!loaded && !error) return null;
 
   return (
-    <SafeAreaProvider>
-      <StoreProvider>
-        <StatusBar style="dark" />
-        <Routes />
-      </StoreProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={styles.root}>
+      <SafeAreaProvider>
+        <StoreProvider>
+          <StatusBar style="dark" />
+          <Routes />
+        </StoreProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 
@@ -48,9 +52,16 @@ function Routes() {
         <Stack.Screen name="account" />
         <Stack.Screen name="household" />
         <Stack.Screen name="notifications" />
+        {/* The Sheet slides itself in and out (and holds the route until it has slid away), so the
+            screen transition stays off and nothing pops. */}
         <Stack.Screen
           name="import"
-          options={{ presentation: 'transparentModal', animation: 'none', contentStyle: { backgroundColor: 'transparent' } }}
+          options={{
+            presentation: 'transparentModal',
+            animation: 'none',
+            gestureEnabled: false,
+            contentStyle: { backgroundColor: 'transparent' },
+          }}
         />
       </Stack.Protected>
       <Stack.Screen name="scan" options={{ presentation: 'fullScreenModal' }} />
@@ -59,3 +70,7 @@ function Routes() {
     </Stack>
   );
 }
+
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+});

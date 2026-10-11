@@ -58,6 +58,8 @@ export type Ingredient = {
   name: string;
   place: Place;
   have: boolean;
+  /** How much the recipe uses: "400 g", "2", "1 tbsp". Missing when the recipe doesn't say. */
+  amount?: string;
 };
 
 export type Recipe = {
@@ -69,9 +71,10 @@ export type Recipe = {
   servings?: string;
   /** "saved by Sam", the end of the meta line on the recipe. */
   savedBy?: string;
-  /** Set on the recipe picked for tonight: the line on the Tonight note. */
+  /** Set on the recipe picked for tonight: the line on the Tonight note. Worked out in match.ts, never saved. */
   tonight?: string;
-  photo: boolean;
+  /** The recipe's photo (an image URL), from the page it was imported from. None means no photo block. */
+  photo?: string;
   /** "Imported from somekitchenblog.com" on the list. */
   sourceLine: string;
   /** "Open the original on somekitchenblog.com" on the recipe. */
@@ -84,6 +87,8 @@ export type Recipe = {
   have: number;
   /** What you still need ("Tomatoes", "Feta"). The list sentence lower-cases them. */
   missing: string[];
+  /** How much of each missing thing the recipe uses, keyed by its name in `missing` ("Tomatoes" → "400 g"). */
+  missingAmounts?: Record<string, string>;
   /** The ingredients you have, shown on the recipe. Empty when only the list data exists. */
   ingredients: Ingredient[];
   steps: string[];

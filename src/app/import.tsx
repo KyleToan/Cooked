@@ -10,20 +10,20 @@ import { Sheet } from '@/components/Sheet';
 import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
+import { haptics } from '@/hooks/haptics';
 import { useGoToTab } from '@/hooks/useGoToTab';
-import { IMPORT_FOUND, SHAKSHUKA } from '@/data/seed';
+import { countIngredients, foundList, importFromLink, parseRecipeFromText } from '@/data/recipeImport';
 import { useStore } from '@/data/store';
+import type { Recipe } from '@/data/types';
 import { color, radius, size, space, type } from '@/theme';
 
 type Mode = 'link' | 'text';
 type Step = 'edit' | 'loading' | 'done' | 'error';
 
-/** How long the fake import "reads" the page. */
-const READ_MS = 1800;
+/** The shortest time the loader shows, so a quick import doesn't flash. */
+const MIN_READ_MS = 800;
 const TEXT_HEIGHT = 132;
-
-/** Lines that look like ingredients: they start with an amount or a bullet. */
-const ingredientLines = (text: string) => text.split('\n').filter((l) => /^\s*([0-9½¼¾]|[-•*])/.test(l)).length;
+const FOCUS_BORDER = 1.5;
 
 export default function Import() {
   const router = useRouter();
@@ -36,21 +36,38 @@ export default function Import() {
   const [link, setLink] = useState(params.step === 'error' ? 'https://example-news.com/food/best-summer-dinners' : '');
   const [text, setText] = useState('');
   const [hint, setHint] = useState('');
+  const [parsed, setParsed] = useState<Recipe | null>(null);
+  const [focused, setFocused] = useState(false);
 
-  const lines = ingredientLines(text);
+  const lines = countIngredients(text);
   const close = () => router.back();
 
   useEffect(() => {
     if (step !== 'loading') return;
-    // Real import isn't built yet: a link with "shakshuka" in it, or pasted text, finds Shakshuka.
-    const ok = mode === 'text' || /shakshuka/i.test(link);
-    const timer = setTimeout(() => setStep(ok ? 'done' : 'error'), READ_MS);
-    return () => clearTimeout(timer);
-  }, [step, mode, link]);
+    // Links are fetched on the device; pasted text is read straight away.
+    const controller = new AbortController();
+    const read = mode === 'text' ? Promise.resolve(parseRecipeFromText(text, state.items)) : importFromLink(link, state.items, controller.signal);
+    const wait = new Promise((done) => setTimeout(done, MIN_READ_MS));
+    let live = true;
+    Promise.all([read, wait]).then(([recipe]) => {
+      if (!live) return;
+      setParsed(recipe);
+      setStep(recipe ? 'done' : 'error');
+      if (recipe) haptics.success();
+      else haptics.error();
+    });
+    return () => {
+      live = false;
+      controller.abort();
+    };
+    // Only a new 'loading' step starts a read; typing doesn't restart it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
 
   const paste = async () => {
-    const clip = (await Clipboard.getStringAsync()).trim();
-    if (!clip) return;
+    // Empty when the clipboard has no text or the person said no to iOS's "Allow Paste"; the browser can refuse outright.
+    const clip = (await Clipboard.getStringAsync().catch(() => '')).trim();
+    if (!clip) return setHint(mode === 'text' ? 'Nothing to paste. Copy the recipe first.' : 'Nothing to paste. Copy a link first.');
     if (mode === 'text') setText(clip);
     else setLink(clip);
     setHint('');
@@ -62,18 +79,19 @@ export default function Import() {
     setStep('loading');
   };
 
-  // The recipe it found, checked against the kitchen.
-  const saved = state.recipes.find((r) => r.id === SHAKSHUKA.id) ?? SHAKSHUKA;
-  const found = IMPORT_FOUND;
-  const missing = found.filter((g) => !g.have).length;
-  const added = saved.onToBuy;
+  // The recipe it found, checked against the kitchen. Once saved, the store's copy is the one that changes.
+  const saved = parsed ? (state.recipes.find((r) => r.id === parsed.id || (parsed.url && r.url === parsed.url)) ?? parsed) : null;
+  const found = saved ? foundList(saved) : [];
+  const missing = saved?.missing.length ?? 0;
+  const added = saved?.onToBuy ?? false;
+  const meta = saved ? [saved.time, saved.servings].filter(Boolean).join(' · ') : '';
 
-  const title = step === 'done' ? 'Shakshuka' : step === 'error' ? 'No recipe on that page' : 'Import a recipe';
+  const title = step === 'done' && saved ? saved.title : step === 'error' ? 'No recipe on that page' : 'Import a recipe';
   const sub =
     step === 'error'
       ? 'We couldn’t find ingredients or steps there. It may be a list of recipes, or behind a login.'
       : step === 'done'
-        ? `25 min · 2 servings. You have ${found.length - missing} of ${found.length} things.`
+        ? `${meta ? `${meta}. ` : ''}You have ${found.length - missing} of ${found.length} things.`
         : step === 'loading'
           ? 'This takes a few seconds.'
           : 'Paste a link from any recipe site, or the recipe itself. We’ll check it against your kitchen.';
@@ -95,25 +113,25 @@ export default function Import() {
             }}
           />
           {mode === 'link' ? (
-            <View style={styles.linkField}>
-              <TextInput
-                value={link}
-                onChangeText={(v) => {
-                  setLink(v);
-                  setHint('');
-                }}
-                placeholder="Paste a recipe link"
-                placeholderTextColor={color.inkSubtle}
-                accessibilityLabel="Recipe link"
-                keyboardType="url"
-                textContentType="URL"
-                autoCapitalize="none"
-                autoCorrect={false}
-                returnKeyType="go"
-                onSubmitEditing={start}
-                style={styles.input}
-              />
-            </View>
+            <TextInput
+              value={link}
+              onChangeText={(v) => {
+                setLink(v);
+                setHint('');
+              }}
+              placeholder="Touch and hold to paste a link"
+              placeholderTextColor={color.inkSubtle}
+              accessibilityLabel="Recipe link"
+              keyboardType="url"
+              textContentType="URL"
+              autoCapitalize="none"
+              autoCorrect={false}
+              returnKeyType="go"
+              onSubmitEditing={start}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
+              style={[styles.input, styles.linkField, focused && styles.focused]}
+            />
           ) : (
             <>
               <TextInput
@@ -122,14 +140,16 @@ export default function Import() {
                   setText(v);
                   setHint('');
                 }}
-                placeholder="Paste the ingredients and steps. Messy is fine."
+                placeholder="Touch and hold to paste the recipe. Messy is fine."
                 placeholderTextColor={color.inkSubtle}
                 accessibilityLabel="Recipe text"
                 multiline
                 textAlignVertical="top"
-                style={[styles.input, styles.textArea]}
+                onFocus={() => setFocused(true)}
+                onBlur={() => setFocused(false)}
+                style={[styles.input, styles.textArea, focused && styles.focused]}
               />
-              <Text variant="caption" color={text && lines ? 'sageInk' : 'inkMuted'} weight={text && lines ? 'semibold' : undefined}>
+              <Text variant="caption" color={text && lines ? 'ink' : 'inkMuted'} weight={text && lines ? 'semibold' : undefined}>
                 {text
                   ? lines
                     ? `Found ${lines} ingredients`
@@ -139,6 +159,7 @@ export default function Import() {
             </>
           )}
           {hint ? <ErrorLine text={hint} /> : null}
+          {/* Touch and hold in the field pastes without asking; this button makes iOS ask each time. */}
           <ActionPill label="Paste from clipboard" height="header" onPress={paste} />
           <ActionPill label="Import recipe" variant="primary" height="bottom" onPress={start} />
         </View>
@@ -183,7 +204,7 @@ export default function Import() {
         </View>
       ) : null}
 
-      {step === 'done' ? (
+      {step === 'done' && saved ? (
         <View style={styles.body}>
           <View>
             {found.map((g) => (
@@ -201,25 +222,29 @@ export default function Import() {
               </View>
             ))}
           </View>
-          <Tap
-            accessibilityRole="button"
-            accessibilityState={{ selected: added }}
-            onPress={() => {
-              actions.importRecipe();
-              actions.toggleRecipeToBuy(SHAKSHUKA.id);
-            }}
-            style={[styles.missingBtn, added && styles.missingAdded]}
-          >
-            <Text variant="button" weight="semibold" color={added ? 'sageInk' : 'ink'}>
-              {added ? `Added ${missing} to To Buy` : `Add ${missing} missing to To Buy`}
-            </Text>
-          </Tap>
+          {missing ? (
+            // To Buy notes point at a saved recipe, so adding them saves it too. The label says so.
+            <Tap
+              accessibilityRole="button"
+              accessibilityState={{ selected: added }}
+              accessibilityHint={added ? 'Takes them off To Buy. The recipe stays saved.' : undefined}
+              onPress={() => {
+                actions.importRecipe(saved);
+                actions.toggleRecipeToBuy(saved.id);
+              }}
+              style={[styles.missingBtn, added && styles.missingAdded]}
+            >
+              <Text variant="button" weight="semibold" color={added ? 'sageInk' : 'ink'} style={styles.center}>
+                {added ? `Saved · ${missing} added to To Buy` : `Save and add ${missing} missing to To Buy`}
+              </Text>
+            </Tap>
+          ) : null}
           <ActionPill
             label="Save to Recipes"
             variant="primary"
             height="bottom"
             onPress={() => {
-              actions.importRecipe();
+              actions.importRecipe(saved);
               goToTab('/recipes');
             }}
           />
@@ -231,22 +256,27 @@ export default function Import() {
 
 const styles = StyleSheet.create({
   body: { gap: space.s3 + 2 },
+  input: {
+    ...type.body,
+    color: color.ink,
+    padding: 0,
+    outlineWidth: 0,
+    borderRadius: radius.field,
+    borderWidth: 1,
+    borderColor: color.controlLine,
+  },
+  // minHeight and padding, not a fixed height, so larger text sizes still fit.
   linkField: {
-    height: size.controlHeight + space.s1,
+    minHeight: size.controlHeight + space.s1,
     paddingHorizontal: space.s3 + 2,
-    justifyContent: 'center',
-    borderRadius: radius.field,
-    borderWidth: 1,
-    borderColor: color.line,
+    paddingVertical: space.s3,
   },
-  input: { ...type.body, color: color.ink, padding: 0, outlineWidth: 0 },
   textArea: {
-    height: TEXT_HEIGHT,
+    minHeight: TEXT_HEIGHT,
     padding: space.s3 + 2,
-    borderRadius: radius.field,
-    borderWidth: 1,
-    borderColor: color.line,
   },
+  // A thicker sage-ink outline while typing; the padding gives back the extra half point so nothing shifts.
+  focused: { borderWidth: FOCUS_BORDER, borderColor: color.sageInk, margin: -(FOCUS_BORDER - 1) },
   loading: { alignItems: 'center', gap: space.s3 + 2, paddingTop: space.s5 + space.s1 + 2, paddingBottom: space.s5 * 2 },
   errLink: { paddingVertical: space.s3, paddingHorizontal: space.s3 + 2, borderRadius: radius.control, backgroundColor: color.surfaceSunken },
   found: {
@@ -258,7 +288,9 @@ const styles = StyleSheet.create({
     borderBottomColor: color.lineSoft,
   },
   missingBtn: {
-    height: size.controlHeight,
+    minHeight: size.controlHeight,
+    paddingVertical: space.s2,
+    paddingHorizontal: space.s4,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.pill,
@@ -266,5 +298,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: color.surfaceSunken,
   },
+  center: { textAlign: 'center' },
   missingAdded: { backgroundColor: color.surface, borderColor: color.line },
 });
