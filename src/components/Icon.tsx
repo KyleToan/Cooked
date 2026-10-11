@@ -14,10 +14,12 @@ type Props = {
   filled?: boolean;
   /** Required for icon-only buttons. Leave out when the icon sits next to text. */
   label?: string;
+  /** Draw only these shapes of the icon (the loaders animate their parts separately). */
+  parts?: number[];
 };
 
 /** One of the 20 Cooked icons from design/system/icons. */
-export function Icon({ name, size = sizes.iconMd, color: tint = 'ink', filled = false, label }: Props) {
+export function Icon({ name, size = sizes.iconMd, color: tint = 'ink', filled = false, label, parts }: Props) {
   const stroke = color[tint];
   const strokeWidth = size <= sizes.iconSm ? 2 : sizes.iconStroke;
   return (
@@ -36,6 +38,7 @@ export function Icon({ name, size = sizes.iconMd, color: tint = 'ink', filled = 
       importantForAccessibility={label ? 'yes' : 'no-hide-descendants'}
     >
       {iconData[name].map(({ tag, props }, i) => {
+        if (parts && !parts.includes(i)) return null;
         const Shape = SHAPES[tag as keyof typeof SHAPES];
         return <Shape key={i} {...props} />;
       })}

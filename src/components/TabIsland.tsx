@@ -8,12 +8,13 @@ import { Icon } from './Icon';
 import type { IconName } from './icon-data';
 import { Text } from './Text';
 
-type Tab = { key: 'home' | 'scan' | 'recipes'; label: string; icon: IconName; route?: string };
+type TabKey = 'home' | 'scan' | 'recipes';
+type Tab = { key: TabKey; label: string; icon: IconName; href: '/' | '/scan' | '/recipes' };
 
 const TABS: Tab[] = [
-  { key: 'home', label: 'Home', icon: 'home', route: 'index' },
-  { key: 'scan', label: 'Scan', icon: 'scan' },
-  { key: 'recipes', label: 'Recipes', icon: 'recipes', route: 'recipes' },
+  { key: 'home', label: 'Home', icon: 'home', href: '/' },
+  { key: 'scan', label: 'Scan', icon: 'scan', href: '/scan' },
+  { key: 'recipes', label: 'Recipes', icon: 'recipes', href: '/recipes' },
 ];
 
 /** Island icons are 22px in the spec, between the two icon sizes. */
@@ -23,51 +24,50 @@ const MARK_HEIGHT = 2.5;
 
 /**
  * The floating tab island: Home, Scan and Recipes. Scan isn't a tab page; it
- * opens the camera full screen.
+ * opens the camera full screen. Pushed screens like Kitchen show it too.
  */
-export function TabIsland({ state, navigation }: BottomTabBarProps) {
+export function TabIsland({ active }: { active: TabKey }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const activeRoute = state.routes[state.index]?.name;
 
   return (
-    <View
-      pointerEvents="box-none"
-      style={[styles.wrap, { bottom: Math.max(space.s6, insets.bottom + space.s2) }]}
-    >
+    <View pointerEvents="box-none" style={[styles.wrap, { bottom: Math.max(space.s6, insets.bottom + space.s2) }]}>
       <View accessibilityRole="tablist" style={styles.island}>
         {TABS.map((tab) => {
-          const active = tab.route === activeRoute;
+          const on = tab.key === active;
           const onPress = () => {
-            if (!tab.route) {
-              router.push('/scan');
-              return;
+            if (tab.key === 'scan') router.push('/scan');
+            else if (!on) {
+              // From a pushed screen (Kitchen), go back to the tabs first.
+              if (router.canDismiss()) router.dismissAll();
+              router.navigate(tab.href);
             }
-            const route = state.routes.find((r) => r.name === tab.route);
-            if (!route) return;
-            const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-            if (!active && !event.defaultPrevented) navigation.navigate(route.name);
           };
           return (
             <Pressable
               key={tab.key}
               accessibilityRole="tab"
               accessibilityLabel={tab.label}
-              accessibilityState={{ selected: active }}
+              accessibilityState={{ selected: on }}
               onPress={onPress}
               style={styles.tab}
             >
-              <Icon name={tab.icon} size={ISLAND_ICON} color={active ? 'ink' : 'inkMuted'} />
-              <Text variant="micro" color={active ? 'ink' : 'inkMuted'} weight={active ? 'semibold' : 'medium'}>
+              <Icon name={tab.icon} size={ISLAND_ICON} color={on ? 'ink' : 'inkMuted'} />
+              <Text variant="micro" color={on ? 'ink' : 'inkMuted'} weight={on ? 'semibold' : 'medium'}>
                 {tab.label}
               </Text>
-              <View style={[styles.mark, active && styles.markOn]} />
+              <View style={[styles.mark, on && styles.markOn]} />
             </Pressable>
           );
         })}
       </View>
     </View>
   );
+}
+
+/** The island as the tab bar of the (tabs) navigator. */
+export function TabBar({ state }: BottomTabBarProps) {
+  return <TabIsland active={state.routes[state.index]?.name === 'recipes' ? 'recipes' : 'home'} />;
 }
 
 /** Bottom padding a scrolling tab screen needs so its last row clears the island ("about 130px"). */
