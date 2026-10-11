@@ -15,7 +15,7 @@ type Props = {
   icon?: IconName;
   /** 48 on Home (default), 44 in headers and on notes, 52 full width at the bottom of a screen. */
   height?: 'home' | 'header' | 'bottom';
-  /** Stretch to fill its row. The bottom height always does. */
+  /** Share its row with the pill beside it. The bottom height always spans the full width. */
   fill?: boolean;
   disabled?: boolean;
   accessibilityLabel?: string;
@@ -46,7 +46,8 @@ export function ActionPill({
       style={[
         styles.pill,
         { height: HEIGHT[height] },
-        (fill || bottom) && styles.fill,
+        fill && styles.fill,
+        bottom && styles.wide,
         { backgroundColor: primary && !disabled ? color.sage : color.surfaceSunken },
         height === 'header' && styles.compact,
       ]}
@@ -79,6 +80,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
   },
   compact: { paddingHorizontal: space.s4, alignSelf: 'flex-start' },
-  fill: { flex: 1, alignSelf: 'stretch' },
+  fill: { flex: 1 },
+  wide: { alignSelf: 'stretch' },
   row: { flexDirection: 'row', gap: space.s3 },
 });

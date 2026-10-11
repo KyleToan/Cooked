@@ -3,17 +3,18 @@ import type { BottomTabBarProps } from 'expo-router/tabs';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useGoToTab } from '@/hooks/useGoToTab';
 import { color, radius, shadow, size, space } from '@/theme';
 import { Icon } from './Icon';
 import type { IconName } from './icon-data';
 import { Text } from './Text';
 
 type TabKey = 'home' | 'scan' | 'recipes';
-type Tab = { key: TabKey; label: string; icon: IconName; href: '/' | '/scan' | '/recipes' };
+type Tab = { key: TabKey; label: string; icon: IconName; href: '/' | '/recipes' | null };
 
 const TABS: Tab[] = [
   { key: 'home', label: 'Home', icon: 'home', href: '/' },
-  { key: 'scan', label: 'Scan', icon: 'scan', href: '/scan' },
+  { key: 'scan', label: 'Scan', icon: 'scan', href: null },
   { key: 'recipes', label: 'Recipes', icon: 'recipes', href: '/recipes' },
 ];
 
@@ -28,6 +29,7 @@ const MARK_HEIGHT = 2.5;
  */
 export function TabIsland({ active }: { active: TabKey }) {
   const router = useRouter();
+  const goToTab = useGoToTab();
   const insets = useSafeAreaInsets();
 
   return (
@@ -36,12 +38,8 @@ export function TabIsland({ active }: { active: TabKey }) {
         {TABS.map((tab) => {
           const on = tab.key === active;
           const onPress = () => {
-            if (tab.key === 'scan') router.push('/scan');
-            else if (!on) {
-              // From a pushed screen (Kitchen), go back to the tabs first.
-              if (router.canDismiss()) router.dismissAll();
-              router.navigate(tab.href);
-            }
+            if (!tab.href) router.push('/scan');
+            else if (!on) goToTab(tab.href);
           };
           return (
             <Pressable

@@ -199,17 +199,20 @@ export function ToBuyToggle({
   count,
   addedLabel,
   onPress,
+  icon = true,
 }: {
   added: boolean;
   count: number;
   addedLabel: string;
   onPress: () => void;
+  /** The plus and check on Recipes. The Recipe screen's pill has no icon. */
+  icon?: boolean;
 }) {
   return (
     <Tap accessibilityRole="button" accessibilityState={{ selected: added }} onPress={onPress} style={styles.toggleHit}>
       <View style={[styles.toggle, added ? styles.toggleOn : styles.toggleOff]}>
-        <Icon name={added ? 'check' : 'add'} size={TOGGLE_ICON} color={added ? 'sageInk' : 'ink'} />
-        <Text variant="caption" weight="semibold" color={added ? 'sageInk' : 'ink'}>
+        {icon ? <Icon name={added ? 'check' : 'add'} size={TOGGLE_ICON} color={added ? 'sageInk' : 'ink'} /> : null}
+        <Text variant={icon ? 'caption' : 'link'} weight="semibold" color={added ? 'sageInk' : 'ink'}>
           {added ? addedLabel : `Add ${count} to To Buy`}
         </Text>
       </View>

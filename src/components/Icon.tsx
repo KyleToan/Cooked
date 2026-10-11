@@ -1,7 +1,16 @@
+import { Platform } from 'react-native';
 import Svg, { Circle, Ellipse, Line, Path, Polyline, Rect } from 'react-native-svg';
 
 import { color, size as sizes, type ColorName } from '@/theme';
 import { iconData, type IconName } from './icon-data';
+
+/** Name an icon-only button's icon; hide decorative icons from screen readers. */
+function a11y(label?: string): object {
+  if (Platform.OS === 'web') return label ? { role: 'img', 'aria-label': label } : { 'aria-hidden': true };
+  return label
+    ? { accessible: true, accessibilityLabel: label }
+    : { accessibilityElementsHidden: true, importantForAccessibility: 'no-hide-descendants' };
+}
 
 const SHAPES = { path: Path, circle: Circle, rect: Rect, line: Line, polyline: Polyline, ellipse: Ellipse };
 
@@ -32,10 +41,7 @@ export function Icon({ name, size = sizes.iconMd, color: tint = 'ink', filled = 
       strokeWidth={strokeWidth}
       strokeLinecap="round"
       strokeLinejoin="round"
-      accessible={!!label}
-      accessibilityLabel={label}
-      accessibilityElementsHidden={!label}
-      importantForAccessibility={label ? 'yes' : 'no-hide-descendants'}
+      {...a11y(label)}
     >
       {iconData[name].map(({ tag, props }, i) => {
         if (parts && !parts.includes(i)) return null;
