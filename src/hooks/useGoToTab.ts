@@ -6,8 +6,9 @@ export function useGoToTab() {
   const router = useRouter();
   return useCallback(
     (href: '/' | '/recipes') => {
-      if (router.canDismiss()) router.dismissAll();
-      router.navigate(href);
+      // From a pushed screen, pop back to the tabs on the right tab; from a tab, just switch.
+      if (router.canDismiss()) router.dismissTo(href);
+      else router.navigate(href);
     },
     [router],
   );
