@@ -13,7 +13,7 @@ Copied on 2026-10-11 from canvas version `1791726063-ccfe` and design system ver
 
 ## How to use it
 
-1. **Tokens first.** `system/tokens.json` holds every color, type style, space, radius, shadow and size. Turn it into one theme file in the app and use only those names. Never hard-code a hex value or a font size in a view.
+1. **Tokens first.** `system/tokens.json` holds every color, type style, space, radius, shadow and size. `npm run tokens` turns it (and `system/icons/`) into the app's theme in `src/theme/`. Use only those names. Never hard-code a hex value or a font size in a component.
 2. **Rules second.** `system/README.md` is the source of truth for how screens are put together (screen recipe, color roles, type, shape, interaction, checklist). `system/avoid-the-ai-look.md` lists what no screen may use.
 3. **Components third.** Build each of `system/components/*` (README + `preview.html`) as a reusable view before building screens.
 4. **Screens last.** Build one screen at a time from `screens/`. Look at the screenshot for the picture, and read the `.dc.html` for exact values, copy, states and behavior.

@@ -4,23 +4,58 @@ Rules for any AI agent (Claude Code, Cursor, Copilot, etc.) working in this repo
 
 ## The codebase
 
-The repo has no app code yet. When code is added, update this section with:
-
-- Tech stack and framework
-- Folder layout (what lives where)
-- How to install, run, lint and test
-- Where environment config lives (names only, never values)
-
-What's here now:
+**Stack:** React Native with Expo SDK 57, TypeScript, Expo Router. Over-the-air updates through EAS Update. iPhone first; Android builds from the same code.
 
 | Path | What it is |
 | --- | --- |
-| `design/` | The design spec: design system, every screen as a prototype and a screenshot. Read `design/README.md` first. Nothing in it ships in the app. |
+| `src/app/` | Screens. Every file is a route (Expo Router); `_layout.tsx` files are navigators. Only screens go here. |
+| `src/components/` | Reusable views. `Text` and `Icon` are the base pieces; build the design system components here. |
+| `src/theme/` | The theme. `tokens.ts` and `fonts.ts` are **generated**; import everything from `@/theme`. |
+| `scripts/build-tokens.mjs` | Generates `src/theme/tokens.ts`, `src/theme/fonts.ts` and `src/components/icon-data.ts` from `design/system/`. |
+| `design/` | The design spec: design system, every screen as a prototype and a screenshot. Read `design/README.md` first. Nothing in it ships. |
+| `assets/` | App icon, splash and favicon (Expo placeholders for now). |
+| `app.json`, `eas.json` | App config and EAS build and update channels. |
 | `.cursor/rules/cooked-design.mdc` | The design rules Cursor loads for every request. |
-| `context.md` | What Cooked is and what's been designed. |
-| `Decisions.md` | Every product, design and technical decision. |
+| `context.md`, `Decisions.md` | What Cooked is, and every decision made. |
 
-Until there's code, the source of truth for the app is `design/` and `context.md`.
+### Commands
+
+```bash
+npm install                 # install
+npm start                   # dev server; scan the QR code with Expo Go on your phone
+npm run tokens              # regenerate the theme and icons after design/system changes
+npm run typecheck           # TypeScript
+npm run lint                # ESLint (eslint-config-expo)
+npm run doctor              # expo-doctor: dependency and config checks
+npx expo install <package>  # add a package; always use this instead of npm install <package>
+```
+
+Run `typecheck` and `lint` before every commit. There are no tests yet.
+
+### Updates and builds (EAS)
+
+- Builds and OTA updates run on EAS: `npx eas-cli@latest build --profile preview` and `npx eas-cli@latest update --channel preview --message "..." --environment preview`.
+- Channels: `preview` (internal testers) and `production` (App Store). Always ship an update to `preview` and check it before `production`.
+- `runtimeVersion` uses the `fingerprint` policy, so an update only reaches builds with matching native code. Adding or upgrading a package with native code needs a new build, not just an update.
+- The EAS project isn't linked yet. The owner runs `npx eas-cli@latest login`, `init` and `update:configure` once, with their own Expo account. Agents don't run these.
+
+### Environment config
+
+None yet. When there is, list the variable names here (never the values) and keep values in EAS environment variables or a git-ignored `.env.local`.
+
+### Expo rules
+
+- Expo changes every SDK. Before using an Expo, EAS or React Native API, check the docs for this SDK (https://docs.expo.dev/versions/v57.0.0/) instead of relying on memory. https://docs.expo.dev/llms.txt indexes them.
+- `ios/` and `android/` are generated (Continuous Native Generation) and git-ignored. Never create or edit them; configure native behavior in `app.json` and config plugins.
+- Expo Go only includes Expo's bundled native modules. Everything in the app works in Expo Go today; adding a library with other native code means using a development build instead.
+- Prefer Expo's own modules over third-party libraries.
+
+### UI code rules
+
+- Import colors, type, space, radius, size and shadow from `@/theme`. Never write a hex value, font name or font size in a component.
+- Use `Text` from `@/components/Text` (with a `variant` and `color` token) instead of React Native's `Text`, and `Icon` from `@/components/Icon` for icons.
+- Never edit the generated files (`src/theme/tokens.ts`, `src/theme/fonts.ts`, `src/components/icon-data.ts`). Change `design/system/` and run `npm run tokens`.
+- Use the system keyboard, share sheet, camera and Sign in with Apple. The prototypes only fake these.
 
 ## What you are allowed to do
 
