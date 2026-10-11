@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cooked – Home, empty kitchen</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;500;600;700&amp;family=Alumni+Sans:wght@300;600;700&amp;family=Caveat:wght@400;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#56663A;text-decoration:none}a:hover{color:#3F4B2A}
+button,input{font-family:inherit}
+input::placeholder{color:#8C8C86}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #FFFFFF; color: #1A1A18; font-family: 'Albert Sans', system-ui, sans-serif">
+  <div style="position: absolute; left: 0; top: 0; width: 390px; height: 844px; box-sizing: border-box; overflow-y: auto; padding: 60px 20px 130px; display: flex; flex-direction: column; gap: 24px">
+
+    <div style="display: flex; align-items: flex-end; justify-content: space-between">
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <span style="font-size: 15px; font-weight: 500; color: #6E6E68">Welcome, Alex</span>
+        <h1 style="margin: 0; font-family: 'Alumni Sans', sans-serif; font-size: 48px; font-weight: 700; line-height: 0.95; letter-spacing: -0.005em">Cooked</h1>
+      </div>
+      <a href="AppAccount.dc.html" aria-label="Account and household" style="width: 44px; height: 44px; box-sizing: border-box; border-radius: 14px; border: 1px solid #ECECE8; background: #FFFFFF; display: flex; align-items: center; justify-content: center; color: #1A1A18">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.8"></circle><path d="M4.5 20.5c1-4 4-5.5 7.5-5.5s6.5 1.5 7.5 5.5"></path></svg>
+      </a>
+    </div>
+
+    <section style="display: flex; flex-direction: column; gap: 14px">
+      <h2 style="margin: 0; font-family: 'Alumni Sans', sans-serif; font-size: 28px; font-weight: 600; line-height: 1.05">Your Kitchen</h2>
+      <div style="position: relative; margin: 10px 4px 0; padding: 22px 20px 20px; background: #FEFAE0; border-radius: 3px 3px 16px 3px; box-shadow: 0 1px 1px rgba(26,26,24,0.06), 0 8px 16px -6px rgba(26,26,24,0.18); transform: rotate(-1deg); display: flex; flex-direction: column; gap: 10px">
+        <span style="position: absolute; top: -9px; left: 50%; width: 52px; height: 17px; margin-left: -26px; transform: rotate(-3deg); background: rgba(255,255,255,0.65); border: 1px solid rgba(26,26,24,0.06)"></span>
+        <span style="font-family: 'Caveat', cursive; font-size: 30px; font-weight: 700; line-height: 1; color: #2A2A26">Nothing here yet</span>
+        <p style="margin: 0; font-size: 15px; line-height: 1.45; color: #4A4A42">Scan your next grocery receipt and Cooked puts each item in the fridge, pantry or freezer for you.</p>
+        <a href="AppScan.dc.html" style="align-self: flex-start; height: 44px; padding: 0 18px; border-radius: 999px; background: #CCD5AE; color: #1A1A18; display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1A1A18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16"></path><circle cx="12" cy="12" r="2.6"></circle></svg>
+          Scan a receipt
+        </a>
+        <a href="AppKitchen.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; margin: -8px 0; font-size: 14px; font-weight: 600">Or add items by hand</a>
+      </div>
+    </section>
+
+    <section style="display: flex; flex-direction: column; gap: 12px">
+      <h2 style="margin: 0; font-family: 'Alumni Sans', sans-serif; font-size: 28px; font-weight: 600; line-height: 1.05">To Buy</h2>
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <p style="margin: 0; font-size: 14px; line-height: 1.45; color: #6E6E68">Your shared list is empty. Add the first thing you’re out of, and everyone in your kitchen will see it.</p>
+        <label style="display: flex; align-items: center; gap: 14px; height: 52px">
+          <span style="width: 24px; height: 24px; box-sizing: border-box; flex-shrink: 0; border-radius: 7px; border: 1.5px dashed #CFCFC9; display: flex; align-items: center; justify-content: center; color: #56663A"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></span>
+          <input type="text" placeholder="Add an item…" aria-label="Add an item" style="flex: 1; min-width: 0; border: none; outline: none; padding: 0; background: transparent; font-size: 16px; color: #1A1A18">
+        </label>
+      </div>
+    </section>
+
+  </div>
+
+  <div style="position: absolute; left: 45px; bottom: 28px; width: 300px; height: 68px">
+    <dc-import name="CookedIsland" active="home" hint-size="300px,68px"></dc-import>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cooked – Enter the code</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;500;600;700&amp;family=Alumni+Sans:wght@300;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#56663A;text-decoration:none}a:hover{color:#3F4B2A}
+button{font-family:inherit}
+@keyframes ckBlink{50%{opacity:0}}
+.ck-caret{animation:ckBlink 1s steps(1) infinite}
+@media (prefers-reduced-motion:reduce){.ck-caret{animation:none}}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #FFFFFF; color: #1A1A18; font-family: 'Albert Sans', system-ui, sans-serif">
+  <div style="position: absolute; left: 24px; top: 56px; width: 342px; display: flex; flex-direction: column; gap: 20px">
+    <a href="Onb3Email.dc.html" aria-label="Back" style="width: 44px; height: 44px; margin-left: -12px; display: flex; align-items: center; justify-content: center; color: #1A1A18">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>
+    </a>
+    <h1 style="margin: 0; font-family: 'Alumni Sans', sans-serif; font-size: 36px; font-weight: 700; line-height: 1; letter-spacing: -0.005em">Enter the code</h1>
+    <div style="display: flex; flex-direction: column; gap: 10px">
+      <div role="group" aria-label="6-digit code" style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; font-variant-numeric: tabular-nums">
+        <sc-for list="{{boxes}}" as="b" hint-placeholder-count="6">
+          <span style="{{b.style}}">
+            {{b.digit}}
+            <sc-if value="{{b.caret}}" hint-placeholder-val="{{ false }}"><span class="ck-caret" style="width: 2px; height: 24px; background: #1A1A18"></span></sc-if>
+          </span>
+        </sc-for>
+      </div>
+      <sc-if value="{{wrong}}" hint-placeholder-val="{{ false }}">
+        <p role="alert" style="margin: 0; display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: #A33A2B">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5v5.5M12 16.5v.01"></path></svg>
+          That code didn’t work. Use the newest email.
+        </p>
+      </sc-if>
+      <p style="margin: 0; font-size: 14px; color: #6E6E68">Sent to alex.rivera@gmail.com · <a href="Onb3Email.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; margin: -12px 0; font-weight: 600">Change</a></p>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 0; bottom: 291px; width: 390px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #6E6E68">
+    <sc-if value="{{waiting}}" hint-placeholder-val="{{ true }}"><span>Send a new code in {{left}}</span></sc-if>
+    <sc-if value="{{ready}}" hint-placeholder-val="{{ false }}"><button onClick="{{resend}}" style="height: 44px; border: none; background: transparent; padding: 0 12px; cursor: pointer; font-size: 14px; font-weight: 600; color: #56663A">Send a new code</button></sc-if>
+  </div>
+
+  <div style="position: absolute; left: 0; bottom: 0; width: 390px; height: 291px">
+    <dc-import name="CookedKeyboard" layout="numbers" suggest="481726" hint="From Mail" href="Onb5Name.dc.html" hint-size="390px,291px"></dc-import>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"enum","options":["typing","wrong"],"default":"typing"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { secs: 24 };
+  }
+  componentDidMount() {
+    this.timer = setInterval(() => { if (this.state.secs > 0) this.setState({ secs: this.state.secs - 1 }); }, 1000);
+  }
+  componentWillUnmount() { clearInterval(this.timer); }
+  renderVals() {
+    const wrong = this.props.state === 'wrong';
+    const typed = wrong ? [] : ['4', '8', '1', '7'];
+    const s = this.state.secs;
+    const KEYS = ['1', '2 ABC', '3 DEF', '4 GHI', '5 JKL', '6 MNO', '7 PQRS', '8 TUV', '9 WXYZ', '', '0', '⌫'];
+    return {
+      wrong, waiting: s > 0 && !wrong, ready: s === 0 || wrong,
+      left: '0:' + String(s).padStart(2, '0'),
+      resend: () => this.setState({ secs: 30 }),
+      keys: KEYS.map((k) => ({
+        label: k.split(' ')[0],
+        style: 'border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #1A1A18; ' + (k && k !== '⌫' ? 'background: #FFFFFF; box-shadow: 0 1px 0 rgba(0,0,0,0.3);' : 'background: transparent;')
+      })),
+      boxes: [0, 1, 2, 3, 4, 5].map((i) => {
+        const d = typed[i] || '';
+        const cur = i === typed.length;
+        return {
+          digit: d, caret: cur,
+          style: 'height: 58px; box-sizing: border-box; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 600; ' + (wrong ? 'border: 1.5px solid #A33A2B;' : cur ? 'border: 1.5px solid #56663A;' : 'border: 1px solid #ECECE8;')
+        };
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

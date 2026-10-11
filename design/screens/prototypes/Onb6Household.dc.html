@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cooked – Who you cook with</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;500;600;700&amp;family=Alumni+Sans:wght@300;600;700&amp;family=Caveat:wght@400;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#56663A;text-decoration:none}a:hover{color:#3F4B2A}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #FFFFFF; color: #1A1A18; font-family: 'Albert Sans', system-ui, sans-serif">
+  <div style="position: absolute; left: 24px; top: 56px; width: 342px; display: flex; flex-direction: column; gap: 20px">
+    <a href="Onb5Name.dc.html" aria-label="Back" style="width: 44px; height: 44px; display: flex; align-items: center; color: #1A1A18">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>
+    </a>
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <h1 style="margin: 0; font-family: 'Alumni Sans', sans-serif; font-size: 36px; font-weight: 700; line-height: 1">Who do you cook with?</h1>
+      <p style="margin: 0; font-size: 15px; line-height: 1.4; color: #6E6E68">You can change this later.</p>
+    </div>
+    <div role="radiogroup" aria-label="Who do you cook with" style="display: flex; flex-direction: column; gap: 12px">
+      <sc-for list="{{choices}}" as="c" hint-placeholder-count="3">
+        <button role="radio" aria-checked="{{c.checked}}" onClick="{{c.pick}}" style="{{c.style}}">
+          <span style="flex: 1; display: flex; flex-direction: column; gap: 3px; text-align: left">
+            <span style="font-size: 16px; font-weight: 600; color: #1A1A18">{{c.title}}</span>
+            <span style="font-size: 14px; line-height: 1.35; color: #6E6E68">{{c.sub}}</span>
+          </span>
+          <span style="{{c.radio}}"></span>
+        </button>
+      </sc-for>
+    </div>
+    <a href="{{nextHref}}" style="height: 52px; border-radius: 26px; background: #CCD5AE; color: #1A1A18; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600">Next</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { picked: 'household' };
+  }
+  renderVals() {
+    const C = [
+      { id: 'solo', title: 'Just me', sub: 'One kitchen, one list.' },
+      { id: 'household', title: 'Me and my household', sub: 'Partner, family or roommates share the fridge and the list. You’ll invite them after your first scan.' },
+      { id: 'invite', title: 'I have an invite', sub: 'Join a kitchen someone already set up.' }
+    ];
+    const p = this.state.picked;
+    return {
+      nextHref: p === 'invite' ? 'Onb6bInviteCode.dc.html' : p === 'solo' ? 'Onb8ScanSolo.dc.html' : 'Onb8Scan.dc.html',
+      choices: C.map((c) => {
+        const on = c.id === p;
+        return {
+          title: c.title,
+          sub: c.sub,
+          checked: on ? 'true' : 'false',
+          style: 'display: flex; align-items: center; gap: 14px; width: 100%; box-sizing: border-box; padding: 16px; border-radius: 16px; cursor: pointer; ' + (on ? 'background: #E9EDC9; border: 1.5px solid #56663A;' : 'background: #FFFFFF; border: 1px solid #ECECE8;'),
+          radio: 'width: 22px; height: 22px; box-sizing: border-box; flex-shrink: 0; border-radius: 50%; ' + (on ? 'border: 7px solid #56663A;' : 'border: 1.5px solid #CFCFC9;'),
+          pick: () => this.setState({ picked: c.id })
+        };
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

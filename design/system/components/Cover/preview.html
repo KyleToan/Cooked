@@ -1,0 +1,32 @@
+<!-- @dsCard height=288 -->
+<div style="position: relative; width: 960px; height: 288px; background: var(--surface); overflow: hidden; font-family: var(--font-sans)">
+  <svg width="480" height="288" viewBox="0 0 480 288" style="position: absolute; left: 480px; top: 0" aria-hidden="true">
+    <!--
+      blocks: sage 300x288 (lead slab, bleeds top/bottom/right), papaya 180x168, beige 180x120, bronze 80x48 pill (radius-pill = half the short side)
+      arrangement: one tall slab with two stacked satellites on its left, bronze pill tucked on the papaya/beige seam
+      pattern: literal motif — sticky notes (the kitchen grid) as tilted near-square tiles with radius-note corners, cornsilk/papaya/beige on the sage slab; Cooked shows the kitchen as notes on a fridge
+      scales: tile 72 = 3x space-6 minus padding, gaps space-5 (20) and space-4 (16), radii radius-note (3) and radius-pill
+    -->
+    <style>
+      .sage{fill:var(--sage)} .papaya{fill:var(--papaya)} .beige{fill:var(--beige)} .bronze{fill:var(--sage-ink)} .corn{fill:var(--cornsilk)}
+      .tape{fill:var(--surface);opacity:.7}
+    </style>
+    <rect class="papaya" x="0" y="0" width="180" height="168"/>
+    <rect class="beige" x="0" y="168" width="180" height="120"/>
+    <rect class="bronze" x="100" y="144" width="80" height="48" rx="24"/>
+    <rect class="sage" x="180" y="0" width="300" height="288"/>
+    <g transform="translate(212 36) rotate(-4 36 36)"><rect class="corn" width="72" height="72" rx="3"/><rect class="tape" x="22" y="-7" width="28" height="12"/></g>
+    <g transform="translate(304 28) rotate(3 36 36)"><rect class="papaya" width="72" height="72" rx="3"/><rect class="tape" x="22" y="-7" width="28" height="12"/></g>
+    <g transform="translate(396 44) rotate(-2 36 36)"><rect class="beige" width="72" height="72" rx="3"/><rect class="tape" x="22" y="-7" width="28" height="12"/></g>
+    <g transform="translate(228 160) rotate(2 36 36)"><rect class="beige" width="72" height="72" rx="3"/><rect class="tape" x="22" y="-7" width="28" height="12"/></g>
+    <g transform="translate(320 168) rotate(-3 36 36)"><rect class="corn" width="72" height="72" rx="3"/><rect class="tape" x="22" y="-7" width="28" height="12"/></g>
+    <g transform="translate(410 176) rotate(4 36 36)"><rect class="papaya" width="72" height="72" rx="3"/><rect class="tape" x="22" y="-7" width="28" height="12"/></g>
+  </svg>
+  <div style="position: absolute; left: 40px; bottom: 36px; max-width: 420px; display: flex; flex-direction: column; gap: 8px">
+    <div style="font-family: var(--font-display); font-size: 120px; font-weight: 700; line-height: 0.9; letter-spacing: -0.01em; color: var(--ink)">Cooked</div>
+    <div style="font-size: 14px; color: var(--ink-muted)">A calm, shared kitchen: what you have, what you need, what to cook.</div>
+  </div>
+</div>
+<script>
+(function(){var l=document.createElement('link');l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400&family=Alumni+Sans:wght@300;600;700&display=swap';document.head.appendChild(l);})();
+</script>

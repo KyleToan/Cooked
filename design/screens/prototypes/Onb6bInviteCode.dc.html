@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cooked – Join a kitchen</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;500;600;700&amp;family=Alumni+Sans:wght@300;600;700&amp;family=Caveat:wght@400;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#56663A;text-decoration:none}a:hover{color:#3F4B2A}
+button,input{font-family:inherit}
+input::placeholder{color:#8C8C86}
+.ck-field{border:1px solid #ECECE8}
+.ck-field:focus-within{border-color:#56663A;box-shadow:inset 0 0 0 0.5px #56663A}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #FFFFFF; color: #1A1A18; font-family: 'Albert Sans', system-ui, sans-serif">
+  <div style="position: absolute; left: 24px; top: 56px; width: 342px; display: flex; flex-direction: column; gap: 20px">
+    <a href="Onb6Household.dc.html" aria-label="Back" style="width: 44px; height: 44px; display: flex; align-items: center; color: #1A1A18">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>
+    </a>
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <h1 style="margin: 0; font-family: 'Alumni Sans', sans-serif; font-size: 36px; font-weight: 700; line-height: 1">Join a kitchen</h1>
+      <p style="margin: 0; font-size: 15px; line-height: 1.4; color: #6E6E68">Paste the invite link someone sent you, or type the code at the end of it.</p>
+    </div>
+
+    <label for="onb-invite" class="ck-field" style="border: 1.5px solid #56663A; display: flex; flex-direction: column; justify-content: center; gap: 2px; height: 58px; box-sizing: border-box; padding: 0 16px; border-radius: 14px; ">
+      <span style="font-size: 12px; color: #6E6E68">Invite link or code</span>
+      <input id="onb-invite" type="text" value="{{code}}" placeholder="rivera-kitchen" autocapitalize="off" style="border: none; outline: none; padding: 0; font-size: 16px; color: #1A1A18; background: transparent">
+    </label>
+
+    <sc-if value="{{empty}}" hint-placeholder-val="{{ false }}">
+      <button onClick="{{paste}}" style="align-self: flex-start; height: 44px; padding: 0 14px; border-radius: 999px; border: none; background: #F4F4F1; color: #1A1A18; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#56663A" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4.5" width="12" height="16" rx="2"></rect><path d="M9.5 4.5V3.5h5v1"></path></svg>
+        Paste invite link
+      </button>
+    </sc-if>
+
+    <sc-if value="{{found}}" hint-placeholder-val="{{ true }}">
+      <div style="position: relative; margin: 4px 2px 0; padding: 16px 18px 14px; background: #E9EDC9; border-radius: 3px 3px 16px 3px; box-shadow: 0 1px 1px rgba(26,26,24,0.06), 0 8px 16px -6px rgba(26,26,24,0.18); transform: rotate(-1deg); display: flex; flex-direction: column; gap: 6px">
+        <span style="position: absolute; top: -9px; left: 50%; width: 52px; height: 17px; margin-left: -26px; transform: rotate(-3deg); background: rgba(255,255,255,0.65); border: 1px solid rgba(26,26,24,0.06)"></span>
+        <span style="font-family: 'Caveat', cursive; font-size: 30px; font-weight: 700; line-height: 1; color: #2A2A26">Rivera kitchen</span>
+        <span style="font-size: 14px; line-height: 1.4; color: #4A4A42">Sam invited you<br>37 things in the kitchen · 6 on To Buy</span>
+      </div>
+    </sc-if>
+    <a href="AppHome.dc.html" style="{{ctaStyle}}">{{cta}}</a>
+  </div>
+  <div style="position: absolute; left: 0; bottom: 0; width: 390px; height: 291px">
+    <dc-import name="CookedKeyboard" layout="letters" suggest="" hint="" href="" hint-size="390px,291px"></dc-import>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { code: 'rivera-kitchen' };
+  }
+  renderVals() {
+    const ok = !!this.state.code;
+    return {
+      code: this.state.code, empty: !ok, found: ok,
+      paste: () => this.setState({ code: 'rivera-kitchen' }),
+      cta: ok ? 'Join Rivera kitchen' : 'Join',
+      ctaStyle: 'height: 52px; border-radius: 26px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; ' + (ok ? 'background: #CCD5AE; color: #1A1A18;' : 'background: #F4F4F1; color: #8C8C86; pointer-events: none;')
+    };
+  }
+}
+</script>
+</body>
+</html>
