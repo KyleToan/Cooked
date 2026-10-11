@@ -18,7 +18,8 @@ The feel: calm, white, uncluttered, with one warm, homemade touch (sticky notes 
 ## Platform
 
 - iPhone app first, designed at 390 × 844. Native iOS expectations apply: back gestures, Sign in with Apple, the system share sheet and keyboard.
-- Tech stack: not chosen yet. Record it in `Decisions.md` when it is.
+- Tech stack: React Native with Expo (SDK 57), TypeScript and Expo Router, with over-the-air updates through EAS Update. See `AGENTS.md` for the folder layout and commands.
+- State of the code: the project, theme, fonts and icons are set up, and a temporary theme check screen opens first. No Cooked screens are built yet.
 
 ## Screens
 
@@ -67,7 +68,6 @@ The full design system is in `design/system/` and at https://claude.ai/artifact/
 
 ## Open questions
 
-- Tech stack (native SwiftUI, React Native / Expo, Flutter?).
 - Backend, accounts and real-time sync for a shared kitchen.
 - How receipt scanning works (on-device OCR such as Apple Vision, or a service) and how items get sorted into fridge, pantry or freezer.
 - How recipe import works (fetching and parsing a page, or pasted text).

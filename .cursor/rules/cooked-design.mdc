@@ -13,7 +13,8 @@ Before writing or changing any screen or component:
 
 ## Rules
 
-- Every color, font, size, space, radius and shadow comes from the theme file built from `design/system/tokens.json`. Never hard-code a hex value or a font size in a view.
+- Every color, font, size, space, radius and shadow comes from `@/theme` (generated from `design/system/tokens.json` by `npm run tokens`). Never hard-code a hex value, font name or font size in a component.
+- Use `Text` from `@/components/Text` with a `variant` and `color` token, and `Icon` from `@/components/Icon`.
 - Fonts: Alumni Sans only for screen titles (700) and section headings (600, no underline), always 24px or bigger. Albert Sans for everything else. Caveat only on sticky notes.
 - One sage (`sage`) button per screen. Every other button is a grey `surface-sunken` pill or a `sage-ink` text link.
 - Bronze (`bronze`, `bronze-ink`) only marks food to use soon. Never use it for buttons, links or progress.
