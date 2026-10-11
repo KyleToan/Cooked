@@ -16,6 +16,7 @@ Rules for any AI agent (Claude Code, Cursor, Copilot, etc.) working in this repo
 | `assets/` | App icon, splash and favicon (Expo placeholders for now). |
 | `app.json`, `eas.json` | App config and EAS build and update channels. |
 | `.cursor/rules/cooked-design.mdc` | The design rules Cursor loads for every request. |
+| `CLAUDE.md` | Makes Claude Code load this file and the design rules. |
 | `context.md`, `Decisions.md` | What Cooked is, and every decision made. |
 
 ### Commands
