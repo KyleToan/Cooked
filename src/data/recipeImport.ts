@@ -350,6 +350,10 @@ const BULLET = /^\s*[-•*–▢□◦]\s*/;
 const NUMBERED = /^\s*(?:step\s*)?\d+\s*[.):]\s+/i;
 const STARTS_WITH_AMOUNT = new RegExp(String.raw`^\s*${AMOUNT}`);
 const META_LINE = /^(?:serves|servings?|makes|yield|prep|cook|total|time|ready in)\b/i;
+/** A photographed page's number, alone or beside a capitals running header ("112   WEEKNIGHT DINNERS"). */
+const PAGE_NUMBER = /^(?:\d{1,3}|\d{1,3}\s{3,}[^a-z\d]+|[^a-z\d]+\s{3,}\d{1,3})$/;
+/** Ends like a finished sentence, so the next line is a new step rather than the rest of this one. */
+const SENTENCE_END = /[.!?)]$/;
 
 /** Splits pasted text into a title, ingredients and steps. Null when there's no ingredient list. */
 export function parseRecipeFromText(text: string, items: Item[] = []): Recipe | null {
@@ -362,6 +366,7 @@ export function parseRecipeFromText(text: string, items: Item[] = []): Recipe | 
   const steps: string[] = [];
 
   for (const line of lines) {
+    if (PAGE_NUMBER.test(line)) continue;
     const bare = line.replace(/[#*_]+/g, '').trim();
     if (INGREDIENT_HEADING.test(bare)) {
       section = 'ingredients';
@@ -381,8 +386,13 @@ export function parseRecipeFromText(text: string, items: Item[] = []): Recipe | 
     const numbered = NUMBERED.test(line);
     const listed = BULLET.test(line) || (STARTS_WITH_AMOUNT.test(line) && !numbered);
 
-    if (section === 'steps' || (section === null && numbered)) {
-      steps.push(line.replace(NUMBERED, '').replace(BULLET, '').trim());
+    // Without headings, the first numbered line starts the steps, so its wrapped lines stay with it.
+    if (section === null && numbered) section = 'steps';
+    if (section === 'steps') {
+      const last = steps.length - 1;
+      // A photo breaks a step at the page's line ends; carry on the step until it ends a sentence.
+      if (!numbered && !BULLET.test(line) && last >= 0 && !SENTENCE_END.test(steps[last])) steps[last] += ` ${line}`;
+      else steps.push(line.replace(NUMBERED, '').replace(BULLET, '').trim());
       continue;
     }
     if (section === 'ingredients' || listed) {
@@ -397,6 +407,8 @@ export function parseRecipeFromText(text: string, items: Item[] = []): Recipe | 
     if (ingredients.length && bare.length > 30) steps.push(bare);
   }
 
+  // Cookbooks often set titles in capitals; "LEMON CHICKEN" reads as "Lemon chicken".
+  if (title === title.toUpperCase()) title = capitalize(title.toLowerCase());
   return build({ title: title || 'Pasted recipe', time, servings, lines: ingredients, steps, items });
 }
 

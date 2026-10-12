@@ -187,3 +187,16 @@ export const SAMPLE_SCAN: ScanLine[] = [
   { id: 'p', name: 'Frozen peas', price: '$2.49', place: 'freezer', qty: 1 },
   { id: 't', name: 'Paper towels', price: 'Not food · $5.99', place: 'skip', qty: 1 },
 ];
+
+// A cookbook page as the phone would read it, for Recipe mode where this build can't read photos (Expo Go, web).
+export const SAMPLE_RECIPE_PAGE = `Spaghetti with Peas and Basil
+Serves 2
+Ingredients
+200 g spaghetti
+1 cup frozen peas
+2 eggs
+1 handful basil leaves
+Method
+1. Boil the spaghetti in salted water until just tender.
+2. Add the peas for the last two minutes, then drain.
+3. Beat the eggs, toss through the hot pasta off the heat and finish with torn basil.`;

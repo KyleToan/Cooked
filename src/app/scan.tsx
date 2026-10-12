@@ -12,29 +12,30 @@ import { Icon } from '@/components/Icon';
 import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
 import { scanFlow } from '@/data/helpers';
-import { lastScan, readReceiptText } from '@/data/ocr';
+import { lastScan, readText } from '@/data/ocr';
 import { parseReceipt } from '@/data/receipt';
-import { SAMPLE_SCAN } from '@/data/seed';
+import { SAMPLE_RECIPE_PAGE, SAMPLE_SCAN } from '@/data/seed';
 import type { ScanLine } from '@/data/types';
 import { haptics } from '@/hooks/haptics';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { color, radius, size, space } from '@/theme';
 
 /*
- * Only Receipt ships. Fridge, Pantry and Freezer (point at a shelf) need real
- * image reading, and Recipe lives in Import. To bring modes back, add them here
- * and put the mode strip back under the controls (see git history).
+ * Receipt and Recipe ship. Fridge, Pantry and Freezer (point at a shelf) need
+ * real image recognition; add them here when they work.
  */
-type Mode = 'receipt';
+type Mode = 'receipt' | 'recipe';
 
-const MODES: { id: Mode; label: string; hint: string }[] = [
-  { id: 'receipt', label: 'Receipt', hint: 'Fit the whole receipt inside the corners.' },
+const MODES: { id: Mode; label: string; hint: string; tip: string }[] = [
+  { id: 'receipt', label: 'Receipt', hint: 'Fit the whole receipt inside the corners.', tip: 'Long receipt? Take it in parts.' },
+  { id: 'recipe', label: 'Recipe', hint: 'Fit the recipe page inside the corners to save it.', tip: 'Keep the ingredients in the photo.' },
 ];
 
 const SHUTTER = 78;
 const SHUTTER_DOT = 62;
 const SIDE_BTN = 48;
 const GLYPH = 22;
+const STRIP = 56;
 /** Camera chrome sits over the feed around a fixed-size shutter; cap how far its text grows. */
 const CHROME_MAX_SCALE = 1.3;
 /** A critically damped spring: the shutter dips and settles without bouncing. */
@@ -43,8 +44,9 @@ const FLASH_IN = 40;
 const FLASH_OUT = 80;
 
 /**
- * Full-screen camera with corner guides, Photos and Flash. The photo is read on
- * the phone and goes to Check your scan, or to "Couldn't read this receipt".
+ * Full-screen camera with corner guides, Photos, Flash and a Receipt / Recipe
+ * strip. The photo is read on the phone. A receipt goes to Check your scan (or
+ * "Couldn't read this receipt"); a recipe page goes to Import.
  */
 export default function Scan() {
   const router = useRouter();
@@ -55,6 +57,7 @@ export default function Scan() {
   const reduced = useReducedMotion();
   const [flash, setFlash] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [mode, setMode] = useState<Mode>('receipt');
   const press = useSharedValue(1);
   const flashOpacity = useSharedValue(0);
   const shutterStyle = useAnimatedStyle(() => ({ transform: [{ scale: press.get() }] }));
@@ -72,16 +75,32 @@ export default function Scan() {
     return () => sub.remove();
   }, [getPermission]);
 
-  const current = MODES[0];
+  const current = MODES.find((m) => m.id === mode) ?? MODES[0];
+  // Recipes are saved from Import, which only exists once onboarding is done.
+  const modes = flow === 'app' ? MODES : [];
   const granted = !!permission?.granted;
 
   const unreadable = () => router.push({ pathname: '/scan-unreadable', params: { flow } });
 
+  /** Hands a recipe page's text to Import, which shows what it found or "No recipe on that page". */
+  const readRecipe = async (uri: string | undefined) => {
+    let text: string | null;
+    try {
+      text = uri ? await readText(uri) : null;
+    } catch {
+      text = '';
+    }
+    // No reader in this build (Expo Go, web): a sample page keeps the flow usable in development.
+    lastScan.recipeText = text ?? (__DEV__ ? SAMPLE_RECIPE_PAGE : '');
+    router.replace({ pathname: '/import', params: { from: 'scan' } });
+  };
+
   /** Reads the photo into lines for Check your scan; no food lines or a failed read is unreadable. */
   const read = async (uri: string | undefined) => {
+    if (mode === 'recipe') return readRecipe(uri);
     let lines: ScanLine[] = [];
     try {
-      const text = uri ? await readReceiptText(uri) : null;
+      const text = uri ? await readText(uri) : null;
       // No reader in this build (Expo Go, web): the sample receipt keeps the screens usable in development.
       if (text === null) lines = __DEV__ ? SAMPLE_SCAN : [];
       else lines = parseReceipt(text).lines;
@@ -170,7 +189,7 @@ export default function Scan() {
                 {current.hint}
               </Text>
               <Text variant="caption" color="onInk" style={[styles.center, styles.soft]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
-                Long receipt? Take it in parts.
+                {current.tip}
               </Text>
             </>
           ) : (
@@ -225,6 +244,28 @@ export default function Scan() {
             </Text>
           </Tap>
         </View>
+        {modes.length ? (
+          <Glass style={styles.strip}>
+            <View accessibilityRole="tablist" accessibilityLabel="Scan mode" style={styles.modes}>
+              {modes.map((m) => {
+                const on = m.id === mode;
+                return (
+                  <Tap
+                    key={m.id}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: on }}
+                    onPress={() => setMode(m.id)}
+                    style={[styles.mode, on && styles.modeOn]}
+                  >
+                    <Text variant="caption" weight="medium" color={on ? 'ink' : 'onInk'} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
+                      {m.label}
+                    </Text>
+                  </Tap>
+                );
+              })}
+            </View>
+          </Glass>
+        ) : null}
       </View>
     </View>
   );
@@ -282,6 +323,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   shutterDot: { width: SHUTTER_DOT, height: SHUTTER_DOT, borderRadius: radius.pill, backgroundColor: color.onInk },
+  // The prototype's strip: a 56pt glass pill inset 6pt, so each mode is a 44pt target.
+  strip: { height: STRIP, marginTop: space.s5, marginHorizontal: space.s5, borderRadius: radius.pill },
+  modes: { flex: 1, padding: (STRIP - size.targetMin) / 2, flexDirection: 'row', gap: space.s1 },
+  mode: { flex: 1, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
+  modeOn: { backgroundColor: color.onInk },
   ask: { alignItems: 'center', gap: space.s3 },
   askBtn: {
     minHeight: size.targetMin,
