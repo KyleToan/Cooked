@@ -72,7 +72,7 @@ Two families, used the way the Impeccable website uses them: a tall, light, cond
 - **Sheet** — the Import sheet and error sheets such as “Couldn’t read this receipt”.
 - **Settings** — settings rows with a value and chevron, the switch, people rows, and the Log out / Delete account ending used on Account, Household and Notifications.
 - **Tab island** — Home, Scan and Recipes with icons and labels; a grey underscore under the active tab.
-- **Icons** — 20 icons drawn for Cooked on one 24px grid with a 1.8 stroke, including three loading icons (`loading`, `syncing`, `cooking`). Use only these in the app; the Icons group under Assets holds the files.
+- **Icons** — 22 icons drawn for Cooked on one 24px grid with a 1.8 stroke, including three loading icons (`loading`, `syncing`, `cooking`). Use only these in the app; the Icons group under Assets holds the files.
 
 Each component's page has its exact spec and a live preview.
 

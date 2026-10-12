@@ -27,7 +27,7 @@ type Props = {
   parts?: number[];
 };
 
-/** One of the 20 Cooked icons from design/system/icons. */
+/** One of the 22 Cooked icons from design/system/icons. */
 export function Icon({ name, size = sizes.iconMd, color: tint = 'ink', filled = false, label, parts }: Props) {
   const stroke = color[tint];
   const strokeWidth = size <= sizes.iconSm ? 2 : sizes.iconStroke;

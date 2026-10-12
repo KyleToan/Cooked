@@ -7,7 +7,7 @@ import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CornerGuides, FlashGlyph, Glass, PhotosGlyph, Scrim } from '@/components/Camera';
+import { CornerGuides, Glass, Scrim } from '@/components/Camera';
 import { Icon } from '@/components/Icon';
 import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
@@ -30,6 +30,7 @@ const MODES: { id: Mode; label: string; hint: string }[] = [
 const SHUTTER = 78;
 const SHUTTER_DOT = 62;
 const SIDE_BTN = 48;
+const GLYPH = 22;
 /** Camera chrome sits over the feed around a fixed-size shutter; cap how far its text grows. */
 const CHROME_MAX_SCALE = 1.3;
 /** A critically damped spring: the shutter dips and settles without bouncing. */
@@ -152,7 +153,7 @@ export default function Scan() {
         <View style={styles.controls}>
           <Tap accessibilityRole="button" accessibilityLabel="Choose a photo or screenshot" onPress={pickPhoto} style={styles.side}>
             <Glass style={styles.square}>
-              <PhotosGlyph />
+              <Icon name="photos" size={GLYPH} color="onInk" />
             </Glass>
             <Text variant="micro" color="onInk" maxFontSizeMultiplier={CHROME_MAX_SCALE}>
               Photos
@@ -184,7 +185,7 @@ export default function Scan() {
             style={styles.side}
           >
             <Glass style={styles.square} on={flash}>
-              <FlashGlyph tint={flash ? color.ink : color.onInk} />
+              <Icon name="flash" size={GLYPH} color={flash ? 'ink' : 'onInk'} />
             </Glass>
             <Text variant="micro" color="onInk" maxFontSizeMultiplier={CHROME_MAX_SCALE}>
               {flash ? 'Flash on' : 'Flash'}
