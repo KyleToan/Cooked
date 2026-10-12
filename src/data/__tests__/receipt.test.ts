@@ -1,7 +1,8 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { parseReceipt, placeFor } from '@/data/receipt';
+import { parseReceipt, placeFor, shelfLifeFor } from '@/data/receipt';
 import { SAMPLE_SCAN } from '@/data/seed';
+import type { Place } from '@/data/types';
 
 const CORNER_MARKET = `
 CORNER MARKET
@@ -105,5 +106,29 @@ describe('placeFor', () => {
     ['Paper towels', 'skip'],
   ])('%s goes in %s', (name, place) => {
     expect(placeFor(name)).toBe(place);
+  });
+});
+
+describe('shelfLifeFor', () => {
+  it.each([
+    ['Spinach', 'fridge', 5],
+    ['Chicken thighs', 'fridge', 2],
+    ['Milk 2%', 'fridge', 7],
+    ['Eggs', 'fridge', 21],
+    ['Bread', 'pantry', 5],
+    ['Rice', 'pantry', 365],
+    ['Spaghetti', 'pantry', 365],
+    ['Ice cream', 'freezer', 60],
+    ['Frozen peas', 'freezer', 240],
+  ] as [string, Place, number][])('%s in the %s keeps %i days', (name, place, days) => {
+    expect(shelfLifeFor(name, place)).toBe(days);
+  });
+
+  it.each([
+    ['Tofu', 'fridge', 7],
+    ['Cumin', 'pantry', 180],
+    ['Chicken thighs', 'freezer', 90],
+  ] as [string, Place, number][])('%s in the %s falls back to the place default', (name, place, days) => {
+    expect(shelfLifeFor(name, place)).toBe(days);
   });
 });
