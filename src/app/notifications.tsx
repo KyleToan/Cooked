@@ -12,6 +12,7 @@ import { Sheet } from '@/components/Sheet';
 import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
+import { parseClock } from '@/data/helpers';
 import { useStore } from '@/data/store';
 import type { NotificationKey } from '@/data/types';
 import { color, radius, size, space } from '@/theme';
@@ -40,10 +41,7 @@ function toPermission(p: Notifications.NotificationPermissionsStatus): Permissio
 /** "7:30 pm" -> a Date today at 19:30. Falls back to 5:00 pm if the string doesn't parse. */
 function parseTime(text: string): Date {
   const d = new Date();
-  const m = /^(\d{1,2}):(\d{2})\s*(am|pm)$/i.exec(text.trim());
-  const hour12 = m ? Number(m[1]) % 12 : 5;
-  const pm = m ? m[3].toLowerCase() === 'pm' : true;
-  d.setHours(hour12 + (pm ? 12 : 0), m ? Number(m[2]) : 0, 0, 0);
+  d.setHours(...parseClock(text), 0, 0);
   return d;
 }
 
@@ -173,7 +171,7 @@ export default function NotificationsScreen() {
           </View>
         ) : null}
         <Text variant="caption" color="inkMuted" style={styles.honest}>
-          Nothing is sent yet. These choices are saved for when Cooked starts sending.
+          To Buy changes and joins start once your kitchen syncs. Until then, those two are only saved.
         </Text>
       </View>
 

@@ -99,3 +99,38 @@ export function makeId(prefix: string): string {
 export function scanFlow(f: unknown): ScanFlow {
   return f === 'onb' || f === 'onbsolo' ? f : 'app';
 }
+
+/** "7:30 pm" -> [19, 30], the format the store keeps the send time in. Falls back to 5:00 pm. */
+export function parseClock(text: string): [number, number] {
+  const m = /^(\d{1,2}):(\d{2})\s*(am|pm)$/i.exec(text.trim());
+  if (!m) return [17, 0];
+  return [(Number(m[1]) % 12) + (m[3].toLowerCase() === 'pm' ? 12 : 0), Number(m[2])];
+}
+
+/** The next moment after `now` at `time` ("7:30 pm"), on `weekday` (0 is Sunday) if given. */
+export function nextAt(time: string, now = new Date(), weekday?: number): Date {
+  const [h, m] = parseClock(time);
+  const d = new Date(now);
+  d.setHours(h, m, 0, 0);
+  if (weekday !== undefined) d.setDate(d.getDate() + ((weekday - d.getDay() + 7) % 7));
+  if (d <= now) d.setDate(d.getDate() + (weekday === undefined ? 1 : 7));
+  return d;
+}
+
+/** The use-soon nudge: "Chicken thighs and spinach need using." Null when nothing needs using. */
+export function nudgeText(items: Item[]): string | null {
+  const names = items
+    .filter(isUseSoon)
+    .map((i, n) => (n === 0 ? i.name : i.name.charAt(0).toLowerCase() + i.name.slice(1)));
+  if (names.length === 0) return null;
+  const shown = names.length > 3 ? [...names.slice(0, 2), `${names.length - 2} more`] : names;
+  return `${joinAnd(shown)} ${names.length === 1 ? 'needs' : 'need'} using.`;
+}
+
+/** The Sunday summary, from the kitchen as it is now: "This week: 2 things to use soon and 3 on To Buy." */
+export function weeklyText(items: Item[], toBuy: ToBuyItem[]): string {
+  const soon = items.filter(isUseSoon).length;
+  const buy = toBuy.filter((t) => !t.done).length;
+  const parts = [soon ? `${count(soon, 'thing')} to use soon` : '', buy ? `${buy} on To Buy` : ''].filter(Boolean);
+  return parts.length ? `This week: ${joinAnd(parts)}.` : 'This week: nothing to use soon, and To Buy is clear.';
+}
