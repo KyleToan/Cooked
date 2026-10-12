@@ -3,7 +3,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { AppState, Linking, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -46,7 +46,7 @@ export default function Scan() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const flow = scanFlow(useLocalSearchParams<{ flow?: string }>().flow);
-  const [permission, requestPermission] = useCameraPermissions();
+  const [permission, requestPermission, getPermission] = useCameraPermissions();
   const camera = useRef<CameraView>(null);
   const reduced = useReducedMotion();
   const [flash, setFlash] = useState(false);
@@ -59,6 +59,14 @@ export default function Scan() {
   useEffect(() => {
     if (permission && !permission.granted && permission.status === 'undetermined') requestPermission();
   }, [permission, requestPermission]);
+
+  // Android keeps the app alive when the camera is allowed in Settings, so check again on return.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'active') getPermission();
+    });
+    return () => sub.remove();
+  }, [getPermission]);
 
   const current = MODES[0];
   const granted = !!permission?.granted;
