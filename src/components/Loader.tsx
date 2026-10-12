@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
 
-import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { useReducedMotion } from 'react-native-reanimated';
 import { size as sizes, type ColorName } from '@/theme';
 import { Icon } from './Icon';
 

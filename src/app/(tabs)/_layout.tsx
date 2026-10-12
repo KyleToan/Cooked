@@ -2,7 +2,7 @@ import { Tabs } from 'expo-router';
 
 import { TabBar } from '@/components/TabIsland';
 
-/** Home and Recipes. Scan sits in the island too, but opens full screen. */
+/** Home, Your Kitchen (Fridge in the island) and Recipes. */
 export default function TabsLayout() {
   return (
     <Tabs
@@ -10,6 +10,7 @@ export default function TabsLayout() {
       tabBar={(props) => <TabBar {...props} />}
     >
       <Tabs.Screen name="index" />
+      <Tabs.Screen name="kitchen" />
       <Tabs.Screen name="recipes" />
     </Tabs>
   );

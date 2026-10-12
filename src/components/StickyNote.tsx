@@ -1,8 +1,7 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
-import Animated, { ReduceMotion, interpolate, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { ReduceMotion, interpolate, useAnimatedStyle, useReducedMotion, useSharedValue, withSpring } from 'react-native-reanimated';
 
-import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { color, radius, shadow, size, space, type, type ColorName } from '@/theme';
 import { Tap } from './Tap';
 import { Text } from './Text';

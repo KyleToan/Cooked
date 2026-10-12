@@ -4,7 +4,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { ActionPill, PillRow } from '@/components/ActionPill';
 import { UndoBar } from '@/components/Controls';
-import { GreetingHeader, SectionHeader } from '@/components/Header';
+import { SectionHeader, TopBar } from '@/components/Header';
 import { Icon } from '@/components/Icon';
 import { Screen } from '@/components/Screen';
 import { SearchField } from '@/components/SearchField';
@@ -13,7 +13,7 @@ import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
 import { AddRow, TodoList } from '@/components/TodoList';
-import { count, greeting, inStock, isUseSoon, PLACE_LABEL, PLACES, sortToBuy, toBuyProgress } from '@/data/helpers';
+import { count, inStock, isUseSoon, PLACE_LABEL, PLACES, sortToBuy, toBuyProgress } from '@/data/helpers';
 import { useStore, useUndo } from '@/data/store';
 import type { ToBuyItem } from '@/data/types';
 import { size, space } from '@/theme';
@@ -64,14 +64,14 @@ export default function Home() {
     const q = query.trim().toLowerCase();
     if (!q) return null;
     return [
-      ...stock.filter((i) => i.name.toLowerCase().includes(q)).map((i) => ({ key: i.id, name: i.name, where: PLACE_LABEL[i.place], open: () => router.push({ pathname: '/kitchen', params: { tab: i.place } }) })),
+      ...stock.filter((i) => i.name.toLowerCase().includes(q)).map((i) => ({ key: i.id, name: i.name, where: PLACE_LABEL[i.place], open: () => router.navigate({ pathname: '/kitchen', params: { tab: i.place } }) })),
       // Still to get (not ticked off): opens the To Buy tab.
-      ...state.toBuy.filter((t) => !t.done && t.name.toLowerCase().includes(q)).map((t) => ({ key: t.id, name: t.name, where: 'To Buy', open: () => router.push({ pathname: '/kitchen', params: { tab: 'tobuy' } }) })),
+      ...state.toBuy.filter((t) => !t.done && t.name.toLowerCase().includes(q)).map((t) => ({ key: t.id, name: t.name, where: 'To Buy', open: () => router.navigate({ pathname: '/kitchen', params: { tab: 'tobuy' } }) })),
       ...state.recipes.filter((r) => r.title.toLowerCase().includes(q)).map((r) => ({ key: r.id, name: r.title, where: 'Recipe', open: () => router.push({ pathname: '/recipe/[id]', params: { id: r.id } }) })),
     ];
   }, [query, stock, state.toBuy, state.recipes, router]);
 
-  const openKitchen = (tab: string) => router.push({ pathname: '/kitchen', params: { tab } });
+  const openKitchen = (tab: string) => router.navigate({ pathname: '/kitchen', params: { tab } });
 
   const toBuyList = (
     <TodoList
@@ -104,9 +104,9 @@ export default function Home() {
       top="tab"
       overlay={undo ? <UndoBar text={undo.text} onUndo={actions.undo} /> : null}
     >
-      <GreetingHeader
-        line={emptyKitchen ? `Welcome, ${state.user.name}` : greeting(state.user.name)}
+      <TopBar
         title="Cooked"
+        onScan={() => router.push('/scan')}
         onAccount={() => router.push('/account')}
       />
 

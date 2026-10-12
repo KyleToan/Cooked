@@ -3,12 +3,13 @@ import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { AppState, Linking, Pressable, StyleSheet, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
+import { AccessibilityInfo, AppState, Linking, Pressable, StyleSheet, View } from 'react-native';
+import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CornerGuides, Glass, Scrim } from '@/components/Camera';
 import { Icon } from '@/components/Icon';
+import { CookingLoader } from '@/components/Loader';
 import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
 import { scanFlow } from '@/data/helpers';
@@ -17,7 +18,6 @@ import { parseReceipt } from '@/data/receipt';
 import { SAMPLE_RECIPE_PAGE, SAMPLE_SCAN } from '@/data/seed';
 import type { ScanLine } from '@/data/types';
 import { haptics } from '@/hooks/haptics';
-import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { color, radius, size, space } from '@/theme';
 
 /*
@@ -42,6 +42,8 @@ const CHROME_MAX_SCALE = 1.3;
 const PRESS_SPRING = { stiffness: 400, damping: 40, mass: 1 };
 const FLASH_IN = 40;
 const FLASH_OUT = 80;
+/** How dark the capture blink gets. */
+const BLINK = 0.6;
 
 /**
  * Full-screen camera with corner guides, Photos, Flash and a Receipt / Recipe
@@ -112,12 +114,16 @@ export default function Scan() {
     router.push({ pathname: '/scan-review', params: { flow } });
   };
 
+  const announceReading = () =>
+    AccessibilityInfo.announceForAccessibility(mode === 'recipe' ? 'Reading the recipe' : 'Reading your receipt');
+
   const capture = async () => {
     if (busy) return;
     haptics.tap();
-    // A quick white flash over the preview says the photo was taken. Reduce Motion keeps just the haptic.
-    if (!reduced) flashOpacity.set(withSequence(withTiming(1, { duration: FLASH_IN }), withTiming(0, { duration: FLASH_OUT })));
+    // A quick dark blink over the preview, like the system Camera, says the photo was taken. Reduce Motion keeps just the haptic.
+    if (!reduced) flashOpacity.set(withSequence(withTiming(BLINK, { duration: FLASH_IN }), withTiming(0, { duration: FLASH_OUT })));
     setBusy(true);
+    announceReading();
     let uri: string | undefined;
     try {
       if (granted) uri = (await camera.current?.takePictureAsync({ quality: 0.6, skipProcessing: true }))?.uri;
@@ -139,6 +145,7 @@ export default function Scan() {
     });
     if (result.canceled) return;
     setBusy(true);
+    announceReading();
     try {
       await read(result.assets[0]?.uri);
     } finally {
@@ -183,7 +190,14 @@ export default function Scan() {
         </View>
 
         <View style={styles.hint}>
-          {granted || !permission ? (
+          {busy ? (
+            <View style={styles.reading}>
+              <CookingLoader color="onInk" />
+              <Text variant="body" weight="medium" color="onInk" style={styles.center} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
+                {mode === 'recipe' ? 'Reading the recipe…' : 'Reading your receipt…'}
+              </Text>
+            </View>
+          ) : granted || !permission ? (
             <>
               <Text variant="body" weight="medium" color="onInk" style={styles.center} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                 {current.hint}
@@ -254,7 +268,11 @@ export default function Scan() {
                     key={m.id}
                     accessibilityRole="tab"
                     accessibilityState={{ selected: on }}
-                    onPress={() => setMode(m.id)}
+                    onPress={() => {
+                      if (on) return;
+                      haptics.select();
+                      setMode(m.id);
+                    }}
                     style={[styles.mode, on && styles.modeOn]}
                   >
                     <Text variant="caption" weight="medium" color={on ? 'ink' : 'onInk'} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
@@ -299,7 +317,7 @@ const styles = StyleSheet.create({
   dev: { textAlign: 'center', opacity: 0.7 },
   hint: { marginTop: space.s4, marginHorizontal: space.s5 * 2, gap: space.s1, minHeight: space.s5 * 2 + space.s3 },
   guides: { flex: 1, marginTop: space.s4, marginBottom: space.s6 + space.s1, marginHorizontal: space.s6 + space.s1 },
-  flash: { backgroundColor: color.surface },
+  flash: { backgroundColor: color.noteInk },
   // Each wash reaches past its controls so it fades out over the feed, not at a hard edge.
   scrimTop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: -space.section * 2 },
   scrimBottom: { position: 'absolute', top: -space.section * 3, left: 0, right: 0, bottom: 0 },
@@ -329,6 +347,7 @@ const styles = StyleSheet.create({
   mode: { flex: 1, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   modeOn: { backgroundColor: color.onInk },
   ask: { alignItems: 'center', gap: space.s3 },
+  reading: { alignItems: 'center', gap: space.s2 },
   askBtn: {
     minHeight: size.targetMin,
     paddingVertical: space.s2,

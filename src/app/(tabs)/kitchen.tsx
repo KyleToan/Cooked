@@ -2,17 +2,17 @@ import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/d
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Platform, ScrollView, Share, StyleSheet, useWindowDimensions, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { ActionPill } from '@/components/ActionPill';
-import { Switch, UndoBar } from '@/components/Controls';
-import { PushedHeader, SectionHeader } from '@/components/Header';
+import { ROW_LAYOUT, Switch, UndoBar } from '@/components/Controls';
+import { GreetingHeader, SectionHeader } from '@/components/Header';
 import { Icon } from '@/components/Icon';
 import { KitchenRow } from '@/components/ListRows';
 import { Screen } from '@/components/Screen';
 import { SearchField } from '@/components/SearchField';
 import { Sheet } from '@/components/Sheet';
 import { PAPER } from '@/components/StickyNote';
-import { TabIsland } from '@/components/TabIsland';
 import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
@@ -21,7 +21,6 @@ import { count, dateIn, daysUntil, isDueSoon, joinAnd, shortDate, sortToBuy, toB
 import { useStore, useUndo } from '@/data/store';
 import type { Item, Place } from '@/data/types';
 import { haptics } from '@/hooks/haptics';
-import { useLayoutMotion } from '@/hooks/useLayoutMotion';
 import { color, radius, size, space, type ColorName } from '@/theme';
 
 type Tab = Place | 'tobuy';
@@ -51,15 +50,20 @@ const WEB_DAYS = [1, 3, 7, 14];
 const isTab = (t: unknown): t is Tab => t === 'fridge' || t === 'pantry' || t === 'freezer' || t === 'tobuy';
 
 export default function Kitchen() {
-  const router = useRouter();
   const params = useLocalSearchParams<{ tab?: string }>();
+  const router = useRouter();
   const { state, actions } = useStore();
   const undo = useUndo('kitchen');
-  const animate = useLayoutMotion();
   const { fontScale } = useWindowDimensions();
   const scrollTabs = fontScale > TABS_SCROLL_SCALE;
 
   const [tab, setTab] = useState<Tab>(isTab(params.tab) ? params.tab : 'fridge');
+  // Kitchen is a tab and stays mounted, so a link to one of its tabs (from Home's search) arrives as a new param.
+  const [linked, setLinked] = useState(params.tab);
+  if (params.tab !== linked) {
+    setLinked(params.tab);
+    if (isTab(params.tab)) setTab(params.tab);
+  }
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState<string | null>(null);
   const [sort, setSort] = useState<'az' | 'useby'>('az');
@@ -80,7 +84,6 @@ export default function Kitchen() {
     setTab(t);
     setOpen(null);
     setQuery('');
-    actions.clearUndo('kitchen');
   };
 
   const placeholder = tab === 'tobuy' ? 'Search your list' : `Search the ${tab}`;
@@ -110,30 +113,12 @@ export default function Kitchen() {
     <View style={styles.root}>
       <Screen
         island
+        top="tab"
         raised={!!undo}
         gap={space.s5}
-        overlay={
-          <>
-            {undo ? <UndoBar text={undo.text} onUndo={actions.undo} /> : null}
-            <TabIsland active="home" />
-          </>
-        }
+        overlay={undo ? <UndoBar text={undo.text} onUndo={actions.undo} /> : null}
       >
-        <PushedHeader
-          title="Your Kitchen"
-          onBack={() => router.back()}
-          backLabel="Back to home"
-          below={
-            statusLine ? (
-              <View style={styles.sync}>
-                <Icon name="syncing" size={13} color="inkMuted" />
-                <Text variant="caption" color="inkMuted">
-                  {statusLine}
-                </Text>
-              </View>
-            ) : null
-          }
-        />
+        <GreetingHeader line={statusLine} title="Your Kitchen" onAccount={() => router.push('/account')} />
 
         <SearchField placeholder={placeholder} value={query} onChangeText={setQuery} />
 
@@ -163,10 +148,7 @@ export default function Kitchen() {
             clearQuery={() => setQuery('')}
             items={state.items.filter((i) => i.place === tab && matches(i.name))}
             open={open}
-            setOpen={(id) => {
-              animate();
-              setOpen(id);
-            }}
+            setOpen={setOpen}
             sort={sort}
             toggleSort={() => setSort(sort === 'az' ? 'useby' : 'az')}
             startQty={startQty}
@@ -201,17 +183,13 @@ function StockTab({
 }) {
   const router = useRouter();
   const { state, actions } = useStore();
-  const animate = useLayoutMotion();
   const copy = PLACE_COPY[place];
   // iOS: the item whose use-by date is being picked in the sheet, and the date so far.
   const [picking, setPicking] = useState<Item | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [draft, setDraft] = useState(() => new Date());
 
-  const setBestBy = (id: string, days: number) => {
-    animate();
-    actions.setBestBy(id, days);
-  };
+  const setBestBy = (id: string, days: number) => actions.setBestBy(id, days);
 
   const openDate = (i: Item) => {
     const value = dateIn(i.daysLeft);
@@ -229,22 +207,20 @@ function StockTab({
   // Fridge and freezer only: the pantry's first section is Running low, not dates.
   const dateControls = (i: Item) => (
     <View style={styles.useBy}>
-      <View style={styles.useByPart}>
+      <Tap
+        accessibilityRole="button"
+        accessibilityLabel={`Use by ${shortDate(i.daysLeft)}`}
+        accessibilityHint="Opens a date picker"
+        onPress={() => openDate(i)}
+        style={styles.useByPart}
+      >
         <Text variant="caption" color="inkMuted">
           Use by
         </Text>
-        <Tap
-          accessibilityRole="button"
-          accessibilityLabel={`Use by ${shortDate(i.daysLeft)}`}
-          accessibilityHint="Opens a date picker"
-          onPress={() => openDate(i)}
-          style={styles.datePill}
-        >
-          <Text variant="button" weight="semibold">
-            {shortDate(i.daysLeft)}
-          </Text>
-        </Tap>
-      </View>
+        <Text variant="button" weight="semibold">
+          {shortDate(i.daysLeft)}
+        </Text>
+      </Tap>
       <View style={styles.useByPart}>
         <Text variant="caption" color="inkMuted">
           Use soon
@@ -252,10 +228,7 @@ function StockTab({
         <Switch
           value={isDueSoon(i)}
           label={`Use ${i.name} soon`}
-          onChange={(on) => {
-            animate();
-            actions.setUseSoon(i.id, on);
-          }}
+          onChange={(on) => actions.setUseSoon(i.id, on)}
         />
       </View>
     </View>
@@ -284,8 +257,8 @@ function StockTab({
   const row = (i: Item, inSoon: boolean) => {
     const recipeAction = inSoon && copy.soonIsDate;
     return (
+      <Animated.View key={i.id} layout={ROW_LAYOUT}>
       <KitchenRow
-        key={i.id}
         item={i}
         startQty={startQty[i.id]}
         soon={inSoon && copy.soonIsDate}
@@ -297,6 +270,7 @@ function StockTab({
         onUseUp={() => actions.setQty(i.id, 0, 'kitchen')}
         extra={copy.soonIsDate ? dateControls(i) : undefined}
       />
+      </Animated.View>
     );
   };
 
@@ -437,7 +411,6 @@ function ToBuyTab({
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  sync: { flexDirection: 'row', alignItems: 'center', gap: space.s1 + 2 },
   tabs: { flexDirection: 'row', gap: space.s2 },
   // Full-bleed so the scrolling tabs slide under the screen edge, not the gutter.
   tabsBleed: { marginHorizontal: -space.s5, flexGrow: 0 },
@@ -461,15 +434,20 @@ const styles = StyleSheet.create({
   noMatch: { gap: space.s1, paddingTop: space.s2 },
   sort: { minHeight: size.targetMin, justifyContent: 'center', paddingHorizontal: space.s1, marginRight: -space.s1 },
   toBuy: { paddingTop: space.s1 },
-  useBy: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', columnGap: space.s3 },
-  useByPart: { flexDirection: 'row', alignItems: 'center', gap: space.s2 },
-  datePill: {
+  // Two grey pills that share the row; at large text each takes a full row of its own.
+  useBy: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s2 },
+  useByPart: {
+    flexGrow: 1,
+    flexBasis: 140,
     minHeight: size.targetMin,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: space.s2,
     paddingVertical: space.s1,
     paddingHorizontal: space.s3 + 2,
     borderRadius: radius.pill,
     backgroundColor: color.surfaceSunken,
-    justifyContent: 'center',
   },
   picker: { alignSelf: 'stretch' },
 });

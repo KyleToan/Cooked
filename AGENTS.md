@@ -10,11 +10,11 @@ Rules for any AI agent (Claude Code, Cursor, Copilot, etc.) working in this repo
 | --- | --- |
 | `src/app/` | Screens. Every file is a route (Expo Router); `_layout.tsx` files are navigators. Only screens go here. |
 | `src/app/(onboarding)/` | Welcome to Ready. The root layout shows this group until onboarding is finished (`Stack.Protected`). |
-| `src/app/(tabs)/` | Home and Recipes, with the tab island as the tab bar. Scan in the island opens `scan.tsx` full screen. |
-| `src/app/*.tsx` | Pushed screens (`kitchen`, `recipe/[id]`, `account`, `household`, `notifications`), the Import sheet (`import`), and the full-screen `scan`, `scan-review` and `scan-unreadable`, which take `?flow=app`, `onb` or `onbsolo`. |
+| `src/app/(tabs)/` | Home, Your Kitchen (`kitchen`, Fridge in the island) and Recipes, with the tab island as the tab bar. The round Scan button top left on Home opens `scan.tsx` full screen. |
+| `src/app/*.tsx` | Pushed screens (`recipe/[id]`, `account`, `household`, `notifications`), the Import sheet (`import`), and the full-screen `scan`, `scan-review` and `scan-unreadable`, which take `?flow=app`, `onb` or `onbsolo`. |
 | `src/components/` | Reusable views, one file per design system component: `Screen`, `ActionPill`, `TextLink`, `Header` (greeting, pushed, section), `SearchField`, `StickyNote`, `TodoList`, `ListRows`, `Controls` (switches, filter pills, stepper, undo bar, field, checkbox), `Sheet`, `Settings`, `TabIsland`, `Loader`, `Onboarding`, `Camera`. `Text`, `Icon`, `Tap` and `Chevron` are the base pieces. |
 | `src/data/` | The data model (`types.ts`), sample data (`seed.ts`), helpers (greeting, use soon, counts) and the local store (`store.tsx`). Every change goes through the `actions` in `store.tsx`, so a backend can replace it. |
-| `src/hooks/` | `useReducedMotion`, `useLayoutMotion`, `useGoToTab`. |
+| `src/hooks/` | `haptics`, `useGoToTab`, `useLocalNotifications`. For Reduce Motion use `useReducedMotion` from `react-native-reanimated`; for list rows that move, `ROW_LAYOUT` from `Controls`. |
 | `src/theme/` | The theme. `tokens.ts` and `fonts.ts` are **generated**; import everything from `@/theme`. `brand.ts` holds Apple and Google brand colors for the sign-in buttons only. |
 | `scripts/build-tokens.mjs` | Generates `src/theme/tokens.ts`, `src/theme/fonts.ts` and `src/components/icon-data.ts` from `design/system/`. |
 | `design/` | The design spec: design system, every screen as a prototype and a screenshot. Read `design/README.md` first. Nothing in it ships. |
@@ -122,7 +122,7 @@ If those files disagree, `README.md` and `tokens.json` win. A few older lines ar
 - **Grey secondary pills.** `surface-sunken` (#F4F4F1). No black buttons, cards or island.
 - **Type.** Alumni Sans for screen titles (`title-xl` 48px and `title-lg` 36px, bold) and section headings (`section-title` 28px, semibold, no underline). Albert Sans for everything else. Caveat only on sticky notes.
 - **Flat lists.** Rows with `line-soft` dividers, not cards.
-- **Tab island.** Floating white pill (300 × 68) with Home, Scan and Recipes; a grey underscore marks the active tab.
+- **Tab island.** Floating white pill (300 × 68) with Home, Fridge and Recipes (Scan is the round button top left on Home); a grey underscore marks the active tab.
 - **Undo, not confirm.** Ticking off or using up an item shows an undo bar. Deleting an account, leaving a kitchen or removing someone asks first; the safe choice is never the red one.
 - **Accessible.** 4.5:1 contrast for text that matters, 44pt minimum tap targets.
 - **Icons.** Only the 22 in `design/system/icons/` (24px grid, 1.8 stroke).

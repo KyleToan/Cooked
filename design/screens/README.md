@@ -8,7 +8,7 @@ Sample people and data: Alex Rivera (the user, alex.rivera@gmail.com), Sam (hous
 
 | Prototype | What it is | Props |
 | --- | --- | --- |
-| `CookedIsland` | The floating tab island: Home, Scan, Recipes, 300 × 68, 28px from the bottom | `active`: home, scan, recipes |
+| `CookedIsland` | The floating tab island: Home, Fridge, Recipes (Decisions #104), 300 × 68, 28px from the bottom | `active`: home, scan, recipes |
 | `CookedKeyboard` | Stand-in for the iOS keyboard in onboarding pictures. **Don't build it.** Use the system keyboard | `layout`: letters, email, numbers |
 
 ## App

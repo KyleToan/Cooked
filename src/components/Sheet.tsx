@@ -26,7 +26,6 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { haptics } from '@/hooks/haptics';
 import { color, size, space } from '@/theme';
 import { Icon } from './Icon';
 import { Tap } from './Tap';
@@ -256,10 +255,6 @@ function SheetBody({ children, onClose, title, subtitle, showClose, inline, open
     animateIn();
   };
 
-  const onDragClose = useCallback(() => {
-    haptics.tap();
-  }, []);
-
   const pan = Gesture.Pan()
     .enabled(!locked)
     // Without a title the grabber alone is small; reach a little below it.
@@ -287,7 +282,6 @@ function SheetBody({ children, onClose, title, subtitle, showClose, inline, open
         exiting.set(true);
         if (reduced) fade.set(withTiming(0, FADE));
         else ty.set(withSpring(h, { ...SLIDE, velocity: v }));
-        if (activated) scheduleOnRN(onDragClose);
       } else {
         if (reduced) {
           ty.set(withTiming(0, FADE));
