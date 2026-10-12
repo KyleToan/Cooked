@@ -1,3 +1,5 @@
+// localStorage on iOS and Android, backed by SQLite; the store loads the saved kitchen from it.
+import 'expo-sqlite/localStorage/install';
 import { useEffect } from 'react';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';

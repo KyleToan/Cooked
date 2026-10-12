@@ -1,7 +1,9 @@
 import { describe, expect, test } from '@jest/globals';
 import {
   amountLabel,
+  bestByFromDays,
   count,
+  daysFromBestBy,
   greeting,
   guessPlace,
   inStock,
@@ -162,5 +164,22 @@ describe('misc', () => {
     expect(scanFlow('app')).toBe('app');
     expect(scanFlow(undefined)).toBe('app');
     expect(scanFlow(['onb'])).toBe('app');
+  });
+});
+
+describe('best-by dates', () => {
+  const today = new Date(2026, 0, 30, 15, 45); // Jan 30, mid-afternoon local
+
+  test('cross a month boundary', () => {
+    expect(bestByFromDays(3, today)).toBe('2026-02-02');
+    expect(daysFromBestBy('2026-02-02', today)).toBe(3);
+    expect(bestByFromDays(-31, today)).toBe('2025-12-30');
+    expect(daysFromBestBy('2025-12-30', today)).toBe(-31);
+    expect(bestByFromDays(0, today)).toBe('2026-01-30');
+  });
+
+  test('round-trip over a DST change', () => {
+    const march = new Date(2026, 2, 1, 23, 30);
+    for (const d of [0, 7, 14, 30, 60]) expect(daysFromBestBy(bestByFromDays(d, march), march)).toBe(d);
   });
 });
