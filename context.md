@@ -70,7 +70,7 @@ The full design system is in `design/system/` and at https://claude.ai/artifact/
 
 Built (branch `build-screens`): onboarding (all three paths, Apple and Google, email or phone with a code), Home and the empty first-run Home, Your Kitchen with all four tabs, Recipes, Recipe, Import a recipe (loading, found and error states), Scan with the real camera, Check your scan, Couldn't read this receipt, Account with the delete sheet, Rivera kitchen, and Notifications. Every action changes the local store, and everything that removes something can be undone or asks first. Logging out clears the kitchen on this phone until there's a backend.
 
-Backend (Supabase, Decisions #82–88): the schema and RPCs are in `supabase/migrations/`, and the app code is built: real sign-in (`src/data/supabase.ts`, `auth.ts`), loading, write-through and realtime sync (`remote.ts`, `store.tsx`), and kitchen actions (`kitchenApi.ts`). It turns on when `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` are set; without them the app runs in the local mode below. Not yet run against a live project.
+Backend (Supabase, Decisions #82–88): the schema and RPCs are in `supabase/migrations/` and applied to the Supabase project (access rules checked with two test users), and the app code is built: real sign-in (`src/data/supabase.ts`, `auth.ts`), loading, write-through and realtime sync (`remote.ts`, `store.tsx`), and kitchen actions (`kitchenApi.ts`). It turns on when `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` are set; without them the app runs in the local mode below. The app itself hasn't been run against it yet.
 
 Local mode (no env vars):
 
