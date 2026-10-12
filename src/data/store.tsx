@@ -8,6 +8,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useReducer,
 import { guessPlace, makeId } from './helpers';
 import { checkRecipe, checkRecipes, usedWhenMade } from './match';
 import { shelfLifeFor } from './receipt';
+import { clearSaved, loadSaved, save, type Saved } from './saved';
 import {
   ALEX,
   NEW_INVITE_CODE,
@@ -94,7 +95,8 @@ export type Action =
   | { type: 'choosePath'; path: KitchenPath }
   | { type: 'skipFirstScan' }
   | { type: 'finishOnboarding' }
-  | { type: 'reset' };
+  | { type: 'reset' }
+  | { type: 'hydrate'; saved: Saved };
 
 const snap = (s: State): Snapshot => ({ items: s.items, toBuy: s.toBuy, kitchen: s.kitchen, recipes: s.recipes });
 
@@ -301,6 +303,8 @@ export function reducer(s: State, a: Action): State {
       return { ...s, session: { ...s.session, onboarded: true }, undo: null };
     case 'reset':
       return initialState();
+    case 'hydrate':
+      return { ...s, ...a.saved, undo: null };
   }
 }
 
@@ -334,13 +338,22 @@ function makeActions(dispatch: (a: Action) => void) {
     choosePath: (path: KitchenPath) => dispatch({ type: 'choosePath', path }),
     skipFirstScan: () => dispatch({ type: 'skipFirstScan' }),
     finishOnboarding: () => dispatch({ type: 'finishOnboarding' }),
-    /** Log out or delete the account: back to Welcome with the sample data. */
+    /** Log out or delete the account: back to Welcome with the sample data, and the saved copy cleared. */
     reset: () => dispatch({ type: 'reset' }),
   };
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, undefined, initialState);
+  // Loads the saved kitchen on the first render, before the splash screen hides, so onboarding doesn't flash.
+  const [state, dispatch] = useReducer(reducer, undefined, () => {
+    const saved = loadSaved();
+    return saved ? reducer(initialState(), { type: 'hydrate', saved }) : initialState();
+  });
+  // Saved after every change, without the undo. Logged out (or not signed in yet): nothing to keep.
+  useEffect(() => {
+    if (state.session.signIn) save(state);
+    else clearSaved();
+  }, [state]);
   const actions = useMemo(() => makeActions(dispatch), []);
   // Screens see recipes checked against the kitchen, with Tonight's pick marked.
   const recipes = useMemo(() => checkRecipes(state.recipes, state.items), [state.recipes, state.items]);

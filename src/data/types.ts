@@ -106,7 +106,7 @@ export type NotificationSettings = Record<NotificationKey, boolean> & {
 export type KitchenPath = 'household' | 'solo' | 'join';
 
 export type Session = {
-  /** Finished onboarding once. In memory only for now. */
+  /** Finished onboarding once. Kept on the phone between launches. */
   onboarded: boolean;
   /** "email", "phone", "apple" or "google": how they signed in. */
   signIn: 'email' | 'phone' | 'apple' | 'google' | null;
