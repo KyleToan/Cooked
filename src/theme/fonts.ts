@@ -3,6 +3,7 @@
 import { AlumniSans_600SemiBold, AlumniSans_700Bold } from '@expo-google-fonts/alumni-sans';
 import { AlbertSans_400Regular, AlbertSans_500Medium, AlbertSans_600SemiBold, AlbertSans_700Bold } from '@expo-google-fonts/albert-sans';
 import { Caveat_400Regular, Caveat_500Medium, Caveat_700Bold } from '@expo-google-fonts/caveat';
+import { font } from './tokens';
 
-/** Every font face the app uses, for useFonts(). */
-export const fontFaces = { AlumniSans_600SemiBold, AlumniSans_700Bold, AlbertSans_400Regular, AlbertSans_500Medium, AlbertSans_600SemiBold, AlbertSans_700Bold, Caveat_400Regular, Caveat_500Medium, Caveat_700Bold };
+/** Every font face the app uses, for useFonts() in Expo Go and on web. Native builds bundle them. */
+export const fontFaces = { [font.AlumniSans_600SemiBold]: AlumniSans_600SemiBold, [font.AlumniSans_700Bold]: AlumniSans_700Bold, [font.AlbertSans_400Regular]: AlbertSans_400Regular, [font.AlbertSans_500Medium]: AlbertSans_500Medium, [font.AlbertSans_600SemiBold]: AlbertSans_600SemiBold, [font.AlbertSans_700Bold]: AlbertSans_700Bold, [font.Caveat_400Regular]: Caveat_400Regular, [font.Caveat_500Medium]: Caveat_500Medium, [font.Caveat_700Bold]: Caveat_700Bold };
