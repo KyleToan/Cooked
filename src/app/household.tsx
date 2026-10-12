@@ -12,6 +12,7 @@ import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
 import { joinAnd } from '@/data/helpers';
+import { failText } from '@/data/errors';
 import * as api from '@/data/kitchenApi';
 import { useStore, useUndo } from '@/data/store';
 import { hasBackend } from '@/data/supabase';
@@ -45,12 +46,13 @@ export default function Household() {
   const canRemove = !hasBackend || kitchen.people.some((p) => p.id === state.user.id && p.note === 'Made this kitchen');
   const kitchenId = kitchen.id ?? '';
 
-  /** Runs a server call; on success reloads the kitchen, on failure shows `fail` under the section. */
-  const call = async (at: 'people' | 'invite' | 'leave', fail: string, run: () => Promise<api.Result>) => {
+  /** Runs a server call; on success reloads the kitchen, on failure shows "We couldn’t <what>…" under the section. */
+  const call = async (at: 'people' | 'invite' | 'leave', what: string, run: () => Promise<api.Result>) => {
     setError(null);
     const r = await run();
-    if (r !== 'ok') {
-      setError({ at, text: fail });
+    const why = api.failure(r);
+    if (why) {
+      setError({ at, text: failText(what, why) });
       return false;
     }
     await reload();
@@ -62,7 +64,8 @@ export default function Household() {
     setConfirming(false);
     if (!hasBackend) return actions.removePerson(p.id);
     const r = await api.removeMember(kitchenId, p.id);
-    if (r !== 'ok') return setError({ at: 'people', text: `We couldn’t remove ${p.name}. Check your connection and try again.` });
+    const why = api.failure(r);
+    if (why) return setError({ at: 'people', text: failText(`remove ${p.name}`, why) });
     setError(null);
     // Mirror it locally, which also shows the undo bar for a few seconds.
     actions.removePerson(p.id);
@@ -76,7 +79,7 @@ export default function Household() {
       const text =
         r === 'in_other_kitchen'
           ? `${who.name} joined another kitchen, so they can’t be added back.`
-          : `We couldn’t add ${who.name} back. Check your connection and try again.`;
+          : failText(`add ${who.name} back`, api.failure(r) ?? 'server');
       return setError({ at: 'people', text });
     }
     setError(null);
@@ -218,7 +221,7 @@ export default function Household() {
           onPress={async () => {
             setRelinking(false);
             if (!hasBackend) return actions.newInviteLink();
-            if (await call('invite', 'We couldn’t make a new link. Check your connection and try again.', () => api.newInvite(kitchenId))) {
+            if (await call('invite', 'make a new link', () => api.newInvite(kitchenId))) {
               setMadeLink(true);
             }
           }}
@@ -252,7 +255,7 @@ export default function Household() {
           onPress={async () => {
             setLeaving(false);
             if (!hasBackend) return actions.leaveKitchen();
-            await call('leave', 'We couldn’t leave the kitchen. Check your connection and try again.', api.leaveKitchen);
+            await call('leave', 'leave the kitchen', api.leaveKitchen);
           }}
         />
       </Sheet>

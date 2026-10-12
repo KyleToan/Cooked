@@ -6,6 +6,7 @@ import { ActionPill } from '@/components/ActionPill';
 import { ErrorLine, Field, Segmented } from '@/components/Controls';
 import { OnbScreen } from '@/components/Onboarding';
 import { Text } from '@/components/Text';
+import { failText, failureOf, type Failure } from '@/data/errors';
 import { useStore } from '@/data/store';
 import { supabase } from '@/data/supabase';
 import { color, radius, size, space } from '@/theme';
@@ -23,19 +24,19 @@ export default function Email() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [sending, setSending] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState<Failure | null>(null);
 
   const ready = mode === 'email' ? looksLikeEmail(email) : looksLikePhone(phone);
   const send = async () => {
     if (!ready || sending) return;
     if (supabase) {
       setSending(true);
-      setFailed(false);
+      setFailed(null);
       const { error } = await supabase.auth.signInWithOtp(
         mode === 'email' ? { email: email.trim() } : { phone: `+1${phone.replace(/\D/g, '')}` },
       );
       setSending(false);
-      if (error) return setFailed(true);
+      if (error) return setFailed(failureOf(error.status));
     }
     actions.signIn(mode, mode === 'email' ? email.trim() : `+1 ${phone.trim()}`);
     router.push('/code');
@@ -100,7 +101,7 @@ export default function Email() {
         </View>
       )}
 
-      {failed ? <ErrorLine text="We couldn’t send the code. Check your connection and try again." /> : null}
+      {failed ? <ErrorLine text={failText('send the code', failed)} /> : null}
 
       <ActionPill label="Send code" variant="primary" height="bottom" onPress={send} disabled={!ready || sending} />
     </OnbScreen>

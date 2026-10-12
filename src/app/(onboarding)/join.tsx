@@ -9,6 +9,7 @@ import { OnbScreen } from '@/components/Onboarding';
 import { BigNote, NOTE_TITLE_MAX } from '@/components/StickyNote';
 import { Text } from '@/components/Text';
 import { inStock } from '@/data/helpers';
+import { failText } from '@/data/errors';
 import * as api from '@/data/kitchenApi';
 import { SEED_ITEMS, SEED_KITCHEN, SEED_TO_BUY, SAM } from '@/data/seed';
 import { useStore } from '@/data/store';
@@ -25,7 +26,8 @@ const SETTLE_MS = 600;
 const FAILED: Partial<Record<api.Result, string>> = {
   used: 'This link was already used. Ask for a new one.',
   expired: 'This link ran out. Ask for a new one.',
-  network: 'We couldn’t check that code. Check your connection and try again.',
+  offline: failText('check that code', 'offline'),
+  server: failText('check that code', 'server'),
 };
 
 /**
@@ -47,7 +49,7 @@ export default function Join() {
   // Without a backend only the sample code is known, so it shows the kitchen before joining.
   const found = !hasBackend && code === SEED_KITCHEN.inviteCode;
   const result = failed?.code === code ? failed.result : null;
-  const failText = result ? FAILED[result] : undefined;
+  const failMessage = result ? FAILED[result] : undefined;
   const notFound = hasBackend ? result === 'not_found' : !!value.trim() && !found && checked === value;
 
   useEffect(() => {
@@ -101,7 +103,7 @@ export default function Join() {
       />
       {!value ? <ActionPill label="Paste invite link" height="header" onPress={paste} /> : null}
       {notFound ? <ErrorLine text="We couldn’t find a kitchen with that code. Check the link and try again." /> : null}
-      {failText ? <ErrorLine text={failText} /> : null}
+      {failMessage ? <ErrorLine text={failMessage} /> : null}
       {found ? (
         <BigNote paper="beige" tilt={-1} style={styles.note}>
           <Text variant="noteTitle" color="noteInk" maxFontSizeMultiplier={NOTE_TITLE_MAX}>

@@ -8,6 +8,7 @@ import { OnbScreen } from '@/components/Onboarding';
 import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
+import { failText, failureOf, type Failure } from '@/data/errors';
 import { useStore } from '@/data/store';
 import { supabase } from '@/data/supabase';
 import { haptics } from '@/hooks/haptics';
@@ -35,7 +36,7 @@ export default function Code() {
   const input = useRef<TextInput>(null);
   const [code, setCode] = useState('');
   const [wrong, setWrong] = useState(false);
-  const [offline, setOffline] = useState(false);
+  const [trouble, setTrouble] = useState<Failure | null>(null);
   const [checking, setChecking] = useState(false);
   const [secs, setSecs] = useState(FIRST_WAIT);
   const [focused, setFocused] = useState(true);
@@ -60,24 +61,25 @@ export default function Code() {
   // The store keeps the phone number as shown ("+1 555…"); Supabase wants E.164.
   const phone = `+${contact.replace(/\D/g, '')}`;
 
-  const failed = (isWrong: boolean) => {
+  const failed = (why: 'wrong' | Failure) => {
+    const isWrong = why === 'wrong';
     setWrong(isWrong);
-    setOffline(!isWrong);
+    setTrouble(isWrong ? null : why);
     setCode('');
     haptics.error();
     if (isWrong) shake();
   };
 
   const check = async (digits: string) => {
-    if (!supabase) return digits === CODE ? router.push('/name') : failed(true);
+    if (!supabase) return digits === CODE ? router.push('/name') : failed('wrong');
     setChecking(true);
     const { error } = await supabase.auth.verifyOtp(
       byText ? { phone, token: digits, type: 'sms' } : { email: contact, token: digits, type: 'email' },
     );
     setChecking(false);
     if (!error) return router.push('/name');
-    // A 4xx means the code was wrong or expired; anything else (no status, 5xx) is the network or the server.
-    failed(!!error.status && error.status < 500);
+    // A 4xx means the code was wrong or expired; no status is the network, a 5xx is the server.
+    failed(error.status && error.status < 500 ? 'wrong' : failureOf(error.status));
   };
 
   const onChange = (v: string) => {
@@ -86,16 +88,16 @@ export default function Code() {
     setCode(digits);
     if (digits.length) {
       setWrong(false);
-      setOffline(false);
+      setTrouble(null);
     }
     if (digits.length === LENGTH) check(digits);
   };
 
   const resend = () => {
-    supabase?.auth.signInWithOtp(byText ? { phone } : { email: contact }).then(({ error }) => error && setOffline(true));
+    supabase?.auth.signInWithOtp(byText ? { phone } : { email: contact }).then(({ error }) => error && setTrouble(failureOf(error.status)));
     setSecs(RESEND_WAIT);
     setWrong(false);
-    setOffline(false);
+    setTrouble(null);
     setCode('');
     input.current?.focus();
   };
@@ -162,7 +164,7 @@ export default function Code() {
           accessibilityLabel="6-digit code"
         />
         {wrong ? <ErrorLine text={`That code didn’t work. Use the newest ${byText ? 'text' : 'email'}.`} /> : null}
-        {offline ? <ErrorLine text="We couldn’t check the code. Check your connection and try again." /> : null}
+        {trouble ? <ErrorLine text={failText('check the code', trouble)} /> : null}
         <View style={styles.sent}>
           <Text variant="caption" color="inkMuted">
             Sent to {contact} ·{' '}

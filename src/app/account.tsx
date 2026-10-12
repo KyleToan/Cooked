@@ -12,6 +12,7 @@ import { Sheet } from '@/components/Sheet';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
 import { joinAnd } from '@/data/helpers';
+import { failText, type Failure } from '@/data/errors';
 import * as api from '@/data/kitchenApi';
 import { useStore } from '@/data/store';
 import { hasBackend, supabase } from '@/data/supabase';
@@ -32,7 +33,7 @@ export default function Account() {
   const [lastName, setLastName] = useState(state.user.lastName ?? '');
   const [busy, setBusy] = useState(false);
   // Which sheet's server call failed, so its error line shows.
-  const [failed, setFailed] = useState<'delete' | 'name' | null>(null);
+  const [failed, setFailed] = useState<{ at: 'delete' | 'name'; why: Failure } | null>(null);
 
   const user = state.user;
   const method = state.session.signIn ?? 'email';
@@ -53,7 +54,8 @@ export default function Account() {
     setBusy(true);
     const r = await run();
     setBusy(false);
-    setFailed(r === 'ok' ? null : which);
+    const why = api.failure(r);
+    setFailed(why ? { at: which, why } : null);
     return r === 'ok';
   };
 
@@ -135,7 +137,7 @@ export default function Account() {
           This can’t be undone.
         </Text>
         <ActionPill label="Keep my account" variant="primary" height="bottom" onPress={() => setDeleting(false)} />
-        {failed === 'delete' ? <ErrorLine text="We couldn’t delete your account. Check your connection and try again." /> : null}
+        {failed?.at === 'delete' ? <ErrorLine text={failText('delete your account', failed.why)} /> : null}
         <TextLink label="Delete account" color="errorInk" variant="button" align="center" onPress={deleteAccount} disabled={busy} />
       </Sheet>
 
@@ -158,7 +160,7 @@ export default function Account() {
           textContentType="familyName"
           autoCapitalize="words"
         />
-        {failed === 'name' ? <ErrorLine text="We couldn’t save your name. Check your connection and try again." /> : null}
+        {failed?.at === 'name' ? <ErrorLine text={failText('save your name', failed.why)} /> : null}
         <ActionPill label="Save" variant="primary" height="bottom" disabled={!name.trim() || busy} onPress={saveName} />
       </Sheet>
     </Screen>
