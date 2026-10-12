@@ -12,11 +12,15 @@ import {
   isUseSoon,
   joinAnd,
   makeId,
+  nextAt,
+  parseClock,
   plural,
   scanFlow,
   sortToBuy,
   timeOfDay,
   toBuyProgress,
+  nudgeText,
+  weeklyText,
 } from '@/data/helpers';
 import { SEED_ITEMS, SEED_TO_BUY } from '@/data/seed';
 import type { Item } from '@/data/types';
@@ -139,6 +143,44 @@ describe('To Buy', () => {
   });
 });
 
+describe('notifications', () => {
+  const soon = (name: string) => item({ name, daysLeft: 1 });
+
+  test('use-soon text for 0, 1, 2 and many items', () => {
+    expect(nudgeText([item()])).toBeNull();
+    expect(nudgeText([soon('Spinach'), item({ name: 'Rice' })])).toBe('Spinach needs using.');
+    expect(nudgeText([soon('Chicken thighs'), soon('Spinach')])).toBe('Chicken thighs and Spinach need using.');
+    expect(nudgeText([soon('Milk'), soon('Greek yogurt'), soon('Basil')])).toBe('Milk, Greek yogurt and Basil need using.');
+    expect(nudgeText(['Milk', 'Feta', 'Basil', 'Eggs'].map(soon))).toBe('Milk, Feta and 2 more need using.');
+  });
+
+  test('used-up items are left out', () => {
+    expect(nudgeText([item({ daysLeft: 1, qty: 0 })])).toBeNull();
+  });
+
+  test('weekly text', () => {
+    const open = { ...SEED_TO_BUY[0], done: false };
+    expect(weeklyText([soon('Milk'), soon('Feta')], [open, { ...open, done: true }])).toBe(
+      'This week: 2 things to use soon and 1 on To Buy.',
+    );
+    expect(weeklyText([soon('Milk')], [])).toBe('This week: 1 thing to use soon.');
+    expect(weeklyText([], [])).toBe('This week: nothing to use soon, and To Buy is clear.');
+  });
+
+  // 2026-10-11 is a Sunday.
+  test('next daily time: later today, or tomorrow once it has passed', () => {
+    expect(nextAt('5:00 pm', at(9))).toEqual(new Date(2026, 9, 11, 17, 0));
+    expect(nextAt('5:00 pm', at(17))).toEqual(new Date(2026, 9, 12, 17, 0));
+    expect(nextAt('8:00 am', at(9))).toEqual(new Date(2026, 9, 12, 8, 0));
+  });
+
+  test('next Sunday: today if still ahead, else a week on', () => {
+    expect(nextAt('10:00 am', at(9), 0)).toEqual(new Date(2026, 9, 11, 10, 0));
+    expect(nextAt('10:00 am', at(11), 0)).toEqual(new Date(2026, 9, 18, 10, 0));
+    expect(nextAt('10:00 am', new Date(2026, 9, 14, 23), 0)).toEqual(new Date(2026, 9, 18, 10, 0));
+  });
+});
+
 describe('guessPlace', () => {
   test('uses where the kitchen keeps it, ignoring case and spaces', () => {
     expect(guessPlace('  frozen PEAS ', SEED_ITEMS)).toBe('freezer');
@@ -156,6 +198,13 @@ describe('misc', () => {
     const ids = new Set(Array.from({ length: 50 }, () => makeId('i')));
     expect(ids.size).toBe(50);
     expect([...ids].every((id) => id.startsWith('i-'))).toBe(true);
+  });
+
+  test('parseClock', () => {
+    expect(parseClock('7:30 pm')).toEqual([19, 30]);
+    expect(parseClock('12:05 am')).toEqual([0, 5]);
+    expect(parseClock('12:00 PM')).toEqual([12, 0]);
+    expect(parseClock('soon')).toEqual([17, 0]);
   });
 
   test('scanFlow', () => {
