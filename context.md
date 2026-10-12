@@ -78,7 +78,7 @@ Faked until there's a backend:
 - **Receipt reading (OCR)** is real in a development build: the photo is read on the phone with Google ML Kit (`src/data/ocr.ts`), and `parseReceipt` in `src/data/receipt.ts` turns the text into Check your scan lines. No food lines or a failed read shows "Couldn't read this receipt". Expo Go and the web have no ML Kit, so there Scan shows the 7 sample Corner Market items in development. Not yet checked against real receipt photos.
 - **Recipe scanning.** Scan's Recipe mode reads a cookbook page the same way and opens Import with the text, which shows the recipe it found or "No recipe on that page". In Expo Go and on the web it uses a sample page in development. Not yet checked against real cookbook photos.
 - **Recipe import** is real: a link is fetched on the device and its schema.org recipe data read; pasted text is split into ingredients and steps (`src/data/recipeImport.ts`). In a web browser most sites block the fetch, so links there show "No recipe on that page".
-- **Notifications.** The switches and send time are saved on the phone; nothing is sent.
+- **Notifications.** The use-soon nudge and the Sunday summary are scheduled on the phone from the current kitchen (Decisions #89). To Buy changes and joins need a server, so they're only saved. The switches and send time are saved on the phone.
 - **Help, Privacy and Terms** open `cooked.app` pages that don't exist yet.
 
 ## Open questions

@@ -10,6 +10,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { StoreProvider, useStore } from '@/data/store';
+import { useLocalNotifications } from '@/hooks/useLocalNotifications';
 import { color, fontFaces } from '@/theme';
 
 SplashScreen.preventAutoHideAsync();
@@ -41,6 +42,7 @@ export default function RootLayout() {
 function Routes() {
   const { state } = useStore();
   const onboarded = state.session.onboarded;
+  useLocalNotifications(state);
 
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.surface } }}>
