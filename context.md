@@ -77,7 +77,7 @@ Faked until there's a backend:
 - **Kitchens.** Just me and Me and my household start a new, empty kitchen that the first scan fills. Joining only works with the code `rivera-kitchen`, which loads the sample Rivera kitchen.
 - **Receipt reading (OCR).** The camera takes a real photo (or you pick one), but Check your scan always shows the 7 sample Corner Market items. Scan has only the Receipt mode for now; the other modes come back when they work. The step after OCR is built: `parseReceipt` in `src/data/receipt.ts` turns receipt text into Check your scan lines, waiting for an OCR choice.
 - **Recipe import** is real: a link is fetched on the device and its schema.org recipe data read; pasted text is split into ingredients and steps (`src/data/recipeImport.ts`). In a web browser most sites block the fetch, so links there show "No recipe on that page".
-- **Notifications.** The switches and send time are kept in memory; nothing is sent.
+- **Notifications.** The use-soon nudge and the Sunday summary are scheduled on the phone from the current kitchen (Decisions #82). To Buy changes and joins need a server, so they're only saved. The switches and send time are kept in memory.
 - **Help, Privacy and Terms** open `cooked.app` pages that don't exist yet.
 
 ## Open questions
