@@ -7,6 +7,7 @@ import { ErrorLine } from '@/components/Controls';
 import { OnbScreen } from '@/components/Onboarding';
 import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
+import { failText, type Failure } from '@/data/errors';
 import * as api from '@/data/kitchenApi';
 import { useStore } from '@/data/store';
 import { hasBackend } from '@/data/supabase';
@@ -31,7 +32,7 @@ export default function Household() {
   const { state, actions, reload } = useStore();
   const [picked, setPicked] = useState<KitchenPath>('household');
   const [busy, setBusy] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState<Failure | null>(null);
 
   const next = async () => {
     if (picked === 'join') {
@@ -44,7 +45,7 @@ export default function Household() {
       const r = await api.createKitchen(`${state.user.lastName || state.user.name} kitchen`);
       if (r === 'ok') await reload();
       setBusy(false);
-      setFailed(r !== 'ok');
+      setFailed(api.failure(r));
       if (r !== 'ok') return;
     } else {
       actions.choosePath(picked);
@@ -76,7 +77,7 @@ export default function Household() {
           );
         })}
       </View>
-      {failed ? <ErrorLine text="We couldn’t set up your kitchen. Check your connection and try again." /> : null}
+      {failed ? <ErrorLine text={failText('set up your kitchen', failed)} /> : null}
       <ActionPill label="Next" variant="primary" height="bottom" onPress={next} disabled={busy} />
     </OnbScreen>
   );

@@ -7,6 +7,7 @@ import { OnbScreen } from '@/components/Onboarding';
 import { NOTE_TILT, PAPER, PaperNote } from '@/components/StickyNote';
 import { Text } from '@/components/Text';
 import { PLACE_LABEL, PLACES } from '@/data/helpers';
+import { failText, type Failure } from '@/data/errors';
 import * as api from '@/data/kitchenApi';
 import { useStore } from '@/data/store';
 import { hasBackend } from '@/data/supabase';
@@ -16,7 +17,7 @@ import { space } from '@/theme';
 export default function Ready() {
   const { state, actions } = useStore();
   const [busy, setBusy] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState<Failure | null>(null);
   const scan = state.session.lastScan;
   const count = PLACES.reduce((n, p) => n + scan[p].length, 0);
 
@@ -26,7 +27,7 @@ export default function Ready() {
       setBusy(true);
       const r = await api.finishOnboarding();
       setBusy(false);
-      setFailed(r !== 'ok');
+      setFailed(api.failure(r));
       if (r !== 'ok') return;
     }
     actions.finishOnboarding();
@@ -44,7 +45,7 @@ export default function Ready() {
       // Finishing onboarding opens Home.
       bottom={
         <>
-          {failed ? <ErrorLine text="We couldn’t finish setting up. Check your connection and try again." /> : null}
+          {failed ? <ErrorLine text={failText('finish setting up', failed)} /> : null}
           <ActionPill label="Go to my kitchen" variant="primary" height="bottom" onPress={finish} disabled={busy} />
         </>
       }

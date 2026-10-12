@@ -29,10 +29,11 @@ describe('kitchenApi error mapping', () => {
     expect(toResult({ message: 'in_other_kitchen' })).toBe('in_other_kitchen');
   });
 
-  test('anything else is network', () => {
-    expect(toResult({ message: 'not_signed_in' })).toBe('network');
-    expect(toResult({ message: 'TypeError: Network request failed' })).toBe('network');
-    expect(toResult({})).toBe('network');
+  test('anything else is offline or server, by whether the server answered', () => {
+    expect(toResult({ message: 'not_signed_in' }, 400)).toBe('server');
+    expect(toResult({ message: 'boom' }, 500)).toBe('server');
+    expect(toResult({ message: 'TypeError: Network request failed' }, 0)).toBe('offline');
+    expect(toResult({})).toBe('offline');
   });
 
   test('joinKitchen passes the code and maps the answer', async () => {
@@ -43,9 +44,9 @@ describe('kitchenApi error mapping', () => {
     expect(await joinKitchen('rivera-kitchen')).toBe('ok');
   });
 
-  test('a thrown call is network', async () => {
+  test('a thrown call is offline', async () => {
     mockRpc.mockRejectedValueOnce(new Error('offline'));
-    expect(await restoreMember('k1', 'u2')).toBe('network');
+    expect(await restoreMember('k1', 'u2')).toBe('offline');
   });
 
   test('createKitchen treats already_in_kitchen as done', async () => {

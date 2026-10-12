@@ -6,6 +6,7 @@ import { ActionPill } from '@/components/ActionPill';
 import { ErrorLine, Field } from '@/components/Controls';
 import { OnbScreen } from '@/components/Onboarding';
 import { Text } from '@/components/Text';
+import { failText, type Failure } from '@/data/errors';
 import * as api from '@/data/kitchenApi';
 import { useStore } from '@/data/store';
 import { hasBackend } from '@/data/supabase';
@@ -19,7 +20,7 @@ export default function Name() {
   const { state, actions } = useStore();
   const [name, setName] = useState(state.user.name);
   const [busy, setBusy] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState<Failure | null>(null);
   const shown = name.trim() || 'you';
 
   const next = async () => {
@@ -28,7 +29,7 @@ export default function Name() {
       setBusy(true);
       const r = await api.saveProfile({ name: name.trim() });
       setBusy(false);
-      setFailed(r !== 'ok');
+      setFailed(api.failure(r));
       if (r !== 'ok') return;
     }
     actions.setName(name);
@@ -64,7 +65,7 @@ export default function Name() {
           </View>
         </View>
       </View>
-      {failed ? <ErrorLine text="We couldn’t save your name. Check your connection and try again." /> : null}
+      {failed ? <ErrorLine text={failText('save your name', failed)} /> : null}
       <ActionPill label="Next" variant="primary" height="bottom" onPress={next} disabled={!name.trim() || busy} />
     </OnbScreen>
   );

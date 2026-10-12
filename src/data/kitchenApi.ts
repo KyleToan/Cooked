@@ -1,11 +1,12 @@
 // Kitchen and profile changes that go through Supabase RPCs (supabase/migrations/*_init.sql).
 // Screens call these only when `hasBackend`, then `reload()` the store. Without a backend they keep the local actions.
 
+import { failureOf, type Failure } from './errors';
 import type { NotificationSettings } from './types';
 import { supabase } from './supabase';
 
-/** What a call came back with. Anything the screens can't explain to a person is 'network'. */
-export type Result = 'ok' | 'not_found' | 'used' | 'expired' | 'not_creator' | 'in_other_kitchen' | 'network';
+/** What a call came back with. Anything the screens can't explain to a person is 'offline' or 'server'. */
+export type Result = 'ok' | 'not_found' | 'used' | 'expired' | 'not_creator' | 'in_other_kitchen' | Failure;
 
 /** The exception messages the RPCs raise, as the codes the screens show copy for. */
 const CODES: Record<string, Result> = {
@@ -18,16 +19,20 @@ const CODES: Record<string, Result> = {
   already_in_kitchen: 'ok',
 };
 
-export const toResult = (error: { message?: string } | null): Result =>
-  !error ? 'ok' : (CODES[error.message ?? ''] ?? 'network');
+export const toResult = (error: { message?: string } | null, status?: number): Result =>
+  !error ? 'ok' : (CODES[error.message ?? ''] ?? failureOf(status));
 
-/** Runs a Supabase call; a thrown error (offline, no backend) counts as 'network'. */
-async function run(call: () => PromiseLike<{ error: { message?: string } | null }>): Promise<Result> {
-  if (!supabase) return 'network';
+/** The failure behind a result, for screens that only show a generic error line; null when it worked. */
+export const failure = (r: Result): Failure | null => (r === 'ok' ? null : r === 'offline' ? 'offline' : 'server');
+
+/** Runs a Supabase call. supabase-js answers status 0 when the request never reached the server; a thrown error counts as offline too. */
+async function run(call: () => PromiseLike<{ error: { message?: string } | null; status?: number }>): Promise<Result> {
+  if (!supabase) return 'server';
   try {
-    return toResult((await call()).error);
+    const { error, status } = await call();
+    return toResult(error, status);
   } catch {
-    return 'network';
+    return 'offline';
   }
 }
 
@@ -47,7 +52,7 @@ export const deleteAccount = () => run(() => supabase!.rpc('delete_account'));
 
 async function updateProfile(fields: Record<string, unknown>): Promise<Result> {
   const id = await uid();
-  if (!id) return 'network';
+  if (!id) return 'server';
   return run(() => supabase!.from('profiles').update(fields).eq('id', id));
 }
 

@@ -13,7 +13,8 @@ import { Sheet } from '@/components/Sheet';
 import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
-import { saveNotifications } from '@/data/kitchenApi';
+import { failText, type Failure } from '@/data/errors';
+import { failure, saveNotifications } from '@/data/kitchenApi';
 import { useStore } from '@/data/store';
 import { hasBackend } from '@/data/supabase';
 import type { NotificationKey } from '@/data/types';
@@ -65,13 +66,13 @@ export default function NotificationsScreen() {
   const [permission, setPermission] = useState<Permission>(native ? 'undetermined' : 'unsupported');
   const [picking, setPicking] = useState(false);
   const [draft, setDraft] = useState(() => parseTime(n.useSoonTime));
-  const [saveFailed, setSaveFailed] = useState(false);
+  const [saveFailed, setSaveFailed] = useState<Failure | null>(null);
 
   // Save every change to the profile (stored only; nothing is sent). Skips the settings as the screen opened with.
   const opened = useRef(n);
   useEffect(() => {
     if (!hasBackend || n === opened.current) return;
-    saveNotifications(n).then((r) => setSaveFailed(r !== 'ok'));
+    saveNotifications(n).then((r) => setSaveFailed(failure(r)));
   }, [n]);
 
   // Read the permission on open, and again when coming back from the Settings app.
@@ -183,7 +184,7 @@ export default function NotificationsScreen() {
             <TextLink label="Open Settings" onPress={() => Linking.openSettings().catch(() => {})} />
           </View>
         ) : null}
-        {saveFailed ? <ErrorLine text="We couldn’t save that. Check your connection and try again." /> : null}
+        {saveFailed ? <ErrorLine text={failText('save that', saveFailed)} /> : null}
         <Text variant="caption" color="inkMuted" style={styles.honest}>
           Nothing is sent yet. These choices are saved for when Cooked starts sending.
         </Text>
