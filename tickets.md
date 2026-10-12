@@ -248,17 +248,8 @@ Agents finished tickets 2–9 on their own branches. None are pushed or merged. 
 ### 2. Fix GitHub login and push
 Pushing failed with "could not read Username". Run `gh auth login` (or set up a credential helper), then push `tickets-non-backend` and the eight ticket branches.
 
-### 3. Merge the branches
-Merge into `build-screens` in this order to keep conflicts small: 7, 9, 2, 6, 4, 3, 5, 8. Or ask an agent to make an integration branch and resolve the conflicts. Expect conflicts in:
-- **`Decisions.md`:** most branches added row #82 (ticket 2 #82–83, ticket 6 #84). Renumber in merge order. Ticket 4's row is dated 2026-10-12.
-- **`store.tsx`:** tickets 3 and 4.
-- **`helpers.ts` and its tests:** tickets 3 and 5.
-- **`app.json`:** the `expo-sqlite` plugin from ticket 3 and the `expo-font` fonts from ticket 8.
-- **`package.json` and the lock file:** tickets 2 and 3.
-- **`scan.tsx`:** tickets 2, 6, 7 and 9.
-- **`_layout.tsx`:** tickets 3, 5 and 8.
-
-After merging, run `npm run typecheck && npm run lint && npm test`. Two leftover branches, `worktree-agent-a711afe1bc7ad71aa` and `worktree-agent-ab85470e768a81e4f`, point at ce1e5ea and can be deleted.
+### 3. Merge the combined branch
+`combined-tickets` already merges all eight branches (in the order 7, 9, 2, 6, 4, 3, 5, 8) with the conflicts resolved. The new `Decisions.md` rows are renumbered #82–#90 in that order. Review it, then merge it into `build-screens`. Two leftover branches, `worktree-agent-a711afe1bc7ad71aa` and `worktree-agent-ab85470e768a81e4f`, point at ce1e5ea and can be deleted.
 
 ### 4. Choose the app IDs
 `app.json` has no iOS `bundleIdentifier` or `android.package` (e.g. `app.cooked`). EAS asks for them at the first build. Once set they're permanent in the stores.
