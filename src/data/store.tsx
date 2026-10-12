@@ -7,6 +7,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useReducer,
 
 import { guessPlace, makeId } from './helpers';
 import { checkRecipe, checkRecipes, usedWhenMade } from './match';
+import { shelfLifeFor } from './receipt';
 import {
   ALEX,
   NEW_INVITE_CODE,
@@ -55,8 +56,6 @@ export type State = {
   notifications: NotificationSettings;
   undo: Undo | null;
 };
-
-const DEFAULT_DAYS: Record<Place, number> = { fridge: 7, pantry: 180, freezer: 90 };
 
 export function initialState(): State {
   return {
@@ -153,7 +152,7 @@ export function reducer(s: State, a: Action): State {
         qty: 1,
         unit: '',
         meta: `Added by ${s.user.name}`,
-        daysLeft: DEFAULT_DAYS[a.place],
+        daysLeft: shelfLifeFor(name, a.place),
         addedBy: s.user.id,
       };
       return { ...s, items: [...s.items, item], undo: null };
@@ -194,7 +193,7 @@ export function reducer(s: State, a: Action): State {
               qty: line.qty,
               unit: '',
               meta: 'From today’s receipt',
-              daysLeft: DEFAULT_DAYS[place],
+              daysLeft: shelfLifeFor(line.name, place),
               addedBy: s.user.id,
             },
           ];
