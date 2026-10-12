@@ -1,8 +1,17 @@
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, ScrollView, Share, StyleSheet, useWindowDimensions, View } from 'react-native';
-import Animated from 'react-native-reanimated';
+import Animated, {
+  FadeIn,
+  interpolate,
+  interpolateColor,
+  ReduceMotion,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 
 import { ActionPill } from '@/components/ActionPill';
 import { ROW_LAYOUT, Switch, UndoBar } from '@/components/Controls';
@@ -47,6 +56,11 @@ const PLACE_COPY: Record<Place, { soonTitle: string; soonIsDate: boolean; restTi
 /** shortcut: the web has no date picker, so there the date steps through these days from today; fine for previews. */
 const WEB_DAYS = [1, 3, 7, 14];
 
+/** The same critically damped spring as the other sliding pickers (`Segmented`): about 300ms, no overshoot. */
+const SPRING = { duration: 300, dampingRatio: 1, reduceMotion: ReduceMotion.System } as const;
+/** The list fades across when the tab changes. Reanimated skips it under Reduce Motion. */
+const LIST_FADE = FadeIn.duration(150);
+
 const isTab = (t: unknown): t is Tab => t === 'fridge' || t === 'pantry' || t === 'freezer' || t === 'tobuy';
 
 export default function Kitchen() {
@@ -54,8 +68,6 @@ export default function Kitchen() {
   const router = useRouter();
   const { state, actions } = useStore();
   const undo = useUndo('kitchen');
-  const { fontScale } = useWindowDimensions();
-  const scrollTabs = fontScale > TABS_SCROLL_SCALE;
 
   const [tab, setTab] = useState<Tab>(isTab(params.tab) ? params.tab : 'fridge');
   // Kitchen is a tab and stays mounted, so a link to one of its tabs (from Home's search) arrives as a new param.
@@ -88,76 +100,160 @@ export default function Kitchen() {
 
   const placeholder = tab === 'tobuy' ? 'Search your list' : `Search the ${tab}`;
 
-  const tabs = TABS.map((t) => {
-    const on = t.id === tab;
-    return (
-      <Tap
-        key={t.id}
-        accessibilityRole="tab"
-        accessibilityState={{ selected: on }}
-        onPress={() => pick(t.id)}
-        style={[
-          styles.tab,
-          scrollTabs ? styles.tabScroll : styles.tabFit,
-          on ? [t.id === 'tobuy' ? styles.tabOnRing : styles.tabOn, { backgroundColor: color[t.paper] }] : styles.tabOff,
-        ]}
-      >
-        <Text variant="button" weight={on ? 'semibold' : 'medium'} color={on ? 'ink' : 'inkMuted'} style={styles.tabLabel}>
-          {t.label}
-        </Text>
-      </Tap>
-    );
-  });
-
   return (
     <View style={styles.root}>
       <Screen
         island
         top="tab"
         raised={!!undo}
-        gap={space.s5}
-        overlay={undo ? <UndoBar text={undo.text} onUndo={actions.undo} /> : null}
+        overlay={undo ? <UndoBar text={undo.text} onUndo={actions.undo} onDismiss={() => actions.clearUndo(undo.scope)} /> : null}
       >
         <GreetingHeader line={statusLine} title="Your Kitchen" onAccount={() => router.push('/account')} />
 
         <SearchField placeholder={placeholder} value={query} onChangeText={setQuery} />
 
-        {scrollTabs ? (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            accessibilityRole="tablist"
-            accessibilityLabel="Where"
-            style={styles.tabsBleed}
-            contentContainerStyle={[styles.tabs, styles.tabsScrollContent]}
-          >
-            {tabs}
-          </ScrollView>
-        ) : (
-          <View accessibilityRole="tablist" accessibilityLabel="Where" style={styles.tabs}>
-            {tabs}
-          </View>
-        )}
+        <KitchenTabs tab={tab} onPick={pick} />
 
-        {tab === 'tobuy' ? (
-          <ToBuyTab matches={matches} others={others} query={query.trim()} clearQuery={() => setQuery('')} />
-        ) : (
-          <StockTab
-            place={tab}
-            query={query.trim()}
-            clearQuery={() => setQuery('')}
-            items={state.items.filter((i) => i.place === tab && matches(i.name))}
-            open={open}
-            setOpen={setOpen}
-            sort={sort}
-            toggleSort={() => setSort(sort === 'az' ? 'useby' : 'az')}
-            startQty={startQty}
-          />
-        )}
+        <Animated.View key={tab} entering={LIST_FADE}>
+          {tab === 'tobuy' ? (
+            <ToBuyTab matches={matches} others={others} query={query.trim()} clearQuery={() => setQuery('')} />
+          ) : (
+            <StockTab
+              place={tab}
+              query={query.trim()}
+              clearQuery={() => setQuery('')}
+              items={state.items.filter((i) => i.place === tab && matches(i.name))}
+              open={open}
+              setOpen={setOpen}
+              sort={sort}
+              toggleSort={() => setSort(sort === 'az' ? 'useby' : 'az')}
+              startQty={startQty}
+            />
+          )}
+        </Animated.View>
       </Screen>
     </View>
   );
 }
+
+type TabLayout = { x: number; width: number };
+
+/**
+ * Grey pills, one per tab; the picked one is a paper pill that slides between them on a spring,
+ * its color crossing from paper to paper (To Buy: white with a `sage-ink` ring).
+ * At large text the row scrolls sideways and keeps the picked tab in view.
+ */
+function KitchenTabs({ tab, onPick }: { tab: Tab; onPick: (t: Tab) => void }) {
+  const { fontScale, width: screenW } = useWindowDimensions();
+  const scrollTabs = fontScale > TABS_SCROLL_SCALE;
+  const reduced = useReducedMotion();
+  const index = TABS.findIndex((t) => t.id === tab);
+  const [layouts, setLayouts] = useState<Partial<Record<Tab, TabLayout>>>({});
+  const at = layouts[tab];
+  const measured = TABS.every((t) => layouts[t.id]);
+
+  const x = useSharedValue(0);
+  const w = useSharedValue(0);
+  const p = useSharedValue(index);
+  const placed = useRef(false);
+
+  useEffect(() => {
+    if (!at || !measured) return;
+    // Later layout changes (the bolder label at large text, a rotation) spring too, so a slide in flight isn't cut short.
+    if (reduced || !placed.current) {
+      // First layout or Reduce Motion: place the pill without moving it.
+      placed.current = true;
+      x.set(at.x);
+      w.set(at.width);
+      p.set(index);
+    } else {
+      x.set(withSpring(at.x, SPRING));
+      w.set(withSpring(at.width, SPRING));
+      p.set(withSpring(index, SPRING));
+    }
+  }, [at, index, measured, reduced, x, w, p]);
+
+  // Keep the picked tab in view when the row scrolls: centered, but never past either end.
+  const scroller = useRef<ScrollView>(null);
+  const contentW = useRef(0);
+  useEffect(() => {
+    if (!scrollTabs || !at) return;
+    const max = Math.max(0, contentW.current - screenW);
+    const to = Math.min(max, Math.max(0, at.x + at.width / 2 - screenW / 2));
+    scroller.current?.scrollTo({ x: to, animated: !reduced });
+  }, [scrollTabs, at, screenW, reduced]);
+
+  const steps = TABS.map((_, i) => i);
+  const papers = TABS.map((t) => color[t.paper]);
+  const rings = TABS.map((t) => (t.id === 'tobuy' ? color.sageInk : color.line));
+  const ringWidths = TABS.map((t) => (t.id === 'tobuy' ? RING_TOBUY : RING_PAPER));
+  const pill = useAnimatedStyle(() => ({
+    transform: [{ translateX: x.get() }],
+    width: w.get(),
+    backgroundColor: interpolateColor(p.get(), steps, papers),
+    borderColor: interpolateColor(p.get(), steps, rings),
+    borderWidth: interpolate(p.get(), steps, ringWidths),
+  }));
+
+  const content = (
+    <>
+      {measured
+        ? TABS.map((t) => (
+            <View key={t.id} pointerEvents="none" style={[styles.tabTrack, { left: layouts[t.id]!.x, width: layouts[t.id]!.width }]} />
+          ))
+        : null}
+      {measured ? <Animated.View pointerEvents="none" style={[styles.tabPill, pill]} /> : null}
+      {TABS.map((t) => {
+        const on = t.id === tab;
+        return (
+          <Tap
+            key={t.id}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: on }}
+            onPress={() => onPick(t.id)}
+            onLayout={(e) => {
+              const { x: lx, width } = e.nativeEvent.layout;
+              setLayouts((prev) => (prev[t.id]?.x === lx && prev[t.id]?.width === width ? prev : { ...prev, [t.id]: { x: lx, width } }));
+            }}
+            style={[
+              styles.tab,
+              scrollTabs ? styles.tabScroll : styles.tabFit,
+              // Until every tab is measured there's no sliding pill yet, so each tab draws its own fill.
+              !measured && (on ? { backgroundColor: color[t.paper] } : styles.tabOff),
+            ]}
+          >
+            <Text variant="button" weight={on ? 'semibold' : 'medium'} color={on ? 'ink' : 'inkMuted'} style={styles.tabLabel}>
+              {t.label}
+            </Text>
+          </Tap>
+        );
+      })}
+    </>
+  );
+
+  return scrollTabs ? (
+    <ScrollView
+      ref={scroller}
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      onContentSizeChange={(cw) => (contentW.current = cw)}
+      accessibilityRole="tablist"
+      accessibilityLabel="Where"
+      style={styles.tabsBleed}
+      contentContainerStyle={[styles.tabs, styles.tabsScrollContent]}
+    >
+      {content}
+    </ScrollView>
+  ) : (
+    <View accessibilityRole="tablist" accessibilityLabel="Where" style={styles.tabs}>
+      {content}
+    </View>
+  );
+}
+
+/** Picked To Buy's `sage-ink` ring is a little heavier than a paper's `line` edge, as on the place picker. */
+const RING_TOBUY = 1.5;
+const RING_PAPER = 1;
 
 function StockTab({
   place,
@@ -221,16 +317,24 @@ function StockTab({
           {shortDate(i.daysLeft)}
         </Text>
       </Tap>
-      <View style={styles.useByPart}>
+      {/* The whole pill flips the switch, and VoiceOver reads it as one switch. */}
+      <Tap
+        accessibilityRole="switch"
+        accessibilityLabel={`Use ${i.name} soon`}
+        accessibilityState={{ checked: isDueSoon(i) }}
+        onPress={() => {
+          haptics.select();
+          actions.setUseSoon(i.id, !isDueSoon(i));
+        }}
+        style={styles.useByPart}
+      >
         <Text variant="caption" color="inkMuted">
           Use soon
         </Text>
-        <Switch
-          value={isDueSoon(i)}
-          label={`Use ${i.name} soon`}
-          onChange={(on) => actions.setUseSoon(i.id, on)}
-        />
-      </View>
+        <View importantForAccessibility="no-hide-descendants">
+          <Switch value={isDueSoon(i)} label={`Use ${i.name} soon`} onChange={(on) => actions.setUseSoon(i.id, on)} />
+        </View>
+      </Tap>
     </View>
   );
 
@@ -318,7 +422,7 @@ function StockTab({
               style={styles.sort}
             >
               <Text variant="link" color="sageInk">
-                Sort: {sort === 'az' ? 'A–Z' : 'Use by'}
+                Sort: {sort === 'az' ? 'A to Z' : 'Use by'}
               </Text>
             </Tap>
           }
@@ -332,7 +436,8 @@ function StockTab({
           <DateTimePicker
             value={draft}
             mode="date"
-            display="spinner"
+            display="inline"
+            accentColor={color.sageInk}
             themeVariant="light"
             textColor={color.ink}
             onValueChange={(_e, d) => setDraft(d)}
@@ -373,7 +478,7 @@ function ToBuyTab({
 
   const share = () => {
     const left = sortToBuy(state.toBuy).filter((t) => !t.done);
-    Share.share({ message: ['To Buy', ...left.map((t) => `– ${t.name}`)].join('\n') });
+    Share.share({ message: ['To Buy', ...left.map((t) => `• ${t.name}`)].join('\n') });
   };
 
   if (query && list.length === 0) {
@@ -426,10 +531,10 @@ const styles = StyleSheet.create({
   tabFit: { flex: 1, paddingHorizontal: space.s1 },
   tabScroll: { paddingHorizontal: space.s4 },
   tabLabel: { textAlign: 'center' },
-  tabOn: { borderWidth: 1, borderColor: color.line },
-  tabOnRing: { borderWidth: 1.5, borderColor: color.sageInk },
   tabOff: { backgroundColor: color.surfaceSunken },
-  stock: { gap: space.s5 + space.s1 + 2, paddingTop: space.s1 },
+  tabTrack: { position: 'absolute', top: 0, bottom: 0, borderRadius: radius.pill, backgroundColor: color.surfaceSunken },
+  tabPill: { position: 'absolute', top: 0, bottom: 0, left: 0, borderRadius: radius.pill },
+  stock: { gap: space.s5 + space.tight, paddingTop: space.s1 },
   list: { gap: space.s1 },
   noMatch: { gap: space.s1, paddingTop: space.s2 },
   sort: { minHeight: size.targetMin, justifyContent: 'center', paddingHorizontal: space.s1, marginRight: -space.s1 },
@@ -445,7 +550,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: space.s2,
     paddingVertical: space.s1,
-    paddingHorizontal: space.s3 + 2,
+    paddingHorizontal: space.roomy,
     borderRadius: radius.pill,
     backgroundColor: color.surfaceSunken,
   },

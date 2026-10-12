@@ -71,7 +71,7 @@ export default function Account() {
 
   return (
     <Screen>
-      <PushedHeader title="Account" onBack={() => router.back()} backLabel="Back to home" />
+      <PushedHeader title="Account" onBack={() => router.back()} backLabel="Back" />
 
       <View style={styles.profile}>
         <Avatar name={user.name} paper="papaya" diameter={PROFILE} />
@@ -109,7 +109,6 @@ export default function Account() {
           }} />
         <SettingsRow label="Email" value={email} />
         <SettingsRow label="Sign-in" value={SIGN_IN[method]} />
-        <SettingsRow label="Units" value="Cups and ounces" />
       </View>
 
       <View>
@@ -148,7 +147,8 @@ export default function Account() {
             : 'Your kitchen is only saved on this phone for now, so logging out clears it: every item, list and recipe.'}
         </Text>
         <ActionPill label="Stay logged in" variant="primary" height="bottom" onPress={() => setLoggingOut(false)} />
-        <TextLink label="Log out" color="errorInk" variant="button" align="center" onPress={logOut} />
+        {/* Red only when logging out clears this phone (no backend); with one, nothing is lost. */}
+        <TextLink label="Log out" color={hasBackend ? 'ink' : 'errorInk'} variant="button" align="center" onPress={logOut} />
       </Sheet>
 
       <Sheet visible={editingName} onClose={() => setEditingName(false)} title="Your name">
@@ -161,7 +161,7 @@ export default function Account() {
           autoCapitalize="words"
         />
         {failed?.at === 'name' ? <ErrorLine text={failText('save your name', failed.why)} /> : null}
-        <ActionPill label="Save" variant="primary" height="bottom" disabled={!name.trim() || busy} onPress={saveName} />
+        <ActionPill label="Save" variant="primary" height="bottom" disabled={!name.trim()} busy={busy} onPress={saveName} />
       </Sheet>
     </Screen>
   );
@@ -169,5 +169,5 @@ export default function Account() {
 
 const styles = StyleSheet.create({
   grow: { flex: 1, minWidth: 0, gap: 2 },
-  profile: { flexDirection: 'row', alignItems: 'center', gap: space.s3 + 2 },
+  profile: { flexDirection: 'row', alignItems: 'center', gap: space.roomy },
 });

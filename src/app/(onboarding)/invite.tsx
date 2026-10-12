@@ -4,11 +4,11 @@ import { Share, StyleSheet, View } from 'react-native';
 
 import { ActionPill } from '@/components/ActionPill';
 import { OnbScreen } from '@/components/Onboarding';
-import { Avatar } from '@/components/Settings';
+import { Avatar, InviteLink } from '@/components/Settings';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
 import { useStore } from '@/data/store';
-import { color, radius, size, space } from '@/theme';
+import { color, radius, space } from '@/theme';
 
 const PERSON = 36;
 
@@ -31,19 +31,22 @@ export default function Invite() {
       sub="Send the link by text or anywhere else. They’ll see the fridge, pantry, freezer and To Buy, and can add to them."
       bottom={
         <>
-          <ActionPill label={shared ? 'Share again' : 'Share invite link'} variant="primary" height="bottom" onPress={share} />
-          <TextLink label={shared ? 'Done' : 'Skip for now'} variant="button" align="center" onPress={() => router.push('/ready')} />
+          {/* After sharing, moving on is the main thing; sharing again is the quiet link. */}
+          {shared ? (
+            <>
+              <ActionPill label="Next" variant="primary" height="bottom" onPress={() => router.push('/ready')} />
+              <TextLink label="Share again" variant="button" align="center" onPress={share} />
+            </>
+          ) : (
+            <>
+              <ActionPill label="Share invite link" variant="primary" height="bottom" onPress={share} />
+              <TextLink label="Skip for now" variant="button" align="center" onPress={() => router.push('/ready')} />
+            </>
+          )}
         </>
       }
     >
-      <View style={styles.link}>
-        <Text variant="micro" weight="regular" color="inkMuted">
-          Invite link
-        </Text>
-        <Text variant="button" weight="regular">
-          {link}
-        </Text>
-      </View>
+      <InviteLink link={link} />
       <View style={styles.people}>
         <Text variant="caption" weight="semibold" color="inkMuted">
           In this kitchen
@@ -72,16 +75,6 @@ export default function Invite() {
 
 const styles = StyleSheet.create({
   grow: { flex: 1 },
-  link: {
-    minHeight: size.controlHeight + space.s3 - 2,
-    paddingHorizontal: space.s4,
-    paddingVertical: space.s2,
-    justifyContent: 'center',
-    gap: 2,
-    borderRadius: radius.control,
-    borderWidth: 1,
-    borderColor: color.line,
-  },
   people: { gap: space.s3 },
   person: { flexDirection: 'row', alignItems: 'center', gap: space.s3 },
   empty: { width: PERSON, height: PERSON, borderRadius: radius.pill, borderWidth: 1.5, borderStyle: 'dashed', borderColor: color.checkBorder },

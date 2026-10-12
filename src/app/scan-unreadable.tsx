@@ -38,7 +38,7 @@ export default function ScanUnreadable() {
         showClose={false}
         onClose={() => router.back()}
         title="Couldn’t read this receipt"
-        subtitle="The photo looks blurry or the bottom is cut off. Lay it flat in good light and fit all of it inside the corners."
+        subtitle="We couldn’t find any food on this receipt. Lay it flat in good light and fit all of it inside the corners."
       >
         <ActionPill label="Retake photo" variant="primary" height="bottom" onPress={() => router.back()} />
         <TextLink label="Add the items by hand" variant="button" align="center" onPress={byHand} />

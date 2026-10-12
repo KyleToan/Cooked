@@ -6,7 +6,7 @@ import { Icon } from "./Icon";
 import { Tap } from "./Tap";
 import { Text } from "./Text";
 
-/** The account button is 22pt inside a 44pt square. */
+/** The account and Scan buttons are 22pt icons inside 44pt circles. */
 const ACCOUNT_ICON = 22;
 
 type GreetingProps = {
@@ -54,12 +54,14 @@ export function GreetingHeader({
 
 type TopBarProps = {
   title: string;
+  /** The greeting under the title ("Good morning, Alex"). */
+  line?: string;
   onScan: () => void;
   onAccount: () => void;
 };
 
-/** Home's top bar: a round Scan button on the left, the title centred, the account button on the right. */
-export function TopBar({ title, onScan, onAccount }: TopBarProps) {
+/** Home's top bar: a round Scan button on the left, the title and greeting centred, the account button on the right. */
+export function TopBar({ title, line, onScan, onAccount }: TopBarProps) {
   return (
     <View style={styles.topRow}>
       <Tap
@@ -71,15 +73,28 @@ export function TopBar({ title, onScan, onAccount }: TopBarProps) {
       >
         <Icon name="scan" size={ACCOUNT_ICON} color="sageInk" />
       </Tap>
-      <Text
-        variant="titleXl"
-        accessibilityRole="header"
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        style={styles.topTitle}
-      >
-        {title}
-      </Text>
+      <View style={styles.topTitles}>
+        <Text
+          variant="titleXl"
+          accessibilityRole="header"
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          style={styles.center}
+        >
+          {title}
+        </Text>
+        {line ? (
+          <Text
+            variant="greeting"
+            color="inkMuted"
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            style={styles.center}
+          >
+            {line}
+          </Text>
+        ) : null}
+      </View>
       <Tap
         accessibilityRole="button"
         accessibilityLabel="Account and household"
@@ -195,16 +210,18 @@ const styles = StyleSheet.create({
   account: {
     width: size.targetMin,
     height: size.targetMin,
-    borderRadius: radius.control,
+    borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: color.line,
     backgroundColor: color.surface,
     alignItems: "center",
     justifyContent: "center",
   },
-  topRow: { flexDirection: "row", alignItems: "center", gap: space.s3 },
+  // Top-aligned so the buttons sit beside the title line (46pt), not halfway down the greeting.
+  topRow: { flexDirection: "row", alignItems: "flex-start", gap: space.s3 },
   // Both side buttons are 44pt wide, so a flex title between them sits in the true centre.
-  topTitle: { flex: 1, textAlign: "center" },
+  topTitles: { flex: 1, gap: space.s1 },
+  center: { textAlign: "center" },
   scan: {
     width: size.targetMin,
     height: size.targetMin,

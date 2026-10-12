@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
   row2: { gap: space.s2, paddingLeft: space.s6 + 2 },
   note: { justifyContent: 'space-between' },
   /** The left note of each pair hangs a little lower than its neighbour. */
-  lower: { marginTop: space.s3 + 2 },
+  lower: { marginTop: space.roomy },
   copy: { gap: space.s3, marginTop: space.section },
   login: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center' },
   loginLink: { minHeight: size.targetMin, justifyContent: 'center' },

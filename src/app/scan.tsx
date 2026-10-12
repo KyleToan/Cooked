@@ -4,7 +4,15 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, AppState, Linking, Pressable, StyleSheet, View } from 'react-native';
-import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, {
+  ReduceMotion,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CornerGuides, Glass, Scrim } from '@/components/Camera';
@@ -40,6 +48,9 @@ const STRIP = 56;
 const CHROME_MAX_SCALE = 1.3;
 /** A critically damped spring: the shutter dips and settles without bouncing. */
 const PRESS_SPRING = { stiffness: 400, damping: 40, mass: 1 };
+/** The mode pill slides on the app's critically damped spring (Controls' Segmented). */
+const MODE_SPRING = { duration: 300, dampingRatio: 1, reduceMotion: ReduceMotion.System } as const;
+const STRIP_PAD = (STRIP - size.targetMin) / 2;
 const FLASH_IN = 40;
 const FLASH_OUT = 80;
 /** How dark the capture blink gets. */
@@ -64,6 +75,10 @@ export default function Scan() {
   const flashOpacity = useSharedValue(0);
   const shutterStyle = useAnimatedStyle(() => ({ transform: [{ scale: press.get() }] }));
   const flashStyle = useAnimatedStyle(() => ({ opacity: flashOpacity.get() }));
+  const [stripW, setStripW] = useState(0);
+  const modeX = useSharedValue(0);
+  const laidOut = useRef(0);
+  const modePill = useAnimatedStyle(() => ({ transform: [{ translateX: modeX.get() }] }));
 
   useEffect(() => {
     if (permission && !permission.granted && permission.status === 'undetermined') requestPermission();
@@ -81,6 +96,19 @@ export default function Scan() {
   // Recipes are saved from Import, which only exists once onboarding is done.
   const modes = flow === 'app' ? MODES : [];
   const granted = !!permission?.granted;
+  const modeW = modes.length && stripW ? (stripW - STRIP_PAD * 2 - space.s1 * (modes.length - 1)) / modes.length : 0;
+  const modeIndex = Math.max(0, modes.findIndex((m) => m.id === mode));
+
+  useEffect(() => {
+    const to = modeIndex * (modeW + space.s1);
+    if (reduced || laidOut.current !== modeW) {
+      // First layout, a resize or Reduce Motion: place the pill without moving it.
+      laidOut.current = modeW;
+      modeX.set(to);
+    } else {
+      modeX.set(withSpring(to, MODE_SPRING));
+    }
+  }, [modeIndex, modeW, reduced, modeX]);
 
   const unreadable = () => router.push({ pathname: '/scan-unreadable', params: { flow } });
 
@@ -100,17 +128,23 @@ export default function Scan() {
   /** Reads the photo into lines for Check your scan; no food lines or a failed read is unreadable. */
   const read = async (uri: string | undefined) => {
     if (mode === 'recipe') return readRecipe(uri);
+    const at = new Date();
     let lines: ScanLine[] = [];
+    let store: string | null = null;
     try {
       const text = uri ? await readText(uri) : null;
       // No reader in this build (Expo Go, web): the sample receipt keeps the screens usable in development.
-      if (text === null) lines = __DEV__ ? SAMPLE_SCAN : [];
-      else lines = parseReceipt(text).lines;
+      if (text === null) {
+        lines = __DEV__ ? SAMPLE_SCAN : [];
+        store = 'Corner Market';
+      } else {
+        ({ lines, store } = parseReceipt(text));
+      }
     } catch {
       lines = [];
     }
     if (!lines.some((l) => l.place !== 'skip')) return unreadable();
-    lastScan.lines = lines;
+    Object.assign(lastScan, { lines, store, at });
     router.push({ pathname: '/scan-review', params: { flow } });
   };
 
@@ -247,7 +281,10 @@ export default function Scan() {
             accessibilityRole="button"
             accessibilityLabel="Flash"
             accessibilityState={{ selected: flash }}
-            onPress={() => setFlash(!flash)}
+            onPress={() => {
+              haptics.select();
+              setFlash(!flash);
+            }}
             style={styles.side}
           >
             <Glass style={styles.square} on={flash}>
@@ -260,7 +297,13 @@ export default function Scan() {
         </View>
         {modes.length ? (
           <Glass style={styles.strip}>
-            <View accessibilityRole="tablist" accessibilityLabel="Scan mode" style={styles.modes}>
+            <View
+              accessibilityRole="tablist"
+              accessibilityLabel="Scan mode"
+              style={styles.modes}
+              onLayout={(e) => setStripW(e.nativeEvent.layout.width)}
+            >
+              {modeW > 0 ? <Animated.View pointerEvents="none" style={[styles.modePill, { width: modeW }, modePill]} /> : null}
               {modes.map((m) => {
                 const on = m.id === mode;
                 return (
@@ -273,7 +316,7 @@ export default function Scan() {
                       haptics.select();
                       setMode(m.id);
                     }}
-                    style={[styles.mode, on && styles.modeOn]}
+                    style={styles.mode}
                   >
                     <Text variant="caption" weight="medium" color={on ? 'ink' : 'onInk'} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
                       {m.label}
@@ -343,9 +386,17 @@ const styles = StyleSheet.create({
   shutterDot: { width: SHUTTER_DOT, height: SHUTTER_DOT, borderRadius: radius.pill, backgroundColor: color.onInk },
   // The prototype's strip: a 56pt glass pill inset 6pt, so each mode is a 44pt target.
   strip: { height: STRIP, marginTop: space.s5, marginHorizontal: space.s5, borderRadius: radius.pill },
-  modes: { flex: 1, padding: (STRIP - size.targetMin) / 2, flexDirection: 'row', gap: space.s1 },
+  modes: { flex: 1, padding: STRIP_PAD, flexDirection: 'row', gap: space.s1 },
   mode: { flex: 1, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
-  modeOn: { backgroundColor: color.onInk },
+  // The picked mode: a white pill that slides between modes under the labels.
+  modePill: {
+    position: 'absolute',
+    left: STRIP_PAD,
+    top: STRIP_PAD,
+    height: size.targetMin,
+    borderRadius: radius.pill,
+    backgroundColor: color.onInk,
+  },
   ask: { alignItems: 'center', gap: space.s3 },
   reading: { alignItems: 'center', gap: space.s2 },
   askBtn: {

@@ -15,7 +15,7 @@ Cooked is a shared kitchen app: scan a receipt to stock your fridge, pantry and 
 
 Every main screen follows the same skeleton, top to bottom, with a 20px side gutter (`space-5`) and 24px between sections (`space-section`):
 
-1. **Header.** On a main tab, a greeting or status line (`greeting`, `ink-muted`) above the screen title (`title-xl`, top left), with the account button or one secondary pill on the right. On a pushed screen (Kitchen, Recipe, Check items), the back arrow and a `title-lg` title share one line.
+1. **Header.** Home has a top bar: a round grey Scan button on the left, **Cooked** (`title-xl`) centred with the time-of-day greeting (`greeting`, `ink-muted`) under it, and the round account button on the right. Kitchen and Recipes put a status line (`greeting`, `ink-muted`) above a `title-xl` title top left, with the round account button on the right. On a pushed screen (Recipe, Account, Check items), the back arrow and a `title-lg` title share one line.
 2. **Search.** One white field (`radius-field`, 1px `line` border, no shadow) with the magnifier on the right.
 3. **Actions.** At most one sage primary pill per screen, plus one grey secondary pill beside it if needed. Icons in pills use `sage-ink` on grey and `ink` on sage.
 4. **Content sections.** Each has a left-aligned `section-title`, an optional `caption` meta line or progress count, and an optional `link` on the right in `sage-ink`. Lists are plain rows with `line-soft` dividers, not cards.
@@ -71,7 +71,7 @@ Two families, used the way the Impeccable website uses them: a tall, light, cond
 - **Controls** — the Link/Text switch, filter pills, the stepper and the undo bar.
 - **Sheet** — the Import sheet and error sheets such as “Couldn’t read this receipt”.
 - **Settings** — settings rows with a value and chevron, the switch, people rows, and the Log out / Delete account ending used on Account, Household and Notifications.
-- **Tab island** — Home, Fridge and Recipes with icons and labels; a grey underscore under the active tab.
+- **Tab island** — Home, Kitchen (fridge icon) and Recipes with icons and labels; an `ink-muted` underscore slides under the active tab, and each tab dips slightly when pressed.
 - **Icons** — 22 icons drawn for Cooked on one 24px grid with a 1.8 stroke, including three loading icons (`loading`, `syncing`, `cooking`). Use only these in the app; the Icons group under Assets holds the files.
 
 Each component's page has its exact spec and a live preview.

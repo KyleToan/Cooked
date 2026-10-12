@@ -1,5 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
+import Animated, { ReduceMotion, useAnimatedStyle, useReducedMotion, useSharedValue, withSpring } from 'react-native-reanimated';
 
 import { ActionPill } from '@/components/ActionPill';
 import { OnbScreen } from '@/components/Onboarding';
@@ -21,12 +23,24 @@ const RECEIPT_W = 200;
 const GUIDE = 30;
 /** The receipt is a fixed-size drawing (hidden from VoiceOver), so its text barely grows. */
 const ART_TEXT_MAX = 1.2;
+/** The corner guides draw in once: from 90% and clear, critically damped. */
+const GUIDE_IN = { duration: 300, dampingRatio: 1, reduceMotion: ReduceMotion.System } as const;
+const GUIDE_FROM = 0.9;
 
 /** Scan your first receipt, or skip it. */
 export default function FirstScan() {
   const router = useRouter();
   const { actions } = useStore();
   const solo = useLocalSearchParams<{ flow?: string }>().flow === 'solo';
+  const reduced = useReducedMotion();
+  const shown = useSharedValue(reduced ? 1 : 0);
+  useEffect(() => {
+    shown.set(withSpring(1, GUIDE_IN));
+  }, [shown]);
+  const guideIn = useAnimatedStyle(() => ({
+    opacity: shown.get(),
+    transform: [{ scale: GUIDE_FROM + (1 - GUIDE_FROM) * shown.get() }],
+  }));
 
   const later = () => {
     actions.skipFirstScan();
@@ -75,10 +89,10 @@ export default function FirstScan() {
             </Text>
           </View>
         </View>
-        <View style={[styles.guide, styles.tl]} />
-        <View style={[styles.guide, styles.tr]} />
-        <View style={[styles.guide, styles.bl]} />
-        <View style={[styles.guide, styles.br]} />
+        <Animated.View style={[styles.guide, styles.tl, guideIn]} />
+        <Animated.View style={[styles.guide, styles.tr, guideIn]} />
+        <Animated.View style={[styles.guide, styles.bl, guideIn]} />
+        <Animated.View style={[styles.guide, styles.br, guideIn]} />
       </View>
     </OnbScreen>
   );
@@ -102,7 +116,7 @@ const styles = StyleSheet.create({
     ...shadow.note,
   },
   line: { flexDirection: 'row', justifyContent: 'space-between' },
-  total: { paddingTop: space.s1 + 2, borderTopWidth: 1, borderTopColor: color.line },
+  total: { paddingTop: space.tight, borderTopWidth: 1, borderTopColor: color.line },
   guide: { position: 'absolute', width: GUIDE, height: GUIDE, borderColor: color.sageInk },
   tl: { left: 0, top: space.s2, borderTopWidth: 3, borderLeftWidth: 3, borderTopLeftRadius: radius.check + 3 },
   tr: { right: 0, top: space.s2, borderTopWidth: 3, borderRightWidth: 3, borderTopRightRadius: radius.check + 3 },

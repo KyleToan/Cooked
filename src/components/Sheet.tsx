@@ -374,7 +374,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: SHEET_RADIUS,
     backgroundColor: color.surface,
   },
-  handle: { paddingTop: space.s2 + 2, gap: space.s4 },
+  handle: { paddingTop: space.cozy, gap: space.s4 },
   grabber: {
     alignSelf: 'center',
     width: GRABBER_W,
@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
     backgroundColor: color.checkBorder,
   },
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: space.s3 },
-  title: { flex: 1, gap: space.s1 + 2 },
+  title: { flex: 1, gap: space.tight },
   closeHit: {
     width: size.targetMin,
     height: size.targetMin,

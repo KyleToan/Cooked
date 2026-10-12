@@ -1,7 +1,9 @@
+import { Image } from 'expo-image';
 import { useRef, useState, type ReactNode } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
-import Animated from 'react-native-reanimated';
+import Animated, { useAnimatedReaction, useSharedValue, type SharedValue } from 'react-native-reanimated';
 import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import { amountLabel, joinAnd, PLACE_LABEL } from '@/data/helpers';
 import type { Item, Place, Recipe, ScanLine } from '@/data/types';
@@ -42,6 +44,13 @@ export function KitchenRow({ item, startQty, soon, open, onToggleOpen, actionLab
   const amount = amountLabel(item, startQty);
   const swipe = useRef<SwipeableMethods>(null);
   const canUseUp = !!onUseUp && item.qty > 0;
+  const rowWidth = useSharedValue(0);
+  // Past the commit point, letting go uses the item up.
+  const armed = useRef(false);
+  const arm = (past: boolean) => {
+    armed.current = past;
+    if (past) haptics.select();
+  };
 
   const markUsedUp = () => {
     swipe.current?.close();
@@ -49,7 +58,7 @@ export function KitchenRow({ item, startQty, soon, open, onToggleOpen, actionLab
   };
 
   const row = (
-    <View style={[styles.divider, styles.ground]}>
+    <View style={[styles.divider, styles.ground]} onLayout={(e) => rowWidth.set(e.nativeEvent.layout.width)}>
       <Tap
         accessibilityRole="button"
         accessibilityLabel={`${item.name}, ${item.meta}, ${amount}`}
@@ -91,21 +100,30 @@ export function KitchenRow({ item, startQty, soon, open, onToggleOpen, actionLab
   return (
     <ReanimatedSwipeable
       ref={swipe}
-      friction={2}
+      // Friction 1 so the row follows the finger all the way to the commit point.
+      friction={1}
       rightThreshold={USE_UP_WIDTH / 2}
-      overshootRight={false}
-      onSwipeableWillOpen={() => haptics.select()}
-      renderRightActions={() => (
-        <Tap
-          accessibilityRole="button"
-          accessibilityLabel={`Use up ${item.name}`}
-          onPress={markUsedUp}
-          style={styles.useUp}
-        >
-          <Text variant="link" color="ink">
-            Use up
-          </Text>
-        </Tap>
+      overshootRight
+      onSwipeableWillOpen={() => {
+        haptics.select();
+        if (armed.current) markUsedUp();
+      }}
+      renderRightActions={(_progress, translation) => (
+        <>
+          <CommitWatch translation={translation} rowWidth={rowWidth} onCross={arm} />
+          {/* Grey behind the whole row, so a long swipe never shows a gap. */}
+          <View style={styles.useUpFill} />
+          <Tap
+            accessibilityRole="button"
+            accessibilityLabel={`Use up ${item.name}`}
+            onPress={markUsedUp}
+            style={styles.useUp}
+          >
+            <Text variant="link" color="ink">
+              Use up
+            </Text>
+          </Tap>
+        </>
       )}
     >
       {row}
@@ -114,6 +132,27 @@ export function KitchenRow({ item, startQty, soon, open, onToggleOpen, actionLab
 }
 
 const USE_UP_WIDTH = 96;
+/** Dragged this far across the row, letting go uses the item up. */
+const USE_UP_COMMIT = 0.6;
+
+/** Tells the row when the swipe crosses the commit point, either way. Draws nothing. */
+function CommitWatch({
+  translation,
+  rowWidth,
+  onCross,
+}: {
+  translation: SharedValue<number>;
+  rowWidth: SharedValue<number>;
+  onCross: (past: boolean) => void;
+}) {
+  useAnimatedReaction(
+    () => rowWidth.get() > 0 && -translation.get() > rowWidth.get() * USE_UP_COMMIT,
+    (past, was) => {
+      if (was !== null && past !== was) scheduleOnRN(onCross, past);
+    },
+  );
+  return null;
+}
 
 /* ---------- Check-items row ---------- */
 
@@ -145,7 +184,7 @@ export function CheckItemRow({ line, open, onToggleOpen, onChange }: CheckRowPro
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
             returnKeyType="done"
-            style={[styles.nameInput, { color: skip ? color.inkMuted : color.ink, borderBottomColor: focused ? color.sageInk : 'transparent' }]}
+            style={[styles.nameInput, { color: skip ? color.inkMuted : color.ink, borderBottomColor: focused ? color.sageInk : color.lineSoft }]}
           />
           <Text variant="micro" color="inkMuted" weight="regular">
             {detail}
@@ -227,32 +266,44 @@ export function RecipeRow({ recipe, onOpen, onToggleToBuy }: RecipeRowProps) {
       ? `You have all ${recipe.need} things.`
       : `You have ${recipe.have} of ${recipe.need}. Missing ${joinAnd(recipe.missing.map((m) => m.toLowerCase()))}.`;
   return (
-    <View style={[styles.divider, styles.recipe]}>
-      <Tap accessibilityRole="link" onPress={onOpen} style={styles.recipeText}>
-        <View style={styles.recipeTop}>
-          <Text weight="semibold" style={styles.grow}>
-            {recipe.title}
-          </Text>
-          <Text variant="caption" color="inkMuted">
-            {recipe.time}
-          </Text>
-        </View>
-        <Text variant="caption" color="inkMuted">
-          {have}
-        </Text>
-        <Text variant="micro" color="inkMuted" weight="regular">
-          {recipe.sourceLine}
-        </Text>
-      </Tap>
-      {(n > 0 && n <= MAX_MISSING_PILL) || recipe.onToBuy ? (
-        <ToBuyToggle
-          added={recipe.onToBuy}
-          count={n}
-          addedLabel="Added to To Buy"
-          onPress={onToggleToBuy}
-          accessibilityLabel={`Add ${n} missing from ${recipe.title} to To Buy`}
+    <View style={[styles.divider, styles.recipe, recipe.photo ? styles.recipeWithPhoto : null]}>
+      {recipe.photo ? (
+        <Image
+          source={{ uri: recipe.photo }}
+          contentFit="cover"
+          transition={150}
+          accessible={false}
+          importantForAccessibility="no-hide-descendants"
+          style={styles.thumb}
         />
       ) : null}
+      <View style={[recipe.photo ? styles.grow : null, styles.recipeBody]}>
+        <Tap accessibilityRole="link" onPress={onOpen} style={styles.recipeText}>
+          <View style={styles.recipeTop}>
+            <Text weight="semibold" style={styles.grow}>
+              {recipe.title}
+            </Text>
+            <Text variant="caption" color="inkMuted">
+              {recipe.time}
+            </Text>
+          </View>
+          <Text variant="caption" color="inkMuted">
+            {have}
+          </Text>
+          <Text variant="micro" color="inkMuted" weight="regular">
+            {recipe.sourceLine}
+          </Text>
+        </Tap>
+        {(n > 0 && n <= MAX_MISSING_PILL) || recipe.onToBuy ? (
+          <ToBuyToggle
+            added={recipe.onToBuy}
+            count={n}
+            addedLabel="Added to To Buy"
+            onPress={onToggleToBuy}
+            accessibilityLabel={`Add ${n} missing from ${recipe.title} to To Buy`}
+          />
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -300,6 +351,7 @@ export function ToBuyToggle({
 }
 
 const TOGGLE_ICON = 14;
+const THUMB = 56;
 
 const styles = StyleSheet.create({
   divider: { borderBottomWidth: 1, borderBottomColor: color.lineSoft },
@@ -308,10 +360,11 @@ const styles = StyleSheet.create({
     minHeight: size.rowHeight + space.s1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space.s2 + 2,
+    gap: space.cozy,
     paddingVertical: space.s2,
   },
   ground: { backgroundColor: color.surface },
+  useUpFill: { ...StyleSheet.absoluteFill, backgroundColor: color.surfaceSunken },
   useUp: {
     width: USE_UP_WIDTH,
     alignItems: 'center',
@@ -338,8 +391,8 @@ const styles = StyleSheet.create({
     borderColor: color.line,
   },
   tagSkip: { backgroundColor: color.surface },
-  picker: { gap: space.s2 + 2, paddingBottom: space.s3 + 2 },
-  places: { flexDirection: 'row', gap: space.s1 + 2 },
+  picker: { gap: space.cozy, paddingBottom: space.roomy },
+  places: { flexDirection: 'row', gap: space.tight },
   place: {
     flex: 1,
     minHeight: size.targetMin,
@@ -352,8 +405,11 @@ const styles = StyleSheet.create({
   placeOn: { borderWidth: 1.5, borderColor: color.sageInk },
   placeOff: { backgroundColor: color.surfaceSunken },
   howMany: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  recipe: { gap: space.s1, paddingTop: space.s3 + 2, paddingBottom: space.s2 + 2 },
-  recipeText: { gap: space.s1 + 2 },
+  recipe: { gap: space.s1, paddingTop: space.roomy, paddingBottom: space.cozy },
+  recipeWithPhoto: { flexDirection: 'row', alignItems: 'flex-start', gap: space.s3 },
+  thumb: { width: THUMB, height: THUMB, borderRadius: radius.control },
+  recipeBody: { gap: space.s1 },
+  recipeText: { gap: space.tight },
   recipeTop: { flexDirection: 'row', alignItems: 'baseline', gap: space.s3 },
   toggleHit: { alignSelf: 'flex-start', minHeight: size.targetMin, justifyContent: 'center' },
   toggle: {
@@ -362,7 +418,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.s3,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space.s1 + 2,
+    gap: space.tight,
     borderRadius: radius.pill,
   },
   toggleOff: { backgroundColor: color.surfaceSunken },

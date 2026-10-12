@@ -50,6 +50,45 @@ type KitchenNoteProps = {
  * they stay the same height when text grows.
  */
 export function KitchenNote({ label, count, flag, paper, tilt, onPress, accessibilityLabel }: KitchenNoteProps) {
+  return (
+    <LiftingNote
+      noteStyle={styles.small}
+      areaStyle={styles.pressArea}
+      corner={radius.control}
+      paper={paper}
+      tilt={tilt}
+      onPress={onPress}
+      accessibilityRole="link"
+      accessibilityLabel={accessibilityLabel ?? [label, count, flag].filter(Boolean).join(', ')}
+    >
+      <Tape width={40} />
+      <Text variant="noteTitle" color="noteInk" numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={NOTE_TITLE_MAX}>
+        {label}
+      </Text>
+      <Text variant="noteBody" color="noteInkSoft">
+        {count}
+      </Text>
+      {flag ? <UseSoonFlag text={flag} /> : null}
+    </LiftingNote>
+  );
+}
+
+type LiftingNoteProps = {
+  children: ReactNode;
+  noteStyle: StyleProp<ViewStyle>;
+  /** The pressable area around the note (a row's share of the width). */
+  areaStyle?: StyleProp<ViewStyle>;
+  /** The note's bottom right corner, so the lifted shadow matches its shape. */
+  corner: number;
+  paper: ColorName;
+  tilt: number;
+  onPress: () => void;
+  accessibilityRole: 'link' | 'button';
+  accessibilityLabel?: string;
+};
+
+/** A note you can press: while pressed it straightens and lifts a little; with Reduce Motion on it just dims. */
+function LiftingNote({ children, noteStyle, areaStyle, corner, paper, tilt, onPress, accessibilityRole, accessibilityLabel }: LiftingNoteProps) {
   const reduced = useReducedMotion();
   const press = useSharedValue(0);
   const lifted = useAnimatedStyle(() => ({
@@ -60,28 +99,12 @@ export function KitchenNote({ label, count, flag, paper, tilt, onPress, accessib
     ],
   }));
   const raisedShadow = useAnimatedStyle(() => ({ opacity: press.value }));
-
-  const body = (
-    <>
-      <Tape width={40} />
-      <Text variant="noteTitle" color="noteInk" numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={NOTE_TITLE_MAX}>
-        {label}
-      </Text>
-      <Text variant="noteBody" color="noteInkSoft">
-        {count}
-      </Text>
-      {flag ? <UseSoonFlag text={flag} /> : null}
-    </>
-  );
-  const a11y = {
-    accessibilityRole: 'link' as const,
-    accessibilityLabel: accessibilityLabel ?? [label, count, flag].filter(Boolean).join(', '),
-  };
+  const a11y = { accessibilityRole, accessibilityLabel };
 
   if (reduced) {
     return (
-      <Tap {...a11y} onPress={onPress} style={[styles.small, { backgroundColor: color[paper], transform: [{ rotate: `${tilt}deg` }] }]}>
-        {body}
+      <Tap {...a11y} onPress={onPress} style={[noteStyle, { backgroundColor: color[paper], transform: [{ rotate: `${tilt}deg` }] }]}>
+        {children}
       </Tap>
     );
   }
@@ -95,12 +118,15 @@ export function KitchenNote({ label, count, flag, paper, tilt, onPress, accessib
       onPressOut={() => {
         press.set(withSpring(0, PRESS_SPRING));
       }}
-      style={styles.pressArea}
+      style={areaStyle}
     >
-      <Animated.View style={[styles.small, styles.fill, { backgroundColor: color[paper] }, lifted]}>
+      <Animated.View style={[noteStyle, { backgroundColor: color[paper] }, lifted]}>
         {/* A deeper shadow under the paper that fades in as the note lifts. */}
-        <Animated.View pointerEvents="none" style={[styles.raised, { backgroundColor: color[paper] }, raisedShadow]} />
-        {body}
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.raised, { backgroundColor: color[paper], borderBottomRightRadius: corner }, raisedShadow]}
+        />
+        {children}
       </Animated.View>
     </Pressable>
   );
@@ -154,10 +180,30 @@ type BigNoteProps = {
   paper?: ColorName;
   tilt?: number;
   style?: StyleProp<ViewStyle>;
+  /** Makes the whole note one link (Tonight's recipe), with the kitchen notes' press-lift. */
+  onPress?: () => void;
+  accessibilityLabel?: string;
+  accessibilityRole?: 'link' | 'button';
 };
 
 /** The full-width note: the empty kitchen, Tonight's recipe, the kitchen you're joining. */
-export function BigNote({ children, paper = 'cornsilk', tilt = -1, style }: BigNoteProps) {
+export function BigNote({ children, paper = 'cornsilk', tilt = -1, style, onPress, accessibilityLabel, accessibilityRole = 'link' }: BigNoteProps) {
+  if (onPress) {
+    return (
+      <LiftingNote
+        noteStyle={[styles.big, style]}
+        corner={radius.field}
+        paper={paper}
+        tilt={tilt}
+        onPress={onPress}
+        accessibilityRole={accessibilityRole}
+        accessibilityLabel={accessibilityLabel}
+      >
+        <Tape width={52} />
+        {children}
+      </LiftingNote>
+    );
+  }
   return (
     <View style={[styles.big, { backgroundColor: color[paper], transform: [{ rotate: `${tilt}deg` }] }, style]}>
       <Tape width={52} />
@@ -175,7 +221,6 @@ const styles = StyleSheet.create({
     transform: [{ rotate: TAPE_TILT }],
   },
   pressArea: { flex: 1 },
-  fill: { flex: 1 },
   raised: {
     position: 'absolute',
     top: 0,
@@ -183,16 +228,15 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     borderRadius: radius.note,
-    borderBottomRightRadius: radius.control,
     ...shadow.island,
   },
   small: {
     flex: 1,
     // A minimum, not a fixed height: at large text sizes the note grows instead of clipping.
     minHeight: size.noteHeight,
-    paddingTop: space.s3 + 2,
+    paddingTop: space.roomy,
     paddingHorizontal: space.s3,
-    paddingBottom: space.s2 + 2,
+    paddingBottom: space.cozy,
     gap: space.s2,
     borderRadius: radius.note,
     borderBottomRightRadius: radius.control,

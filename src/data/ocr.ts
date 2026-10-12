@@ -10,8 +10,13 @@ import type { ScanLine } from './types';
 // The package's own import throws where its native code isn't built in (Expo Go, web), so look the module up optionally.
 const native = requireOptionalNativeModule<{ recognizeText(uri: string): Promise<Text> }>('RNMLKitTextRecognition');
 
-/** What the last scan read: receipt lines for Check your scan, recipe text for Import. */
-export const lastScan: { lines: ScanLine[]; recipeText: string } = { lines: SAMPLE_SCAN, recipeText: '' };
+/** What the last scan read: receipt lines, the store's name and when it was taken for Check your scan, recipe text for Import. */
+export const lastScan: { lines: ScanLine[]; store: string | null; at: Date; recipeText: string } = {
+  lines: SAMPLE_SCAN,
+  store: 'Corner Market',
+  at: new Date(),
+  recipeText: '',
+};
 
 /**
  * The photo's text, one printed row per line, or null when this build can't

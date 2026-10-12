@@ -1,4 +1,5 @@
-import { useId, type ReactNode, type Ref } from 'react';
+import { useScrollToTop } from 'expo-router';
+import { useId, useImperativeHandle, useRef, type ReactNode, type Ref } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
@@ -35,6 +36,10 @@ const UNDO_ROOM = size.controlHeight + space.s1 + space.s3;
  */
 export function Screen({ children, island, raised, footer, overlay, gap = space.section, top = 'pushed', scrollRef }: Props) {
   const insets = useSafeAreaInsets();
+  const ref = useRef<ScrollView>(null);
+  useImperativeHandle(scrollRef, () => ref.current as ScrollView);
+  // Tapping the picked tab again scrolls back to the top; does nothing outside the tabs.
+  useScrollToTop(ref);
   const undo = raised ? UNDO_ROOM : 0;
   const bottom = (island ? ISLAND_CLEARANCE + insets.bottom : footer ? space.section : space.section * 2 + insets.bottom) + undo;
   // On a screen with the island, white covers everything from the island's top edge down, and fades in above it.
@@ -43,7 +48,7 @@ export function Screen({ children, island, raised, footer, overlay, gap = space.
     <View style={styles.root}>
       <View style={styles.root}>
         <ScrollView
-          ref={scrollRef}
+          ref={ref}
           style={styles.root}
           contentContainerStyle={{
             paddingTop: insets.top + (top === 'tab' ? space.s3 : space.s1),

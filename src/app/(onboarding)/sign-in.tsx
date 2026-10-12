@@ -5,6 +5,7 @@ import { Linking, Platform, StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { ErrorLine } from '@/components/Controls';
+import { Spinner } from '@/components/Loader';
 import { OnbScreen } from '@/components/Onboarding';
 import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
@@ -14,6 +15,8 @@ import { brand, color, radius, size, space } from '@/theme';
 
 const BUTTON_H = size.controlHeight + space.s1;
 const LOGO = 20;
+/** Apple's own button can't show a spinner, so it dims while Apple is busy. */
+const DIMMED = 0.5;
 
 /**
  * Apple, Google, or email or phone with a code. Without a backend sign-in is
@@ -23,7 +26,8 @@ export default function SignIn() {
   const router = useRouter();
   const { actions } = useStore();
   const [appleButton, setAppleButton] = useState(false);
-  const [busy, setBusy] = useState(false);
+  // The provider being signed in with, which shows a spinner in place of its logo.
+  const [busy, setBusy] = useState<'apple' | 'google' | null>(null);
   const [failed, setFailed] = useState<'apple' | 'google' | null>(null);
 
   useEffect(() => {
@@ -32,7 +36,7 @@ export default function SignIn() {
 
   const provider = async (method: 'apple' | 'google') => {
     if (busy) return;
-    setBusy(true);
+    setBusy(method);
     setFailed(null);
     try {
       await (method === 'apple' ? signInWithApple() : signInWithGoogle());
@@ -41,7 +45,7 @@ export default function SignIn() {
     } catch (e) {
       if (!(e instanceof Canceled)) setFailed(method);
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   };
 
@@ -72,13 +76,13 @@ export default function SignIn() {
             buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
             buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE_OUTLINE}
             cornerRadius={BUTTON_H / 2}
-            style={styles.apple}
+            style={[styles.apple, busy === 'apple' && styles.dimmed]}
             onPress={() => provider('apple')}
           />
         ) : (
-          <Outline label="Continue with Apple" logo={<AppleLogo />} onPress={() => provider('apple')} />
+          <Outline label="Continue with Apple" logo={<AppleLogo />} busy={busy === 'apple'} onPress={() => provider('apple')} />
         )}
-        <Outline label="Continue with Google" logo={<GoogleLogo />} onPress={() => provider('google')} />
+        <Outline label="Continue with Google" logo={<GoogleLogo />} busy={busy === 'google'} onPress={() => provider('google')} />
         {failed ? (
           <ErrorLine text={`We couldn’t sign you in with ${failed === 'apple' ? 'Apple' : 'Google'}. Try again, or use email or phone.`} />
         ) : null}
@@ -95,10 +99,10 @@ export default function SignIn() {
   );
 }
 
-function Outline({ label, logo, onPress }: { label: string; logo?: ReactNode; onPress: () => void }) {
+function Outline({ label, logo, busy, onPress }: { label: string; logo?: ReactNode; busy?: boolean; onPress: () => void }) {
   return (
-    <Tap accessibilityRole="button" onPress={onPress} style={styles.outline}>
-      {logo}
+    <Tap accessibilityRole="button" accessibilityState={{ busy }} onPress={onPress} style={styles.outline}>
+      {busy ? <Spinner size={LOGO} /> : logo}
       <Text weight="medium" style={styles.outlineLabel}>
         {label}
       </Text>
@@ -136,11 +140,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: space.s2 + 2,
+    gap: space.cozy,
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: color.line,
+    borderColor: color.controlLine,
   },
+  dimmed: { opacity: DIMMED },
   outlineLabel: { flexShrink: 1, textAlign: 'center' },
   or: { flexDirection: 'row', alignItems: 'center', gap: space.s3, paddingVertical: space.s1 },
   rule: { flex: 1, height: 1, backgroundColor: color.line },

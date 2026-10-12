@@ -3,12 +3,11 @@ import { useState } from 'react';
 import { Share, StyleSheet, View } from 'react-native';
 
 import { ActionPill } from '@/components/ActionPill';
-import { ErrorLine, Field } from '@/components/Controls';
+import { ErrorLine, Field, UndoBar } from '@/components/Controls';
 import { PushedHeader, SectionHeader } from '@/components/Header';
 import { Screen } from '@/components/Screen';
-import { PersonRow } from '@/components/Settings';
+import { InviteLink, PersonRow } from '@/components/Settings';
 import { Sheet } from '@/components/Sheet';
-import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
 import { joinAnd } from '@/data/helpers';
@@ -18,7 +17,7 @@ import { useStore, useUndo } from '@/data/store';
 import { hasBackend } from '@/data/supabase';
 import { haptics } from '@/hooks/haptics';
 import type { Person } from '@/data/types';
-import { color, radius, size, space, type ColorName } from '@/theme';
+import { space, type ColorName } from '@/theme';
 
 const PAPERS: ColorName[] = ['papaya', 'beige', 'cornsilk'];
 
@@ -97,25 +96,28 @@ export default function Household() {
   };
 
   return (
-    <Screen>
+    <Screen
+      raised={!!removed}
+      overlay={removed ? <UndoBar text={removed.text} onUndo={undoRemove} onDismiss={() => actions.clearUndo(removed.scope)} island={false} /> : null}
+    >
       <PushedHeader
         title={kitchen.name}
         onBack={() => router.back()}
         backLabel="Back to account"
-        right={
-          <Tap accessibilityRole="button" onPress={() => {
-              setName(kitchen.name);
-              setRenaming(true);
-            }} style={styles.rename}>
-            <Text variant="link" color="sageInk">
-              Rename
-            </Text>
-          </Tap>
-        }
         below={
-          <Text variant="caption" color="inkMuted">
-            Everyone here shares the fridge, pantry, freezer, To Buy and recipes.
-          </Text>
+          <>
+            <Text variant="caption" color="inkMuted">
+              Everyone here shares the fridge, pantry, freezer, To Buy and recipes.
+            </Text>
+            <TextLink
+              label="Rename"
+              accessibilityLabel="Rename the kitchen"
+              onPress={() => {
+                setName(kitchen.name);
+                setRenaming(true);
+              }}
+            />
+          </>
         }
       />
 
@@ -145,27 +147,12 @@ export default function Household() {
             />
           );
         })}
-        {removed ? (
-          <View accessibilityRole="alert" style={styles.removed}>
-            <Text variant="caption" color="inkMuted">
-              {removed.text}
-            </Text>
-            <TextLink label="Undo" onPress={undoRemove} />
-          </View>
-        ) : null}
         {failLine('people')}
       </View>
 
       <View style={styles.invite}>
         <SectionHeader title="Invite" />
-        <View style={styles.link}>
-          <Text variant="micro" weight="regular" color="inkMuted">
-            Invite link
-          </Text>
-          <Text variant="button" weight="regular">
-            {link}
-          </Text>
-        </View>
+        <InviteLink link={link} />
         <Text variant="caption" color="inkMuted">
           {kitchen.newLink || madeLink
             ? 'New link made. The old one no longer works.'
@@ -265,18 +252,6 @@ export default function Household() {
 
 const styles = StyleSheet.create({
   center: { textAlign: 'center' },
-  rename: { minHeight: size.targetMin, justifyContent: 'center', paddingHorizontal: space.s1 },
-  removed: { minHeight: size.controlHeight + space.s1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   invite: { gap: space.s3 },
-  link: {
-    minHeight: size.controlHeight + space.s3 - 2,
-    paddingVertical: space.s2,
-    paddingHorizontal: space.s4,
-    justifyContent: 'center',
-    gap: 2,
-    borderRadius: radius.control,
-    borderWidth: 1,
-    borderColor: color.line,
-  },
   leave: { gap: 2, paddingTop: space.s2, alignItems: 'center' },
 });

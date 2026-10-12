@@ -11,7 +11,9 @@ import {
   type TextInputProps,
   type ViewStyle,
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
+  cancelAnimation,
   FadeIn,
   FadeOut,
   LinearTransition,
@@ -24,6 +26,7 @@ import Animated, {
   type EntryExitAnimationFunction,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import { haptics } from '@/hooks/haptics';
 import { color, radius, shadow, size, space, type } from '@/theme';
@@ -274,32 +277,85 @@ const undoOut: EntryExitAnimationFunction = () => {
 const undoFadeIn = FadeIn.duration(UNDO_FADE).reduceMotion(ReduceMotion.Never);
 const undoFadeOut = FadeOut.duration(UNDO_FADE).reduceMotion(ReduceMotion.Never);
 
-/** Floats 12pt above the island (or above the bottom edge on screens without it). */
-export function UndoBar({ text, onUndo, island = true }: { text: string; onUndo: () => void; island?: boolean }) {
+/** Rubber band constant and deceleration rate (UIScrollView's), as in the sheet. */
+const RUBBER = 0.55;
+const DECELERATION = 0.998;
+
+/**
+ * Floats 12pt above the island (or above the bottom edge on screens without it).
+ * With `onDismiss` it can be swiped down and away.
+ */
+export function UndoBar({
+  text,
+  onUndo,
+  onDismiss,
+  island = true,
+}: {
+  text: string;
+  onUndo: () => void;
+  onDismiss?: () => void;
+  island?: boolean;
+}) {
   const insets = useSafeAreaInsets();
   const reduced = useReducedMotion();
   const edge = Math.max(space.s6, insets.bottom + space.s2);
   const bottom = island ? edge + size.islandHeight + space.s3 : edge;
+  const ty = useSharedValue(0);
+  const height = useSharedValue(0);
+  const dismiss = () => onDismiss?.();
+  const pan = Gesture.Pan()
+    .enabled(!!onDismiss)
+    .activeOffsetY(10)
+    .failOffsetX([-10, 10])
+    .onBegin(() => {
+      cancelAnimation(ty);
+    })
+    .onUpdate((e) => {
+      const y = e.translationY;
+      // 1:1 downwards; upwards it stretches less the further it goes.
+      ty.set(y >= 0 ? y : -(1 - 1 / ((-y * RUBBER) / height.get() + 1)) * height.get());
+    })
+    .onFinalize((e, activated) => {
+      const h = height.get();
+      if (!h) return;
+      const v = activated ? e.velocityY : 0;
+      const projected = ty.get() + ((v / 1000) * DECELERATION) / (1 - DECELERATION);
+      if (projected > h / 2) {
+        ty.set(
+          withSpring(h + bottom, { ...SPRING, velocity: v }, (done) => {
+            if (done) scheduleOnRN(dismiss);
+          }),
+        );
+      } else {
+        ty.set(withSpring(0, { ...SPRING, velocity: v }));
+      }
+    });
+  const drag = useAnimatedStyle(() => ({ transform: [{ translateY: ty.get() }] }));
   // iOS ignores live regions, so say it out loud; Android's live region already does.
   useEffect(() => {
     if (Platform.OS === 'ios') AccessibilityInfo.announceForAccessibility(`${text}. Undo available.`);
   }, [text]);
+  // The outer view enters and leaves; the inner one follows the finger.
   return (
     <Animated.View
       accessibilityRole="alert"
       accessibilityLiveRegion="polite"
       entering={reduced ? undoFadeIn : undoIn}
       exiting={reduced ? undoFadeOut : undoOut}
-      style={[styles.undo, { bottom }]}
+      style={[styles.undoWrap, { bottom }]}
     >
-      <Text variant="button" numberOfLines={2} style={styles.undoText}>
-        {text}
-      </Text>
-      <Tap accessibilityRole="button" accessibilityLabel={`Undo: ${text}`} onPress={onUndo} style={styles.undoBtn}>
-        <Text variant="button" weight="semibold" color="sageInk">
-          Undo
-        </Text>
-      </Tap>
+      <GestureDetector gesture={pan}>
+        <Animated.View style={[styles.undo, drag]} onLayout={(e) => height.set(e.nativeEvent.layout.height)}>
+          <Text variant="button" numberOfLines={2} style={styles.undoText}>
+            {text}
+          </Text>
+          <Tap accessibilityRole="button" accessibilityLabel={`Undo: ${text}`} onPress={onUndo} style={styles.undoBtn}>
+            <Text variant="button" weight="semibold" color="sageInk">
+              Undo
+            </Text>
+          </Tap>
+        </Animated.View>
+      </GestureDetector>
     </Animated.View>
   );
 }
@@ -376,8 +432,11 @@ export function Checkbox({ checked, onPress, label }: { checked: boolean; onPres
     opacity: on.get(),
     transform: [{ scale: reduced ? 1 : CHECK_FROM + (1 - CHECK_FROM) * on.get() }],
   }));
+  // The fill fades over the outline on the same value, so box and tick move together.
+  const fill = useAnimatedStyle(() => ({ opacity: on.get() }));
   const box = (
-    <View style={[styles.box, checked ? styles.boxOn : styles.boxOff]}>
+    <View style={styles.box}>
+      <Animated.View style={[styles.boxFill, fill]} />
       <Animated.View style={mark}>
         <Icon name="check" size={CHECK_ICON} color="onInk" />
       </Animated.View>
@@ -443,8 +502,8 @@ const styles = StyleSheet.create({
   filterHit: { minHeight: size.targetMin, justifyContent: 'center' },
   filter: {
     minHeight: size.targetMin - space.s2,
-    paddingVertical: space.s1 + 2,
-    paddingHorizontal: space.s3 + 2,
+    paddingVertical: space.tight,
+    paddingHorizontal: space.roomy,
     borderRadius: radius.pill,
     borderWidth: 1.5,
     alignItems: 'center',
@@ -463,14 +522,12 @@ const styles = StyleSheet.create({
   },
   stepBtn: { width: size.targetMin, height: size.targetMin, alignItems: 'center', justifyContent: 'center' },
   stepValue: { minWidth: BOX, textAlign: 'center' },
+  undoWrap: { position: 'absolute', left: space.s5, right: space.s5 },
   undo: {
-    position: 'absolute',
-    left: space.s5,
-    right: space.s5,
     minHeight: size.controlHeight + space.s1,
     paddingVertical: space.s1,
     paddingLeft: space.s4 + 2,
-    paddingRight: space.s1 + 2,
+    paddingRight: space.tight,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -481,7 +538,7 @@ const styles = StyleSheet.create({
     ...shadow.island,
   },
   undoText: { flexShrink: 1 },
-  undoBtn: { minHeight: size.targetMin, paddingHorizontal: space.s3 + 2, justifyContent: 'center' },
+  undoBtn: { minHeight: size.targetMin, paddingHorizontal: space.roomy, justifyContent: 'center' },
   fieldWrap: { gap: space.s2 },
   field: {
     minHeight: size.controlHeight + space.s3 - 2,
@@ -495,13 +552,13 @@ const styles = StyleSheet.create({
   checkHit: {
     width: size.targetMin,
     height: size.targetMin,
-    marginLeft: -(space.s2 + 2),
+    marginLeft: -(space.cozy),
     alignItems: 'center',
     justifyContent: 'center',
   },
-  box: { width: BOX, height: BOX, borderRadius: radius.check, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
-  boxOff: { borderColor: color.controlLine },
-  boxOn: { borderColor: color.sageInk, backgroundColor: color.sageInk },
+  box: { width: BOX, height: BOX, borderRadius: radius.check, borderWidth: 1.5, borderColor: color.controlLine, alignItems: 'center', justifyContent: 'center' },
+  /** Covers the 1.5pt outline too. */
+  boxFill: { position: 'absolute', top: -1.5, left: -1.5, right: -1.5, bottom: -1.5, borderRadius: radius.check, backgroundColor: color.sageInk },
   addBox: {
     width: BOX,
     height: BOX,
