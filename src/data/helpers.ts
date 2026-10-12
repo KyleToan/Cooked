@@ -1,3 +1,5 @@
+import * as Crypto from 'expo-crypto';
+
 import type { Item, Place, Recipe, ScanFlow, ToBuyItem } from './types';
 
 /** "Up late" before 5am, "Good morning" before noon, "Good afternoon" before 5pm, "Good evening" after. */
@@ -89,10 +91,9 @@ export function initial(name: string): string {
   return name.trim().charAt(0).toUpperCase() || '?';
 }
 
-let nextId = 0;
-export function makeId(prefix: string): string {
-  nextId += 1;
-  return `${prefix}-${Date.now().toString(36)}-${nextId}`;
+/** A v4 UUID, so ids made offline match the uuid primary keys in the database. The prefix is kept for callers but unused. */
+export function makeId(_prefix: string): string {
+  return Crypto.randomUUID();
 }
 
 /** Where the scan screens were opened from: the app, or onboarding (household or just me). */

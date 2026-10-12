@@ -14,6 +14,10 @@ export type Person = {
 };
 
 export type Kitchen = {
+  /** The kitchens row id. Missing in fake mode and before the first load. */
+  id?: string;
+  /** The user id of whoever made it (kitchens.created_by); only they can remove people. */
+  createdBy?: string;
   name: string;
   people: Person[];
   /** The end of the invite link: cooked.app/join/<code>. One person, 7 days. */

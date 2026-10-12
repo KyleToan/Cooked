@@ -3,10 +3,11 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { ActionPill } from '@/components/ActionPill';
-import { Field, Segmented } from '@/components/Controls';
+import { ErrorLine, Field, Segmented } from '@/components/Controls';
 import { OnbScreen } from '@/components/Onboarding';
 import { Text } from '@/components/Text';
 import { useStore } from '@/data/store';
+import { supabase } from '@/data/supabase';
 import { color, radius, size, space } from '@/theme';
 
 type Mode = 'email' | 'phone';
@@ -21,10 +22,21 @@ export default function Email() {
   const [mode, setMode] = useState<Mode>('email');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [sending, setSending] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   const ready = mode === 'email' ? looksLikeEmail(email) : looksLikePhone(phone);
-  const send = () => {
-    if (!ready) return;
+  const send = async () => {
+    if (!ready || sending) return;
+    if (supabase) {
+      setSending(true);
+      setFailed(false);
+      const { error } = await supabase.auth.signInWithOtp(
+        mode === 'email' ? { email: email.trim() } : { phone: `+1${phone.replace(/\D/g, '')}` },
+      );
+      setSending(false);
+      if (error) return setFailed(true);
+    }
     actions.signIn(mode, mode === 'email' ? email.trim() : `+1 ${phone.trim()}`);
     router.push('/code');
   };
@@ -88,7 +100,9 @@ export default function Email() {
         </View>
       )}
 
-      <ActionPill label="Send code" variant="primary" height="bottom" onPress={send} disabled={!ready} />
+      {failed ? <ErrorLine text="We couldn’t send the code. Check your connection and try again." /> : null}
+
+      <ActionPill label="Send code" variant="primary" height="bottom" onPress={send} disabled={!ready || sending} />
     </OnbScreen>
   );
 }

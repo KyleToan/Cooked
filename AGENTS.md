@@ -50,7 +50,12 @@ To check screens in a browser, run `npx expo start --web`. The app starts in onb
 
 ### Environment config
 
-None yet. When there is, list the variable names here (never the values) and keep values in EAS environment variables or a git-ignored `.env.local`.
+List the variable names here (never the values). Keep values in EAS environment variables or a git-ignored `.env.local`.
+
+- `EXPO_PUBLIC_SUPABASE_URL`: the Supabase project URL.
+- `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`: the Supabase publishable key (safe in the app bundle; row level security protects the data).
+
+Without both, the app runs in its local fake mode (sign-in code `481726`, nothing leaves the phone).
 
 ### Expo rules
 

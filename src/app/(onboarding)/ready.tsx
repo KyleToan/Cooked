@@ -1,18 +1,36 @@
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { ActionPill } from '@/components/ActionPill';
+import { ErrorLine } from '@/components/Controls';
 import { OnbScreen } from '@/components/Onboarding';
 import { NOTE_TILT, PAPER, PaperNote } from '@/components/StickyNote';
 import { Text } from '@/components/Text';
 import { PLACE_LABEL, PLACES } from '@/data/helpers';
+import * as api from '@/data/kitchenApi';
 import { useStore } from '@/data/store';
+import { hasBackend } from '@/data/supabase';
 import { space } from '@/theme';
 
 /** What the first scan put away, To Buy empty, Go to my kitchen. */
 export default function Ready() {
   const { state, actions } = useStore();
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
   const scan = state.session.lastScan;
   const count = PLACES.reduce((n, p) => n + scan[p].length, 0);
+
+  const finish = async () => {
+    if (hasBackend) {
+      if (busy) return;
+      setBusy(true);
+      const r = await api.finishOnboarding();
+      setBusy(false);
+      setFailed(r !== 'ok');
+      if (r !== 'ok') return;
+    }
+    actions.finishOnboarding();
+  };
 
   return (
     <OnbScreen
@@ -24,7 +42,12 @@ export default function Ready() {
           : 'Scan your next grocery receipt and Cooked puts each item in the fridge, pantry or freezer for you.'
       }
       // Finishing onboarding opens Home.
-      bottom={<ActionPill label="Go to my kitchen" variant="primary" height="bottom" onPress={actions.finishOnboarding} />}
+      bottom={
+        <>
+          {failed ? <ErrorLine text="We couldn’t finish setting up. Check your connection and try again." /> : null}
+          <ActionPill label="Go to my kitchen" variant="primary" height="bottom" onPress={finish} disabled={busy} />
+        </>
+      }
     >
       {count ? (
         <View style={styles.notes}>

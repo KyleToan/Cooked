@@ -3,10 +3,12 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { ActionPill } from '@/components/ActionPill';
-import { Field } from '@/components/Controls';
+import { ErrorLine, Field } from '@/components/Controls';
 import { OnbScreen } from '@/components/Onboarding';
 import { Text } from '@/components/Text';
+import * as api from '@/data/kitchenApi';
 import { useStore } from '@/data/store';
+import { hasBackend } from '@/data/supabase';
 import { color, radius, space } from '@/theme';
 
 const PREVIEW_BOX = 20;
@@ -16,10 +18,19 @@ export default function Name() {
   const router = useRouter();
   const { state, actions } = useStore();
   const [name, setName] = useState(state.user.name);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
   const shown = name.trim() || 'you';
 
-  const next = () => {
-    if (!name.trim()) return;
+  const next = async () => {
+    if (!name.trim() || busy) return;
+    if (hasBackend) {
+      setBusy(true);
+      const r = await api.saveProfile({ name: name.trim() });
+      setBusy(false);
+      setFailed(r !== 'ok');
+      if (r !== 'ok') return;
+    }
     actions.setName(name);
     router.push('/household');
   };
@@ -53,7 +64,8 @@ export default function Name() {
           </View>
         </View>
       </View>
-      <ActionPill label="Next" variant="primary" height="bottom" onPress={next} disabled={!name.trim()} />
+      {failed ? <ErrorLine text="We couldn’t save your name. Check your connection and try again." /> : null}
+      <ActionPill label="Next" variant="primary" height="bottom" onPress={next} disabled={!name.trim() || busy} />
     </OnbScreen>
   );
 }

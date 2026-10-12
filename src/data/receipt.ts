@@ -120,7 +120,7 @@ function hasWords(s: string): boolean {
 
 /** "CORNER MARKET" → "Corner Market". */
 function titleCase(s: string): string {
-  return s.toLowerCase().replace(/\b[a-z]/g, (c) => c.toUpperCase());
+  return s.toLowerCase().replace(/(^|\s)[a-z]/g, (c) => c.toUpperCase()); // not \b: "Joe's", not "Joe'S"
 }
 
 /** The store's name: the first line near the top that isn't an address, date or phone number. */
@@ -132,6 +132,13 @@ function findStore(rows: string[]): string | null {
     return titleCase(row.replace(/[^\p{L}\p{N}&' -]/gu, ' ').replace(/\s+/g, ' ').trim());
   }
   return null;
+}
+
+/** OCR reads 0 as O and 1 as l or I; put them back in a price at the end of a row ("7.4O" → "7.40"). */
+function fixPrice(row: string): string {
+  return row.replace(/(^|[\s$])([\dOolI]{1,4}[.,][\dOolI]{2})(?=(?:\s*[A-Z*]{1,2})?$)/, (all, lead: string, p: string) =>
+    /\d/.test(p) ? lead + p.replace(/[Oo]/g, '0').replace(/[lI]/g, '1') : all,
+  );
 }
 
 type Pending = { name: string; qty: number; total: number };
@@ -188,7 +195,7 @@ function readName(raw: string): { name: string; qty: number | null } {
 export function parseReceipt(text: string): ParsedReceipt {
   const rows = (text ?? '')
     .split(/\r?\n/)
-    .map((r) => r.replace(/\s+/g, ' ').trim())
+    .map((r) => fixPrice(r.replace(/\s+/g, ' ').trim()))
     .filter(Boolean);
 
   const items: Pending[] = [];
@@ -225,10 +232,11 @@ export function parseReceipt(text: string): ParsedReceipt {
       waiting = hasWords(row) ? row : null;
       continue;
     }
+    let { name, qty } = readName(row.slice(0, price.index));
+    // A price on its own line belongs to the name just above it.
+    if (!hasWords(name) && waiting) ({ name, qty } = readName(waiting));
     waiting = null;
     if (price[1]) continue; // a discount or refund line
-
-    const { name, qty } = readName(row.slice(0, price.index));
     if (!hasWords(name)) continue;
     items.push({ name, qty: qty ?? 1, total: toNumber(price[2]) });
   }

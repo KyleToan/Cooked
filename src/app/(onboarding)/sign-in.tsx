@@ -4,9 +4,11 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Linking, Platform, StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
+import { ErrorLine } from '@/components/Controls';
 import { OnbScreen } from '@/components/Onboarding';
 import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
+import { Canceled, signInWithApple, signInWithGoogle } from '@/data/auth';
 import { useStore } from '@/data/store';
 import { brand, color, radius, size, space } from '@/theme';
 
@@ -14,21 +16,33 @@ const BUTTON_H = size.controlHeight + space.s1;
 const LOGO = 20;
 
 /**
- * Apple, Google, or email or phone with a code. Sign-in is faked for now:
- * Apple and Google skip straight to Your name.
+ * Apple, Google, or email or phone with a code. Without a backend sign-in is
+ * faked: Apple and Google skip straight to Your name.
  */
 export default function SignIn() {
   const router = useRouter();
   const { actions } = useStore();
   const [appleButton, setAppleButton] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState<'apple' | 'google' | null>(null);
 
   useEffect(() => {
     if (Platform.OS === 'ios') AppleAuthentication.isAvailableAsync().then(setAppleButton);
   }, []);
 
-  const provider = (method: 'apple' | 'google') => {
-    actions.signIn(method);
-    router.push('/name');
+  const provider = async (method: 'apple' | 'google') => {
+    if (busy) return;
+    setBusy(true);
+    setFailed(null);
+    try {
+      await (method === 'apple' ? signInWithApple() : signInWithGoogle());
+      actions.signIn(method);
+      router.push('/name');
+    } catch (e) {
+      if (!(e instanceof Canceled)) setFailed(method);
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -65,6 +79,9 @@ export default function SignIn() {
           <Outline label="Continue with Apple" logo={<AppleLogo />} onPress={() => provider('apple')} />
         )}
         <Outline label="Continue with Google" logo={<GoogleLogo />} onPress={() => provider('google')} />
+        {failed ? (
+          <ErrorLine text={`We couldn’t sign you in with ${failed === 'apple' ? 'Apple' : 'Google'}. Try again, or use email or phone.`} />
+        ) : null}
         <View style={styles.or}>
           <View style={styles.rule} />
           <Text variant="caption" color="inkMuted">

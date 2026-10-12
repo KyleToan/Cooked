@@ -1,4 +1,4 @@
-import { describe, expect, test } from '@jest/globals';
+import { describe, expect, jest, test } from '@jest/globals';
 import {
   amountLabel,
   count,
@@ -18,6 +18,9 @@ import {
 } from '@/data/helpers';
 import { SEED_ITEMS, SEED_TO_BUY } from '@/data/seed';
 import type { Item } from '@/data/types';
+
+// jest-expo's expo-crypto mock returns one fixed uuid; use Node's generator instead (jest.mock is hoisted).
+jest.mock('expo-crypto', () => ({ randomUUID: () => jest.requireActual<typeof import('crypto')>('crypto').randomUUID() }));
 
 const at = (h: number, m = 0) => new Date(2026, 9, 11, h, m);
 
@@ -150,10 +153,10 @@ describe('guessPlace', () => {
 });
 
 describe('misc', () => {
-  test('makeId is unique and prefixed', () => {
+  test('makeId is a unique uuid', () => {
     const ids = new Set(Array.from({ length: 50 }, () => makeId('i')));
     expect(ids.size).toBe(50);
-    expect([...ids].every((id) => id.startsWith('i-'))).toBe(true);
+    expect([...ids].every((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(id))).toBe(true);
   });
 
   test('scanFlow', () => {
