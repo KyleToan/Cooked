@@ -61,7 +61,7 @@ Without both, the app runs in its local fake mode (sign-in code `481726`, nothin
 
 - Expo changes every SDK. Before using an Expo, EAS or React Native API, check the docs for this SDK (https://docs.expo.dev/versions/v57.0.0/) instead of relying on memory. https://docs.expo.dev/llms.txt indexes them.
 - `ios/` and `android/` are generated (Continuous Native Generation) and git-ignored. Never create or edit them; configure native behavior in `app.json` and config plugins.
-- Expo Go only includes Expo's bundled native modules. Everything in the app works in Expo Go today; adding a library with other native code means using a development build instead.
+- Expo Go only includes Expo's bundled native modules. Receipt reading uses ML Kit (native code), so it only works in a development build; in Expo Go and on the web, Scan shows the sample receipt in development. Everything else works in Expo Go; adding a library with other native code means using a development build instead.
 - Prefer Expo's own modules over third-party libraries.
 
 ### UI code rules
@@ -125,7 +125,7 @@ If those files disagree, `README.md` and `tokens.json` win. A few older lines ar
 - **Tab island.** Floating white pill (300 × 68) with Home, Scan and Recipes; a grey underscore marks the active tab.
 - **Undo, not confirm.** Ticking off or using up an item shows an undo bar. Deleting an account, leaving a kitchen or removing someone asks first; the safe choice is never the red one.
 - **Accessible.** 4.5:1 contrast for text that matters, 44pt minimum tap targets.
-- **Icons.** Only the 20 in `design/system/icons/` (24px grid, 1.8 stroke).
+- **Icons.** Only the 22 in `design/system/icons/` (24px grid, 1.8 stroke).
 
 ## Checklist for a new screen
 

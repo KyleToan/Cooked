@@ -244,6 +244,38 @@ Crack in the eggs and cover.`;
     expect(r.steps).toEqual(['Mix it all in a jar.', 'Leave overnight in the fridge.']);
   });
 
+  test('a photographed cookbook page: page header skipped, capitals title, wrapped steps joined', () => {
+    // As readText returns it: the page number column joined to the running header, lines broken where the page breaks them.
+    const text = `112   WEEKNIGHT DINNERS
+LEMON CHICKEN TRAYBAKE
+Serves 4   Total time: 50 min
+INGREDIENTS
+8 chicken thighs
+2 lemons, cut into wedges
+1 lb small potatoes, halved
+4 garlic cloves, unpeeled
+3 tbsp olive oil
+METHOD
+1. Heat the oven to 425°F. Put the
+potatoes in a roasting tin with the
+oil and toss to coat.
+2. Add the chicken, lemon and garlic,
+season well and roast for 40 minutes
+until golden.
+3. Squeeze over the roasted lemon
+before serving.`;
+    const r = parseRecipeFromText(text, KITCHEN)!;
+    expect(r.title).toBe('Lemon chicken traybake');
+    expect(r.servings).toBe('4 servings');
+    expect(r.need).toBe(5);
+    expect(r.missing).toEqual(['Chicken thighs', 'Lemons', 'Potatoes']);
+    expect(r.steps).toEqual([
+      'Heat the oven to 425°F. Put the potatoes in a roasting tin with the oil and toss to coat.',
+      'Add the chicken, lemon and garlic, season well and roast for 40 minutes until golden.',
+      'Squeeze over the roasted lemon before serving.',
+    ]);
+  });
+
   test('null without an ingredient list', () => {
     expect(parseRecipeFromText('Just some words about dinner.')).toBeNull();
     expect(parseRecipeFromText('')).toBeNull();
