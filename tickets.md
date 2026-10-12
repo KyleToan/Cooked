@@ -224,3 +224,75 @@ These are features the design mentions but that need the owner's choice before t
 - **Editing an item by hand** (quantity, date, place, marking a leftover as use soon). The design has Use and swipe to Use up, but no edit screen.
 - **Import from Safari's share sheet.** Sharing a recipe link straight to Cooked needs a share extension (a native config plugin and a new build). Wanted?
 - **Dark mode and iPad** (Decision #40: light mode and iPhone only). No designs yet.
+
+---
+
+## Owner steps after the agent tickets (2026-10-11)
+
+Agents finished tickets 2–9 on their own branches. None are pushed or merged. Each was checked with typecheck, lint and tests, but none has run on a phone.
+
+| Ticket | Branch | Commit | Based on |
+| --- | --- | --- | --- |
+| 2 Receipt OCR | `ticket-2-ocr` | 45e502a | ce1e5ea |
+| 3 Saved on the phone | `ticket-3-persist` | 89b9553 | ce1e5ea |
+| 4 Shelf life | `ticket-4-shelf-life` | 286ade4 | ce1e5ea |
+| 5 Local notifications | `ticket-5-notifications` | d7f74ef | ce1e5ea |
+| 6 Recipe from a photo | `ticket-6-recipe-scan` | 8e1e538 | 45e502a (ticket 2) |
+| 7 Photos and Flash icons | `ticket-7-icons` | 0f0fbe0 | ce1e5ea |
+| 8 Bundled fonts | `ticket-8-fonts` | 04d46a9 | ce1e5ea |
+| 9 Android fixes | `ticket-9-android` | 10e9524 | ce1e5ea |
+
+### 1. Save what's in your main checkout
+`/Users/linhp/Cooked` has uncommitted Supabase work and OCR work. The OCR part is now on `ticket-2-ocr`. Commit the Supabase files on their own branch, and don't add the OCR files (`src/data/ocr.ts`, the OCR hunks in `scan.tsx`, `scan-review.tsx` and `receipt.ts`). Otherwise they will clash with ticket 2.
+
+### 2. Fix GitHub login and push
+Pushing failed with "could not read Username". Run `gh auth login` (or set up a credential helper), then push `tickets-non-backend` and the eight ticket branches.
+
+### 3. Merge the branches
+Merge into `build-screens` in this order to keep conflicts small: 7, 9, 2, 6, 4, 3, 5, 8. Or ask an agent to make an integration branch and resolve the conflicts. Expect conflicts in:
+- **`Decisions.md`:** most branches added row #82 (ticket 2 #82–83, ticket 6 #84). Renumber in merge order. Ticket 4's row is dated 2026-10-12.
+- **`store.tsx`:** tickets 3 and 4.
+- **`helpers.ts` and its tests:** tickets 3 and 5.
+- **`app.json`:** the `expo-sqlite` plugin from ticket 3 and the `expo-font` fonts from ticket 8.
+- **`package.json` and the lock file:** tickets 2 and 3.
+- **`scan.tsx`:** tickets 2, 6, 7 and 9.
+- **`_layout.tsx`:** tickets 3, 5 and 8.
+
+After merging, run `npm run typecheck && npm run lint && npm test`. Two leftover branches, `worktree-agent-a711afe1bc7ad71aa` and `worktree-agent-ab85470e768a81e4f`, point at ce1e5ea and can be deleted.
+
+### 4. Choose the app IDs
+`app.json` has no iOS `bundleIdentifier` or `android.package` (e.g. `app.cooked`). EAS asks for them at the first build. Once set they're permanent in the stores.
+
+### 5. EAS and a development build (ticket 1)
+`npx eas-cli@latest login`, `init`, `update:configure`. Add a `development` profile (`developmentClient: true`) to `eas.json`, then build for iOS and Android. Tickets 2, 3, 6 and 8 add native code, so Expo Go isn't enough.
+
+### 6. Test on your phones
+- **Receipts:** photograph 3 real receipts. Check the items and places on Check your scan, and save the recognized text so an agent can add it as tests (ticket 2, step 5). A blank photo should show "Couldn't read this receipt".
+- **Recipe photo:** a cookbook page from the camera and from Photos ends on the found screen and saves. Also try a two-column page.
+- **Saved kitchen:** add and tick things, kill the app, reopen. Everything is still there, and days left went down the next day. Log out clears it.
+- **Notifications:** with use-soon food, set the time a few minutes ahead and put the app in the background; the nudge arrives. With nothing to use, the switch off, or permission denied, nothing arrives.
+- **Fonts:** with the network off on first launch, titles, body and notes all show the right fonts on iOS and Android.
+- **Android:**
+  - the drawn Apple button
+  - the time dialog
+  - back closing sheets with the slide
+  - the camera permission working right after you allow it in Settings
+  - fields staying above the keyboard (if they're covered, set the Android `behavior` to `'padding'` at `Sheet.tsx:323` and `Onboarding.tsx:31`)
+  - the island above both kinds of nav bar
+  - shadows
+  - the largest text size
+
+### 7. Small calls to make
+- **Nudge text:** it keeps names as stored, so it reads "Chicken thighs and Spinach need using." Keep that, or lower-case all but proper nouns?
+- **Shelf-life numbers:** check a few in ticket 4's table against USDA FoodKeeper.
+- **Photo scan error:** after a failed photo scan, Import's error still offers "Try another link". Hide it?
+- **Icon source:** re-export `design/system/design-system.json` from the design source so it lists the two new icons.
+- **`npm run doctor`:** it fails because `expo-doctor` isn't installed (`npx -y expo-doctor` works). An agent can fix the script.
+
+### 8. Things only you can provide
+- App icon and splash artwork (ticket 10).
+- Help, Privacy and Terms pages at `cooked.app` (ticket 11).
+- Answers to "Needs a decision" above: shelf-scan modes, units, editing items by hand, Safari share, dark mode and iPad.
+
+### 9. Ship to testers (ticket 12)
+`npx eas-cli@latest build --profile preview`, submit to TestFlight, then `npx eas-cli@latest update --channel preview --message "..." --environment preview` and check it reaches the build.
