@@ -12,6 +12,7 @@ import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
 import { haptics } from '@/hooks/haptics';
 import { useGoToTab } from '@/hooks/useGoToTab';
+import { lastScan } from '@/data/ocr';
 import { countIngredients, foundList, importFromLink, parseRecipeFromText } from '@/data/recipeImport';
 import { useStore } from '@/data/store';
 import type { Recipe } from '@/data/types';
@@ -28,13 +29,15 @@ const FOCUS_BORDER = 1.5;
 export default function Import() {
   const router = useRouter();
   const goToTab = useGoToTab();
-  const params = useLocalSearchParams<{ step?: string }>();
+  const params = useLocalSearchParams<{ step?: string; from?: string }>();
+  // Scan's Recipe mode opens Import with the page's text, read straight away.
+  const scanned = params.from === 'scan';
   const { state, actions } = useStore();
 
-  const [mode, setMode] = useState<Mode>('link');
-  const [step, setStep] = useState<Step>(params.step === 'error' ? 'error' : 'edit');
+  const [mode, setMode] = useState<Mode>(scanned ? 'text' : 'link');
+  const [step, setStep] = useState<Step>(params.step === 'error' ? 'error' : scanned ? 'loading' : 'edit');
   const [link, setLink] = useState(params.step === 'error' ? 'https://example-news.com/food/best-summer-dinners' : '');
-  const [text, setText] = useState('');
+  const [text, setText] = useState(scanned ? lastScan.recipeText : '');
   const [hint, setHint] = useState('');
   const [parsed, setParsed] = useState<Recipe | null>(null);
   const [focused, setFocused] = useState(false);
@@ -89,7 +92,9 @@ export default function Import() {
   const title = step === 'done' && saved ? saved.title : step === 'error' ? 'No recipe on that page' : 'Import a recipe';
   const sub =
     step === 'error'
-      ? 'We couldn’t find ingredients or steps there. It may be a list of recipes, or behind a login.'
+      ? scanned
+        ? 'We couldn’t find an ingredient list in that photo. Try a sharper photo, or paste the text.'
+        : 'We couldn’t find ingredients or steps there. It may be a list of recipes, or behind a login.'
       : step === 'done'
         ? `${meta ? `${meta}. ` : ''}You have ${found.length - missing} of ${found.length} things.`
         : step === 'loading'
@@ -177,11 +182,13 @@ export default function Import() {
 
       {step === 'error' ? (
         <View style={styles.body}>
-          <View style={styles.errLink}>
-            <Text variant="caption" numberOfLines={1}>
-              {link}
-            </Text>
-          </View>
+          {link ? (
+            <View style={styles.errLink}>
+              <Text variant="caption" numberOfLines={1}>
+                {link}
+              </Text>
+            </View>
+          ) : null}
           <ActionPill
             label="Paste the recipe text instead"
             variant="primary"

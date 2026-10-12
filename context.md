@@ -6,7 +6,7 @@ Everything an agent or new contributor needs to know about Cooked. Rules for age
 
 Cooked is a shared kitchen app for a household. You:
 
-- **Scan** a grocery receipt and Cooked puts each item where it lives. (Scanning a shelf is planned; recipes come in through Import.)
+- **Scan** a grocery receipt and Cooked puts each item where it lives, or a cookbook page to import the recipe. (Scanning a shelf is planned.)
 - **Track** what's in your Fridge, Pantry and Freezer, with quantities and what to use soon.
 - **Import** recipes from a link or pasted text and see what you already have for them.
 - **Share one To Buy list** with the people you live with.
@@ -75,7 +75,8 @@ Faked until there's a backend:
 - **Sign-in.** Any email or number works and the code is always `481726`. Apple's button is Apple's own on iOS, but no real Apple or Google sign-in happens.
 - **Accounts and sync.** Everything lives in memory and resets when the app restarts, including having finished onboarding. Sam never changes anything.
 - **Kitchens.** Just me and Me and my household start a new, empty kitchen that the first scan fills. Joining only works with the code `rivera-kitchen`, which loads the sample Rivera kitchen.
-- **Receipt reading (OCR)** is real in a development build: the photo is read on the phone with Google ML Kit (`src/data/ocr.ts`), and `parseReceipt` in `src/data/receipt.ts` turns the text into Check your scan lines. No food lines or a failed read shows "Couldn't read this receipt". Expo Go and the web have no ML Kit, so there Scan shows the 7 sample Corner Market items in development. Scan has only the Receipt mode for now. Not yet checked against real receipt photos.
+- **Receipt reading (OCR)** is real in a development build: the photo is read on the phone with Google ML Kit (`src/data/ocr.ts`), and `parseReceipt` in `src/data/receipt.ts` turns the text into Check your scan lines. No food lines or a failed read shows "Couldn't read this receipt". Expo Go and the web have no ML Kit, so there Scan shows the 7 sample Corner Market items in development. Not yet checked against real receipt photos.
+- **Recipe scanning.** Scan's Recipe mode reads a cookbook page the same way and opens Import with the text, which shows the recipe it found or "No recipe on that page". In Expo Go and on the web it uses a sample page in development. Not yet checked against real cookbook photos.
 - **Recipe import** is real: a link is fetched on the device and its schema.org recipe data read; pasted text is split into ingredients and steps (`src/data/recipeImport.ts`). In a web browser most sites block the fetch, so links there show "No recipe on that page".
 - **Notifications.** The switches and send time are kept in memory; nothing is sent.
 - **Help, Privacy and Terms** open `cooked.app` pages that don't exist yet.
