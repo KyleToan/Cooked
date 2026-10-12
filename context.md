@@ -86,7 +86,7 @@ Faked until there's a backend:
 - Backend, accounts and real-time sync for a shared kitchen.
 - How items get sorted into fridge, pantry or freezer beyond the keyword list in `receipt.ts`.
 - Whether recipe links should move from on-device fetching to a server.
-- How "use soon" dates are worked out (typical shelf life per item, or entered by hand).
+- Whether "use soon" dates can be edited by hand. New items get a typical shelf life per item (Decisions #82).
 - Push notifications: the design has To Buy changes, a daily use-soon nudge, someone joining and a weekly summary.
 
 ## Notes from conversations

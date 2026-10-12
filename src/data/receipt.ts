@@ -101,6 +101,37 @@ export function placeFor(name: string): Place | 'skip' {
   return 'pantry';
 }
 
+/** Days a new item keeps when nothing in SHELF_LIFE matches it. */
+const PLACE_DAYS: Record<Place, number> = { fridge: 7, pantry: 180, freezer: 90 };
+
+// Days an item keeps, per place: the short end of the USDA FoodKeeper range,
+// rounded. First match wins, so narrower words come first. Logged in Decisions.md.
+const SHELF_LIFE: Record<Place, [RegExp, number][]> = {
+  fridge: [
+    [/\bchicken/, 2], [/\bturkey/, 2], [/\bground (beef|pork|meat)/, 2], [/\bbeef/, 3], [/\bpork/, 3],
+    [/\bsausages?/, 2], [/\bsalmon/, 2], [/\bfish/, 2], [/\bshrimp/, 2], [/\bbacon/, 7],
+    [/\bham\b/, 3], [/\bleftovers?/, 3], [/\bberr(y|ies)/, 3], [/\bstrawberr/, 3],
+    [/\braspberr/, 3], [/\bblueberr/, 7], [/\bmushrooms?/, 3], [/\bbroccoli/, 3],
+    [/\blettuce/, 3], [/\bspinach/, 5], [/\bkale/, 5], [/\bbasil/, 5], [/\bcilantro/, 7],
+    [/\bparsley/, 7], [/\bherbs?\b/, 5], [/\bcucumbers?/, 4], [/\bpeppers?\b/, 4],
+    [/\bfeta/, 7], [/\bmozzarella/, 7], [/\bcheese|\bcheddar|\bparmesan/, 21],
+    [/milk/, 7], [/\bcream/, 7], [/\byogh?urt/, 7], [/\bbutter/, 30], [/\beggs?\b/, 21],
+    [/\bhummus/, 7], [/\bjuice/, 7], [/\bgrapes?\b/, 7], [/\bcelery/, 7], [/\bcarrots?/, 21],
+  ],
+  pantry: [
+    [/\bbananas?/, 3], [/\bbread|\bbagels?|\btortillas?/, 5], [/\bavocados?/, 3],
+    [/\bpotato/, 21], [/\bonions?/, 30], [/\bgarlic/, 90], [/\brice\b/, 365],
+    [/\bpasta|\bspaghetti|\bpenne|\bnoodles?/, 365], [/\bcanned\b|\bbeans\b|\blentils\b/, 365],
+  ],
+  freezer: [[/\bice cream/, 60], [/\bbread/, 90], [/\bvegetables|\bpeas\b|\bcorn\b/, 240]],
+};
+
+/** Days until a new item should be used, from its name, or the place default. */
+export function shelfLifeFor(name: string, place: Place): number {
+  const n = name.toLowerCase();
+  return SHELF_LIFE[place].find(([r]) => r.test(n))?.[1] ?? PLACE_DAYS[place];
+}
+
 const PRICE_AT_END = /(-?)\$?\s?(\d{1,4}[.,]\d{2})(?:\s*[A-Z*]{1,2})?\s*$/;
 const QTY_LINE = /^(\d{1,3})\s*[@xX]\s*\$?\s?\d{1,4}[.,]\d{2}(?:\s*(?:ea|each|\/\s*ea))?\b/i;
 const WEIGHT_LINE = /^\d+(?:[.,]\d+)?\s*(?:lbs?|kg|g|oz)\b/i;
