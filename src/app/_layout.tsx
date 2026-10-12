@@ -13,6 +13,8 @@ import { color, fontFaces } from '@/theme';
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  // Native builds bundle the fonts (expo-font plugin in app.json), so this is already loaded there;
+  // it only loads them in Expo Go and on web.
   const [loaded, error] = useFonts(fontFaces);
 
   useEffect(() => {
