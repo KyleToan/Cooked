@@ -1,5 +1,5 @@
-// Reads the text on a receipt photo on the phone (Google ML Kit text recognition),
-// then puts it back into rows so parseReceipt sees "MILK 2% 1GAL   3.49" on one line.
+// Reads the text on a photo (a receipt or a recipe page) on the phone with Google ML Kit
+// text recognition, then puts it back into rows so parseReceipt sees "MILK 2% 1GAL   3.49" on one line.
 
 import type { Text, TextLine } from '@infinitered/react-native-mlkit-text-recognition';
 import { requireOptionalNativeModule } from 'expo';
@@ -10,14 +10,14 @@ import type { ScanLine } from './types';
 // The package's own import throws where its native code isn't built in (Expo Go, web), so look the module up optionally.
 const native = requireOptionalNativeModule<{ recognizeText(uri: string): Promise<Text> }>('RNMLKitTextRecognition');
 
-/** The lines the last scan read, handed from Scan to Check your scan. */
-export const lastScan: { lines: ScanLine[] } = { lines: SAMPLE_SCAN };
+/** What the last scan read: receipt lines for Check your scan, recipe text for Import. */
+export const lastScan: { lines: ScanLine[]; recipeText: string } = { lines: SAMPLE_SCAN, recipeText: '' };
 
 /**
- * The receipt's text, one printed row per line, or null when this build can't
+ * The photo's text, one printed row per line, or null when this build can't
  * read photos (Expo Go, web). Throws when reading fails.
  */
-export async function readReceiptText(uri: string): Promise<string | null> {
+export async function readText(uri: string): Promise<string | null> {
   if (!native) return null;
   const result = await native.recognizeText(uri);
   return joinRows(result.blocks.flatMap((b) => b.lines));
