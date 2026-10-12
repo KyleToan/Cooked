@@ -10,7 +10,7 @@ import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
 import { joinAnd, scanFlow } from '@/data/helpers';
-import { SAMPLE_SCAN } from '@/data/seed';
+import { lastScan } from '@/data/ocr';
 import { useStore } from '@/data/store';
 import type { ScanLine } from '@/data/types';
 import { haptics } from '@/hooks/haptics';
@@ -25,14 +25,16 @@ export default function ScanReview() {
   const animate = useLayoutMotion();
   const flow = scanFlow(useLocalSearchParams<{ flow?: string }>().flow);
   const { state, actions } = useStore();
-  const [lines, setLines] = useState<ScanLine[]>(SAMPLE_SCAN);
+  // What the scan read, kept so edits can be told apart from it.
+  const [read] = useState(lastScan.lines);
+  const [lines, setLines] = useState<ScanLine[]>(read);
   const [open, setOpen] = useState<string | null>(null);
 
   // Leaving (back arrow, Retake photo, Android back) throws the edits away, so ask once if
   // anything was renamed, moved or recounted. Adding the items leaves without asking.
   const navigation = useNavigation();
   const edited = lines.some((l, i) => {
-    const o = SAMPLE_SCAN[i];
+    const o = read[i];
     return !o || l.id !== o.id || l.name !== o.name || l.place !== o.place || l.qty !== o.qty;
   });
   const guard = useRef({ edited, leaving: false });

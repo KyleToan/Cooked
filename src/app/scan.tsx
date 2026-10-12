@@ -12,6 +12,10 @@ import { Icon } from '@/components/Icon';
 import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
 import { scanFlow } from '@/data/helpers';
+import { lastScan, readReceiptText } from '@/data/ocr';
+import { parseReceipt } from '@/data/receipt';
+import { SAMPLE_SCAN } from '@/data/seed';
+import type { ScanLine } from '@/data/types';
 import { haptics } from '@/hooks/haptics';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { color, radius, size, space } from '@/theme';
@@ -39,8 +43,8 @@ const FLASH_IN = 40;
 const FLASH_OUT = 80;
 
 /**
- * Full-screen camera with corner guides, Photos and Flash. Reading the receipt
- * isn't built yet: any photo goes to Check your scan with the sample receipt.
+ * Full-screen camera with corner guides, Photos and Flash. The photo is read on
+ * the phone and goes to Check your scan, or to "Couldn't read this receipt".
  */
 export default function Scan() {
   const router = useRouter();
@@ -71,7 +75,23 @@ export default function Scan() {
   const current = MODES[0];
   const granted = !!permission?.granted;
 
-  const review = () => router.push({ pathname: '/scan-review', params: { flow } });
+  const unreadable = () => router.push({ pathname: '/scan-unreadable', params: { flow } });
+
+  /** Reads the photo into lines for Check your scan; no food lines or a failed read is unreadable. */
+  const read = async (uri: string | undefined) => {
+    let lines: ScanLine[] = [];
+    try {
+      const text = uri ? await readReceiptText(uri) : null;
+      // No reader in this build (Expo Go, web): the sample receipt keeps the screens usable in development.
+      if (text === null) lines = __DEV__ ? SAMPLE_SCAN : [];
+      else lines = parseReceipt(text).lines;
+    } catch {
+      lines = [];
+    }
+    if (!lines.some((l) => l.place !== 'skip')) return unreadable();
+    lastScan.lines = lines;
+    router.push({ pathname: '/scan-review', params: { flow } });
+  };
 
   const capture = async () => {
     if (busy) return;
@@ -79,27 +99,32 @@ export default function Scan() {
     // A quick white flash over the preview says the photo was taken. Reduce Motion keeps just the haptic.
     if (!reduced) flashOpacity.set(withSequence(withTiming(1, { duration: FLASH_IN }), withTiming(0, { duration: FLASH_OUT })));
     setBusy(true);
+    let uri: string | undefined;
     try {
-      // The photo isn't read yet (no OCR); taking it is still real.
-      if (granted)
-        await camera.current?.takePictureAsync({
-          quality: 0.6,
-          skipProcessing: true,
-        });
+      if (granted) uri = (await camera.current?.takePictureAsync({ quality: 0.6, skipProcessing: true }))?.uri;
     } catch {
-      // A simulator has no camera; carry on to the sample scan.
+      // A simulator has no camera; in development, carry on to the sample scan.
+    }
+    try {
+      await read(uri);
     } finally {
       setBusy(false);
     }
-    review();
   };
 
   const pickPhoto = async () => {
+    if (busy) return;
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       quality: 0.6,
     });
-    if (!result.canceled) review();
+    if (result.canceled) return;
+    setBusy(true);
+    try {
+      await read(result.assets[0]?.uri);
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -122,7 +147,7 @@ export default function Scan() {
             Scan
           </Text>
           {__DEV__ ? (
-            // Dev only: reach "Couldn't read this receipt" until real OCR exists.
+            // Dev only: reach "Couldn't read this receipt" without a bad photo.
             <Tap
               accessibilityRole="button"
               accessibilityLabel="Developer: show the couldn't read this receipt screen"

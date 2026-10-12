@@ -1,5 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 
+import { joinRows } from '@/data/ocr';
 import { parseReceipt, placeFor } from '@/data/receipt';
 import { SAMPLE_SCAN } from '@/data/seed';
 
@@ -90,6 +91,70 @@ describe('parseReceipt', () => {
       ['Bagels', 'pantry'],
     ]);
     expect(lines[0].price).toBe('Not food · $2.99');
+  });
+});
+
+// Text as phone OCR returns it: uneven spacing, tax flags, a squashed price, a
+// comma for a point, O read for 0 and l for 1, and a price that slipped to its own line.
+const OCR_GROCER = `
+TRADER JOE'S
+2675 Geary Blvd
+San Francisco, CA 94118
+Store #236 - (415) 346-9964
+OPEN 8:00AM TO 9:00PM DAILY
+R-CARROTS SHREDDED 10 OZ      1.29
+ORGANIC BANANAS 3 @ 0.23      0.69
+BABY SPINACH    2.49
+GREEK YOGURT PLAIN 3.99
+EGGS LARGE BROWN 12CT     4,49
+CHICKEN THIGHS BNLS     7.4O
+SPAGHETTI       l.29
+FROZEN MANGO CHUNKS
+2.99
+DISH SOAP LAVENDER     3.49
+SUBTOTAL     $27.61
+TOTAL        $27.61
+VISA         $27.61
+ITEMS 10 VISA
+`;
+
+describe('parseReceipt with OCR text', () => {
+  it('reads a receipt the way phone OCR returns it', () => {
+    const { store, lines } = parseReceipt(OCR_GROCER);
+    expect(store).toBe("Trader Joe's");
+    expect(lines.map((l) => [l.name, l.qty, l.price, l.place])).toEqual([
+      ['R-carrots shredded', 1, '$1.29', 'fridge'],
+      ['Organic bananas', 3, '$0.69', 'pantry'],
+      ['Baby spinach', 1, '$2.49', 'fridge'],
+      ['Greek yogurt plain', 1, '$3.99', 'fridge'],
+      ['Eggs large brown', 12, '$4.49', 'fridge'],
+      ['Chicken thighs boneless', 1, '$7.40', 'fridge'],
+      ['Spaghetti', 1, '$1.29', 'pantry'],
+      ['Frozen mango chunks', 1, '$2.99', 'freezer'],
+      ['Dish soap lavender', 1, 'Not food · $3.49', 'skip'],
+    ]);
+  });
+});
+
+describe('joinRows', () => {
+  const line = (text: string, left: number, top: number) => ({
+    text,
+    frame: { left, top, right: left + 100, bottom: top + 20 },
+  });
+
+  it('puts names and prices read as separate columns back on one row', () => {
+    const text = joinRows([
+      line('MILK 2% 1GAL', 10, 100),
+      line('EGGS LG 12CT', 10, 130),
+      line('3.49 F', 300, 103), // a slightly tilted photo
+      line('4.29 F', 300, 128),
+      line('CORNER MARKET', 80, 40),
+    ]);
+    expect(text).toBe('CORNER MARKET\nMILK 2% 1GAL   3.49 F\nEGGS LG 12CT   4.29 F');
+    expect(parseReceipt(text).lines.map((l) => [l.name, l.price])).toEqual([
+      ['Milk 2%', '$3.49'],
+      ['Eggs', '$4.29'],
+    ]);
   });
 });
 
