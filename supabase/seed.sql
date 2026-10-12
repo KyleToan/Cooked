@@ -38,29 +38,29 @@ insert into public.kitchen_members (kitchen_id, user_id, joined_at) values
 insert into public.invites (code, kitchen_id, expires_at) values
   ('rivera-kitchen', '00000000-0000-4000-b000-000000000001', now() + interval '10 years');
 
--- Items: best_by = today + daysLeft.
+-- Items: best_by = today + daysLeft. use_soon null follows the date; true or false is set by hand.
 insert into public.items (kitchen_id, name, place, meta, qty, unit, amount_text, best_by, running_low, use_soon, added_by)
 select '00000000-0000-4000-b000-000000000001'::uuid, v.name, v.place, v.meta, v.qty, v.unit, v.amount_text,
        current_date + v.days_left, v.running_low, v.use_soon,
        case v.who when 'sam' then '00000000-0000-4000-a000-000000005a11'::uuid else '00000000-0000-4000-a000-00000000a1e1'::uuid end
 from (values
-  ('Spinach',         'fridge',  'Best by tomorrow',                1, 'bag',     null,          1,   false, false, 'alex'),
-  ('Chicken thighs',  'fridge',  'Best in 2 days',                  1, 'pack',    null,          2,   false, false, 'alex'),
-  ('Milk 2%',         'fridge',  'Best in 3 days',                  1, 'carton',  null,          3,   false, false, 'alex'),
-  ('Eggs',            'fridge',  'Best in 9 days',                  8, 'eggs',    null,          9,   false, false, 'alex'),
-  ('Greek yogurt',    'fridge',  'Sam used the last one · 9:40 am', 0, 'tubs',    null,          5,   false, false, 'sam'),
-  ('Cheddar',         'fridge',  'Best in 3 weeks',                 1, 'block',   null,          21,  false, false, 'alex'),
-  ('Basil',           'fridge',  'Best in 4 days',                  1, 'bunch',   null,          4,   false, false, 'alex'),
-  ('Rice',            'pantry',  'Bought 3 weeks ago',              1, 'cup',     'About 1 cup', 0,   true,  false, 'alex'),
-  ('Chickpeas',       'pantry',  'Canned',                          3, 'cans',    null,          400, false, false, 'alex'),
-  ('Flour',           'pantry',  'Opened in May',                   1, 'bag',     null,          120, false, false, 'alex'),
-  ('Olive oil',       'pantry',  'About half left',                 1, 'bottle',  null,          200, false, false, 'alex'),
-  ('Spaghetti',       'pantry',  'From today’s receipt',            2, 'boxes',   null,          300, false, false, 'alex'),
-  ('Bread',           'pantry',  'Best in 3 days',                  1, 'loaf',    null,          3,   false, false, 'sam'),
+  ('Spinach',         'fridge',  'Best by tomorrow',                1, 'bag',     null,          1,   false, null, 'alex'),
+  ('Chicken thighs',  'fridge',  'Best in 2 days',                  1, 'pack',    null,          2,   false, null, 'alex'),
+  ('Milk 2%',         'fridge',  'Best in 3 days',                  1, 'carton',  null,          3,   false, null, 'alex'),
+  ('Eggs',            'fridge',  'Best in 9 days',                  8, 'eggs',    null,          9,   false, null, 'alex'),
+  ('Greek yogurt',    'fridge',  'Sam used the last one · 9:40 am', 0, 'tubs',    null,          5,   false, null, 'sam'),
+  ('Cheddar',         'fridge',  'Best in 3 weeks',                 1, 'block',   null,          21,  false, null, 'alex'),
+  ('Basil',           'fridge',  'Best in 4 days',                  1, 'bunch',   null,          4,   false, null, 'alex'),
+  ('Rice',            'pantry',  'Bought 3 weeks ago',              1, 'cup',     'About 1 cup', 0,   true,  null, 'alex'),
+  ('Chickpeas',       'pantry',  'Canned',                          3, 'cans',    null,          400, false, null, 'alex'),
+  ('Flour',           'pantry',  'Opened in May',                   1, 'bag',     null,          120, false, null, 'alex'),
+  ('Olive oil',       'pantry',  'About half left',                 1, 'bottle',  null,          200, false, null, 'alex'),
+  ('Spaghetti',       'pantry',  'From today’s receipt',            2, 'boxes',   null,          300, false, null, 'alex'),
+  ('Bread',           'pantry',  'Best in 3 days',                  1, 'loaf',    null,          3,   false, null, 'sam'),
   ('Chili leftovers', 'freezer', 'Frozen 3 months ago',             2, 'tubs',    null,          7,   false, true,  'alex'),
-  ('Frozen peas',     'freezer', 'From today’s receipt',            1, 'bag',     null,          180, false, false, 'alex'),
-  ('Ice cream',       'freezer', 'Opened',                          1, 'tub',     null,          60,  false, false, 'sam'),
-  ('Salmon fillets',  'freezer', 'Frozen a month ago',              4, 'fillets', null,          60,  false, false, 'alex')
+  ('Frozen peas',     'freezer', 'From today’s receipt',            1, 'bag',     null,          180, false, null, 'alex'),
+  ('Ice cream',       'freezer', 'Opened',                          1, 'tub',     null,          60,  false, null, 'sam'),
+  ('Salmon fillets',  'freezer', 'Frozen a month ago',              4, 'fillets', null,          60,  false, null, 'alex')
 ) as v(name, place, meta, qty, unit, amount_text, days_left, running_low, use_soon, who);
 
 -- To Buy, in the order Home shows it (updated_at keeps the order).

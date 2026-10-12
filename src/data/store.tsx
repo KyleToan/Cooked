@@ -6,7 +6,7 @@ import { useFocusEffect } from 'expo-router';
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
 
 import { useAuth } from './auth';
-import { guessPlace, makeId } from './helpers';
+import { guessPlace, makeId, shortDate, USE_SOON_DAYS } from './helpers';
 import { checkRecipe, checkRecipes, usedWhenMade } from './match';
 import { shelfLifeFor } from './receipt';
 import { clearSaved, loadSaved, save, type Saved } from './saved';
@@ -80,6 +80,8 @@ export type Action =
   | { type: 'addItem'; name: string; place: Place }
   | { type: 'setQty'; id: string; qty: number; scope: string }
   | { type: 'itemToBuy'; id: string }
+  | { type: 'setUseSoon'; id: string; on: boolean }
+  | { type: 'setBestBy'; id: string; daysLeft: number }
   | { type: 'addScanned'; lines: ScanLine[]; undo?: boolean }
   | { type: 'toggleRecipeToBuy'; id: string }
   | { type: 'madeRecipe'; id: string }
@@ -172,6 +174,18 @@ export function reducer(s: State, a: Action): State {
       const items = s.items.map((i) => (i.id === a.id ? { ...i, qty } : i));
       const undo = qty === 0 && item.qty > 0 ? withUndo(s, `${item.name} used up`, a.scope) : null;
       return { ...s, items, undo };
+    }
+    case 'setUseSoon': {
+      // Kept only when it disagrees with the date, so agreeing with it goes back to following the date.
+      const items = s.items.map((i) => (i.id === a.id ? { ...i, useSoon: a.on === i.daysLeft <= USE_SOON_DAYS ? undefined : a.on } : i));
+      return { ...s, items, undo: null };
+    }
+    case 'setBestBy': {
+      // A new date is the newest word on it: the hand-set Use soon goes back to following the date.
+      const items = s.items.map((i) =>
+        i.id === a.id ? { ...i, daysLeft: a.daysLeft, useSoon: undefined, meta: `Best by ${shortDate(a.daysLeft)}` } : i,
+      );
+      return { ...s, items, undo: null };
     }
     case 'itemToBuy': {
       const item = s.items.find((i) => i.id === a.id);
@@ -340,6 +354,10 @@ function makeActions(dispatch: (a: Action) => void) {
     addItem: (name: string, place: Place) => dispatch({ type: 'addItem', name, place }),
     setQty: (id: string, qty: number, scope: string) => dispatch({ type: 'setQty', id, qty, scope }),
     addItemToBuy: (id: string) => dispatch({ type: 'itemToBuy', id }),
+    /** Use soon by hand, on or off. Matching the date clears the override. */
+    setUseSoon: (id: string, on: boolean) => dispatch({ type: 'setUseSoon', id, on }),
+    /** A new use-by date, `daysLeft` from today. */
+    setBestBy: (id: string, daysLeft: number) => dispatch({ type: 'setBestBy', id, daysLeft }),
     /** With `undo: true`, Home shows "Added N items to your kitchen" with Undo. */
     addScanned: (lines: ScanLine[], opts?: { undo?: boolean }) => dispatch({ type: 'addScanned', lines, undo: opts?.undo }),
     toggleRecipeToBuy: (id: string) => dispatch({ type: 'toggleRecipeToBuy', id }),

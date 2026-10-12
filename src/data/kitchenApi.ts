@@ -42,6 +42,17 @@ async function uid(): Promise<string | undefined> {
 
 export const createKitchen = (name: string) => run(() => supabase!.rpc('create_kitchen', { name }));
 export const joinKitchen = (code: string) => run(() => supabase!.rpc('join_kitchen', { code }));
+/** The kitchen behind an invite code, shown on Join before joining. Null when the code doesn't work or the call fails. */
+export type InvitePeek = { kitchen: string; invitedBy: string; items: number; toBuy: number };
+export async function peekInvite(code: string): Promise<InvitePeek | null> {
+  if (!supabase) return null;
+  try {
+    const { data, error } = await supabase.rpc('peek_invite', { code });
+    return error ? null : ((data as InvitePeek | null) ?? null);
+  } catch {
+    return null;
+  }
+}
 export const newInvite = (kitchenId: string) => run(() => supabase!.rpc('new_invite', { kitchen_id: kitchenId }));
 export const removeMember = (kitchenId: string, userId: string) =>
   run(() => supabase!.rpc('remove_member', { kitchen_id: kitchenId, user_id: userId }));

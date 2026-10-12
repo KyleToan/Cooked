@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 
@@ -32,10 +32,12 @@ type KitchenRowProps = {
    * as stepping down to 0, so the undo bar shows). Also a VoiceOver action.
    */
   onUseUp?: () => void;
+  /** More controls under the action and stepper when open (the use-by date and Use soon). */
+  extra?: ReactNode;
 };
 
 /** Name, meta line, amount and a chevron. Opens in place to a stepper; swipes left to use up. */
-export function KitchenRow({ item, startQty, soon, open, onToggleOpen, actionLabel, onAction, onQty, onUseUp }: KitchenRowProps) {
+export function KitchenRow({ item, startQty, soon, open, onToggleOpen, actionLabel, onAction, onQty, onUseUp, extra }: KitchenRowProps) {
   const amount = amountLabel(item, startQty);
   const swipe = useRef<SwipeableMethods>(null);
   const canUseUp = !!onUseUp && item.qty > 0;
@@ -69,13 +71,16 @@ export function KitchenRow({ item, startQty, soon, open, onToggleOpen, actionLab
         <Chevron direction={open ? 'up' : 'down'} animated />
       </Tap>
       {open ? (
-        <View style={styles.open}>
-          <Tap accessibilityRole="button" onPress={onAction} style={styles.action}>
-            <Text variant="link" color="sageInk">
-              {actionLabel}
-            </Text>
-          </Tap>
-          <Stepper value={item.qty} onChange={onQty} />
+        <View style={styles.openArea}>
+          <View style={styles.open}>
+            <Tap accessibilityRole="button" onPress={onAction} style={styles.action}>
+              <Text variant="link" color="sageInk">
+                {actionLabel}
+              </Text>
+            </Tap>
+            <Stepper value={item.qty} onChange={onQty} />
+          </View>
+          {extra}
         </View>
       ) : null}
     </View>
@@ -314,7 +319,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: color.lineSoft,
   },
-  open: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: space.s3 },
+  openArea: { gap: space.s1, paddingBottom: space.s3 },
+  open: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   action: { minHeight: size.targetMin, justifyContent: 'center' },
   checkRow: { minHeight: size.rowHeight + space.s1, flexDirection: 'row', alignItems: 'center', gap: space.s3 },
   nameInput: { ...type.body, paddingVertical: 2, paddingHorizontal: 0, borderBottomWidth: 1, outlineWidth: 0 },

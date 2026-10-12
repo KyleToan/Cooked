@@ -1,10 +1,10 @@
 import { describe, expect, jest, test } from '@jest/globals';
 
-import { createKitchen, finishOnboarding, joinKitchen, restoreMember, saveProfile, toResult } from '@/data/kitchenApi';
+import { createKitchen, finishOnboarding, joinKitchen, peekInvite, restoreMember, saveProfile, toResult } from '@/data/kitchenApi';
 
 // jest.mock is hoisted above the imports.
 
-const mockRpc = jest.fn<(fn: string, args?: object) => Promise<{ error: { message: string } | null }>>();
+const mockRpc = jest.fn<(fn: string, args?: object) => Promise<{ data?: unknown; error: { message: string } | null }>>();
 const mockEq = jest.fn(async () => ({ error: null }));
 const mockUpdate = jest.fn((_fields: object) => ({ eq: mockEq }));
 jest.mock('@/data/supabase', () => ({
@@ -60,5 +60,18 @@ describe('kitchenApi error mapping', () => {
     expect(mockEq).toHaveBeenLastCalledWith('id', 'u1');
     expect(await finishOnboarding()).toBe('ok');
     expect(mockUpdate.mock.lastCall?.[0]).toHaveProperty('onboarded_at');
+  });
+
+  test('peekInvite returns the kitchen, or null when there is none or the call fails', async () => {
+    const info = { kitchen: 'Rivera kitchen', invitedBy: 'Sam', items: 12, toBuy: 3 };
+    mockRpc.mockResolvedValueOnce({ data: info, error: null });
+    expect(await peekInvite('rivera-kitchen')).toEqual(info);
+    expect(mockRpc).toHaveBeenLastCalledWith('peek_invite', { code: 'rivera-kitchen' });
+    mockRpc.mockResolvedValueOnce({ data: null, error: null });
+    expect(await peekInvite('nope')).toBeNull();
+    fails('boom');
+    expect(await peekInvite('rivera-kitchen')).toBeNull();
+    mockRpc.mockRejectedValueOnce(new Error('offline'));
+    expect(await peekInvite('rivera-kitchen')).toBeNull();
   });
 });

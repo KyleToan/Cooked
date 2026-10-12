@@ -45,7 +45,7 @@ The full design system is in `design/system/` and at https://claude.ai/artifact/
 
 - A household is a "kitchen" (e.g. "Rivera kitchen"). Everyone in it shares the fridge, pantry, freezer, To Buy and recipes.
 - You join with an invite link (`cooked.app/join/<kitchen>`) or the code at the end of it. A link works for one person and runs out after 7 days. "Make a new link" kills the old one.
-- People can be removed from the kitchen (the design shows Alex, who made it, removing Sam). What they added stays. Removing asks first and can be undone. Who is allowed to remove whom isn't decided yet.
+- People can be removed from the kitchen (the design shows Alex, who made it, removing Sam). What they added stays. Removing asks first and can be undone. Only the person who made the kitchen can remove people; if they leave or delete their account, whoever joined earliest takes over (Decisions #84, #100).
 - Leaving a kitchen leaves it with the others and starts you a new, empty one. Deleting your account removes your sign-in and name; the kitchen stays for everyone else.
 - Activity is shown by name: "Added by Sam", "Sam used the last one · 9:40 am".
 
@@ -86,10 +86,8 @@ Local mode (no env vars):
 ## Open questions
 
 - Offline use: writes need a connection for now, and a failed write rolls back.
-- What happens to a kitchen when its creator leaves (no one left can remove people).
 - How items get sorted into fridge, pantry or freezer beyond the keyword table in `receipt.ts`.
 - Whether recipe links should move from on-device fetching to a server.
-- Whether "use soon" dates can be edited by hand. New items get a typical shelf life per item (Decisions #95).
 - Push notifications: the design has To Buy changes, a daily use-soon nudge, someone joining and a weekly summary.
 
 ## Notes from conversations

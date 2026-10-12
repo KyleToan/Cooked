@@ -5,7 +5,7 @@
 import { beforeEach, describe, expect, test } from '@jest/globals';
 
 import { initialState, reducer, type Action, type State } from '@/data/store';
-import { isDueSoon } from '@/data/helpers';
+import { isDueSoon, shortDate } from '@/data/helpers';
 import { ALEX, NEW_INVITE_CODE, SAMPLE_SCAN, SAM, SEED_ITEMS, SEED_KITCHEN, SEED_TO_BUY } from '@/data/seed';
 import type { ScanLine } from '@/data/types';
 
@@ -134,6 +134,38 @@ describe('items', () => {
 
   test('an unknown item changes nothing', () => {
     expect(run(s, { type: 'setQty', id: 'nope', qty: 1, scope: 'kitchen' })).toBe(s);
+  });
+});
+
+describe('use soon by hand', () => {
+  // f1 Spinach is due tomorrow; f4 Eggs in 9 days; z1 Chili leftovers is flagged by hand.
+  test('turning it on for something not due yet', () => {
+    const next = run(s, { type: 'setUseSoon', id: 'f4', on: true });
+    expect(item(next, 'f4').useSoon).toBe(true);
+    expect(isDueSoon(item(next, 'f4'))).toBe(true);
+  });
+
+  test('turning it off for something due wins over the date', () => {
+    const next = run(s, { type: 'setUseSoon', id: 'f1', on: false });
+    expect(item(next, 'f1').useSoon).toBe(false);
+    expect(isDueSoon(item(next, 'f1'))).toBe(false);
+  });
+
+  test('agreeing with the date goes back to following it', () => {
+    expect(item(run(s, { type: 'setUseSoon', id: 'z1', on: false }), 'z1').useSoon).toBeUndefined();
+    expect(item(run(s, { type: 'setUseSoon', id: 'f1', on: false }, { type: 'setUseSoon', id: 'f1', on: true }), 'f1').useSoon).toBeUndefined();
+  });
+
+  test('a new date moves it, clears the hand setting and updates the line', () => {
+    const next = run(s, { type: 'setUseSoon', id: 'f4', on: false }, { type: 'setBestBy', id: 'f4', daysLeft: 1 });
+    expect(item(next, 'f4')).toMatchObject({ daysLeft: 1, useSoon: undefined, meta: `Best by ${shortDate(1)}` });
+    expect(isDueSoon(item(next, 'f4'))).toBe(true);
+    expect(isDueSoon(item(run(s, { type: 'setBestBy', id: 'z1', daysLeft: 10 }), 'z1'))).toBe(false);
+  });
+
+  test('leaves the other items alone', () => {
+    const next = run(s, { type: 'setBestBy', id: 'f4', daysLeft: 1 }, { type: 'setUseSoon', id: 'f1', on: false });
+    expect(next.items.filter((i) => i.id !== 'f4' && i.id !== 'f1')).toEqual(s.items.filter((i) => i.id !== 'f4' && i.id !== 'f1'));
   });
 });
 

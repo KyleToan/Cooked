@@ -66,8 +66,14 @@ describe('mappers round-trip', () => {
   test('items: optionals become null, empty addedBy becomes null and back to empty', () => {
     const item: Item = { id: 'x', name: 'Milk', place: 'fridge', qty: 1, unit: 'carton', meta: '', daysLeft: 4, addedBy: '' };
     const row = itemToRow(item, K, today);
-    expect(row).toMatchObject({ amount_text: null, running_low: false, use_soon: false, added_by: null });
+    expect(row).toMatchObject({ amount_text: null, running_low: false, use_soon: null, added_by: null });
     expect(rowToItem(row, today)).toEqual(item);
+  });
+
+  test('items: use soon set off by hand stays off, apart from following the date', () => {
+    const item: Item = { id: 'x', name: 'Milk', place: 'fridge', qty: 1, unit: 'carton', meta: '', daysLeft: 1, useSoon: false, addedBy: 'a' };
+    expect(itemToRow(item, K, today).use_soon).toBe(false);
+    expect(rowToItem(itemToRow(item, K, today), today).useSoon).toBe(false);
   });
 
   test('to buy', () => {

@@ -44,19 +44,42 @@ export default function Join() {
   // The value we've decided is finished: pasted, submitted, or not typed into for a moment.
   // "Couldn't find a kitchen" only shows for that, never while someone is still typing.
   const [checked, setChecked] = useState('');
+  // What the server said about the last settled code: its kitchen, or null when there's none.
+  const [peek, setPeek] = useState<{ code: string; info: api.InvitePeek | null } | null>(null);
 
   const code = codeOf(value);
   // Without a backend only the sample code is known, so it shows the kitchen before joining.
   const found = !hasBackend && code === SEED_KITCHEN.inviteCode;
+  const peeked = hasBackend && peek?.code === code ? peek : null;
+  const note: api.InvitePeek | null = hasBackend
+    ? (peeked?.info ?? null)
+    : found
+      ? { kitchen: SEED_KITCHEN.name, invitedBy: SAM.name, items: inStock(SEED_ITEMS).length, toBuy: SEED_TO_BUY.length }
+      : null;
   const result = failed?.code === code ? failed.result : null;
   const failMessage = result ? FAILED[result] : undefined;
-  const notFound = hasBackend ? result === 'not_found' : !!value.trim() && !found && checked === value;
+  const notFound = hasBackend
+    ? result === 'not_found' || (!result && !!peeked && !peeked.info && checked === value)
+    : !!value.trim() && !found && checked === value;
 
   useEffect(() => {
     if (!value.trim()) return;
     const t = setTimeout(() => setChecked(value), SETTLE_MS);
     return () => clearTimeout(t);
   }, [value]);
+
+  // Look a settled code up once; an answer for a code that's since changed is dropped.
+  useEffect(() => {
+    const c = codeOf(checked);
+    if (!hasBackend || !c) return;
+    let live = true;
+    api.peekInvite(c).then((info) => {
+      if (live) setPeek({ code: c, info });
+    });
+    return () => {
+      live = false;
+    };
+  }, [checked]);
 
   const paste = async () => {
     const clip = (await Clipboard.getStringAsync()).trim();
@@ -104,19 +127,19 @@ export default function Join() {
       {!value ? <ActionPill label="Paste invite link" height="header" onPress={paste} /> : null}
       {notFound ? <ErrorLine text="We couldn’t find a kitchen with that code. Check the link and try again." /> : null}
       {failMessage ? <ErrorLine text={failMessage} /> : null}
-      {found ? (
+      {note ? (
         <BigNote paper="beige" tilt={-1} style={styles.note}>
           <Text variant="noteTitle" color="noteInk" maxFontSizeMultiplier={NOTE_TITLE_MAX}>
-            {SEED_KITCHEN.name}
+            {note.kitchen}
           </Text>
           <Text variant="caption" color="noteInkSoft">
-            {SAM.name} invited you{'\n'}
-            {inStock(SEED_ITEMS).length} things in the kitchen · {SEED_TO_BUY.length} on To Buy
+            {note.invitedBy ? `${note.invitedBy} invited you\n` : ''}
+            {note.items} {note.items === 1 ? 'thing' : 'things'} in the kitchen · {note.toBuy} on To Buy
           </Text>
         </BigNote>
       ) : null}
       <ActionPill
-        label={found ? `Join ${SEED_KITCHEN.name}` : 'Join'}
+        label={note ? `Join ${note.kitchen}` : 'Join'}
         variant="primary"
         height="bottom"
         onPress={join}

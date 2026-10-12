@@ -43,7 +43,7 @@ export type Item = {
   daysLeft: number;
   /** Pantry items flagged as running low instead of going off. */
   runningLow?: boolean;
-  /** Overrides the days-left rule for things like leftovers. */
+  /** Set by hand, overrides the days-left rule either way (leftovers on, a hardy thing off). Unset follows the date. */
   useSoon?: boolean;
   addedBy: string;
 };

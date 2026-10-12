@@ -20,7 +20,8 @@ export type ItemRow = {
   /** 'YYYY-MM-DD'. */
   best_by: string;
   running_low: boolean;
-  use_soon: boolean;
+  /** Null follows the date; true or false is set by hand. */
+  use_soon: boolean | null;
   added_by: string | null;
 };
 
@@ -72,7 +73,7 @@ export function itemToRow(item: Item, kitchenId: string, today: Date): ItemRow {
     meta: item.meta,
     best_by: bestByFromDays(item.daysLeft, today),
     running_low: item.runningLow ?? false,
-    use_soon: item.useSoon ?? false,
+    use_soon: item.useSoon ?? null,
     added_by: item.addedBy || null,
   };
 }
@@ -88,7 +89,7 @@ export function rowToItem(row: ItemRow, today: Date): Item {
     meta: row.meta,
     daysLeft: daysFromBestBy(row.best_by, today),
     runningLow: row.running_low || undefined,
-    useSoon: row.use_soon || undefined,
+    useSoon: row.use_soon ?? undefined,
     addedBy: row.added_by ?? '',
   };
 }

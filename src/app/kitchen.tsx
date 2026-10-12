@@ -1,21 +1,23 @@
+import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ScrollView, Share, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Platform, ScrollView, Share, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { ActionPill } from '@/components/ActionPill';
-import { UndoBar } from '@/components/Controls';
+import { Switch, UndoBar } from '@/components/Controls';
 import { PushedHeader, SectionHeader } from '@/components/Header';
 import { Icon } from '@/components/Icon';
 import { KitchenRow } from '@/components/ListRows';
 import { Screen } from '@/components/Screen';
 import { SearchField } from '@/components/SearchField';
+import { Sheet } from '@/components/Sheet';
 import { PAPER } from '@/components/StickyNote';
 import { TabIsland } from '@/components/TabIsland';
 import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
 import { AddRow, TodoList } from '@/components/TodoList';
-import { count, isDueSoon, joinAnd, sortToBuy, toBuyProgress } from '@/data/helpers';
+import { count, dateIn, daysUntil, isDueSoon, joinAnd, shortDate, sortToBuy, toBuyProgress } from '@/data/helpers';
 import { useStore, useUndo } from '@/data/store';
 import type { Item, Place } from '@/data/types';
 import { haptics } from '@/hooks/haptics';
@@ -42,6 +44,9 @@ const PLACE_COPY: Record<Place, { soonTitle: string; soonIsDate: boolean; restTi
   pantry: { soonTitle: 'Running low', soonIsDate: false, restTitle: 'In the pantry', add: 'Add to the pantry…', where: 'the pantry' },
   freezer: { soonTitle: 'Use soon', soonIsDate: true, restTitle: 'In the freezer', add: 'Add to the freezer…', where: 'the freezer' },
 };
+
+/** shortcut: the web has no date picker, so there the date steps through these days from today; fine for previews. */
+const WEB_DAYS = [1, 3, 7, 14];
 
 const isTab = (t: unknown): t is Tab => t === 'fridge' || t === 'pantry' || t === 'freezer' || t === 'tobuy';
 
@@ -196,7 +201,65 @@ function StockTab({
 }) {
   const router = useRouter();
   const { state, actions } = useStore();
+  const animate = useLayoutMotion();
   const copy = PLACE_COPY[place];
+  // iOS: the item whose use-by date is being picked in the sheet, and the date so far.
+  const [picking, setPicking] = useState<Item | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [draft, setDraft] = useState(() => new Date());
+
+  const setBestBy = (id: string, days: number) => {
+    animate();
+    actions.setBestBy(id, days);
+  };
+
+  const openDate = (i: Item) => {
+    const value = dateIn(i.daysLeft);
+    if (Platform.OS === 'android') {
+      DateTimePickerAndroid.open({ value, mode: 'date', onValueChange: (_e, d) => setBestBy(i.id, daysUntil(d)) });
+    } else if (Platform.OS === 'ios') {
+      setDraft(value);
+      setPicking(i);
+      setPickerOpen(true);
+    } else {
+      setBestBy(i.id, WEB_DAYS.find((d) => d > i.daysLeft) ?? WEB_DAYS[0]);
+    }
+  };
+
+  // Fridge and freezer only: the pantry's first section is Running low, not dates.
+  const dateControls = (i: Item) => (
+    <View style={styles.useBy}>
+      <View style={styles.useByPart}>
+        <Text variant="caption" color="inkMuted">
+          Use by
+        </Text>
+        <Tap
+          accessibilityRole="button"
+          accessibilityLabel={`Use by ${shortDate(i.daysLeft)}`}
+          accessibilityHint="Opens a date picker"
+          onPress={() => openDate(i)}
+          style={styles.datePill}
+        >
+          <Text variant="button" weight="semibold">
+            {shortDate(i.daysLeft)}
+          </Text>
+        </Tap>
+      </View>
+      <View style={styles.useByPart}>
+        <Text variant="caption" color="inkMuted">
+          Use soon
+        </Text>
+        <Switch
+          value={isDueSoon(i)}
+          label={`Use ${i.name} soon`}
+          onChange={(on) => {
+            animate();
+            actions.setUseSoon(i.id, on);
+          }}
+        />
+      </View>
+    </View>
+  );
 
   const isSoon = (i: Item) => (copy.soonIsDate ? isDueSoon(i) : !!i.runningLow);
   const soon = items.filter(isSoon);
@@ -232,6 +295,7 @@ function StockTab({
         onAction={() => (recipeAction ? findRecipe(i.name) : actions.addItemToBuy(i.id))}
         onQty={(qty) => actions.setQty(i.id, qty, 'kitchen')}
         onUseUp={() => actions.setQty(i.id, 0, 'kitchen')}
+        extra={copy.soonIsDate ? dateControls(i) : undefined}
       />
     );
   };
@@ -288,6 +352,29 @@ function StockTab({
         {rest.map((i) => row(i, false))}
         <AddRow placeholder={copy.add} label={copy.add.replace('…', '')} onSubmit={(name) => actions.addItem(name, place)} />
       </View>
+
+      {Platform.OS === 'ios' ? (
+        <Sheet visible={pickerOpen} onClose={() => setPickerOpen(false)} title={`Use ${picking?.name ?? 'it'} by`}>
+          <DateTimePicker
+            value={draft}
+            mode="date"
+            display="spinner"
+            themeVariant="light"
+            textColor={color.ink}
+            onValueChange={(_e, d) => setDraft(d)}
+            style={styles.picker}
+          />
+          <ActionPill
+            label="Done"
+            variant="primary"
+            height="bottom"
+            onPress={() => {
+              if (picking) setBestBy(picking.id, daysUntil(draft));
+              setPickerOpen(false);
+            }}
+          />
+        </Sheet>
+      ) : null}
     </View>
   );
 }
@@ -374,4 +461,15 @@ const styles = StyleSheet.create({
   noMatch: { gap: space.s1, paddingTop: space.s2 },
   sort: { minHeight: size.targetMin, justifyContent: 'center', paddingHorizontal: space.s1, marginRight: -space.s1 },
   toBuy: { paddingTop: space.s1 },
+  useBy: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', columnGap: space.s3 },
+  useByPart: { flexDirection: 'row', alignItems: 'center', gap: space.s2 },
+  datePill: {
+    minHeight: size.targetMin,
+    paddingVertical: space.s1,
+    paddingHorizontal: space.s3 + 2,
+    borderRadius: radius.pill,
+    backgroundColor: color.surfaceSunken,
+    justifyContent: 'center',
+  },
+  picker: { alignSelf: 'stretch' },
 });

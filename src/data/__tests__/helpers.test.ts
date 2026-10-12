@@ -1,5 +1,8 @@
 import { describe, expect, jest, test } from '@jest/globals';
 import {
+  daysUntil,
+  dateIn,
+  shortDate,
   amountLabel,
   bestByFromDays,
   count,
@@ -84,6 +87,16 @@ describe('use soon', () => {
     expect(stocked.some((i) => i.name === 'Greek yogurt')).toBe(false);
     expect(inStock(SEED_ITEMS, 'freezer').every((i) => i.place === 'freezer')).toBe(true);
     expect(inStock(SEED_ITEMS, 'freezer')).toHaveLength(4);
+  });
+});
+
+describe('use-by dates', () => {
+  const today = new Date(2026, 9, 30, 15, 0);
+  test('short date and days until round-trip across a month', () => {
+    expect(shortDate(0, today)).toBe('Oct 30');
+    expect(shortDate(3, today)).toBe('Nov 2');
+    expect(daysUntil(dateIn(3, today), today)).toBe(3);
+    expect(daysUntil(new Date(2026, 9, 29, 23, 0), today)).toBe(-1);
   });
 });
 

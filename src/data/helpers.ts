@@ -18,7 +18,8 @@ export function greeting(name: string, date = new Date()): string {
 /** Food that needs using in the next two days, or that's been flagged (leftovers). */
 export const USE_SOON_DAYS = 2;
 
-/** Whether it's due soon by date, whatever is left of it. Decides the Use soon section in Kitchen. */
+/** Whether it's due soon by date, whatever is left of it. Decides the Use soon section in Kitchen.
+ * `useSoon` set by hand wins either way; unset follows the date. */
 export function isDueSoon(item: Item): boolean {
   return item.useSoon ?? item.daysLeft <= USE_SOON_DAYS;
 }
@@ -107,10 +108,29 @@ function localMidnight(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
-/** today + days as a local calendar date, 'YYYY-MM-DD'. */
-export function bestByFromDays(days: number, today: Date): string {
+/** Local midnight, `days` after today. */
+export function dateIn(days: number, today = new Date()): Date {
   const d = localMidnight(today);
   d.setDate(d.getDate() + days);
+  return d;
+}
+
+/** Local calendar days from today to `date`. Rounded so DST days still count as one. */
+export function daysUntil(date: Date, today = new Date()): number {
+  return Math.round((localMidnight(date).getTime() - localMidnight(today).getTime()) / DAY);
+}
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** "Oct 14": the use-by date `days` from today. */
+export function shortDate(days: number, today = new Date()): string {
+  const d = dateIn(days, today);
+  return `${MONTHS[d.getMonth()]} ${d.getDate()}`;
+}
+
+/** today + days as a local calendar date, 'YYYY-MM-DD'. */
+export function bestByFromDays(days: number, today: Date): string {
+  const d = dateIn(days, today);
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
@@ -118,7 +138,7 @@ export function bestByFromDays(days: number, today: Date): string {
 /** Local calendar days from today to a 'YYYY-MM-DD' date. Rounded so DST days still count as one. */
 export function daysFromBestBy(bestBy: string, today: Date): number {
   const [y, m, d] = bestBy.split('-').map(Number);
-  return Math.round((new Date(y, m - 1, d).getTime() - localMidnight(today).getTime()) / DAY);
+  return daysUntil(new Date(y, m - 1, d), today);
 }
 
 /** "7:30 pm" -> [19, 30], the format the store keeps the send time in. Falls back to 5:00 pm. */

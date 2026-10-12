@@ -6,37 +6,41 @@ Suggested order: Phase 0 → 1 → 2 → 3 → 4 and 5 side by side → 6 → 7.
 
 ## Phase 0: Decisions (owner)
 
-- [ ] **T0.1 🔑 Backend.** Pick one for accounts, database, real-time sync and file storage (Supabase or Firebase are the usual Expo choices). Create the project with your own account; keys go in EAS environment variables. Log it in `Decisions.md`.
-- [ ] **T0.2 🔑 Receipt reading.** On-device (Apple Vision, needs a development build) or an AI/OCR service (sends photos out). How items get sorted into fridge, pantry or freezer.
-- [ ] **T0.3 🔑 Open product rules.** Who can remove whom from a kitchen. How "use soon" dates are worked out (shelf-life defaults, by hand, or both). Whether recipe links are fetched on a server or on the device.
+- [x] **T0.1 🔑 Backend.** Pick one for accounts, database, real-time sync and file storage (Supabase or Firebase are the usual Expo choices). Create the project with your own account; keys go in EAS environment variables. Log it in `Decisions.md`. *Supabase (Decisions #82).*
+- [x] **T0.2 🔑 Receipt reading.** On-device (Apple Vision, needs a development build) or an AI/OCR service (sends photos out). How items get sorted into fridge, pantry or freezer. *On the phone with Google ML Kit (Decisions #86, #92); places still come from the keyword table in `receipt.ts`.*
+- [x] **T0.3 🔑 Open product rules.** Who can remove whom from a kitchen. How "use soon" dates are worked out (shelf-life defaults, by hand, or both). Whether recipe links are fetched on a server or on the device. *Only the kitchen's maker removes people (Decisions #84), and when the maker leaves, the earliest joiner takes over. Use soon is both: a per-item shelf life sets it, and you can mark or change it by hand. Links are fetched on the device (Decisions #59; see T5.5).*
+- [ ] **T0.4 🔑 Account fields.** Can Email, Sign-in method and Units be changed, and how? Decisions #54 left them read-only. For Units: is metric wanted, and where do units show besides recipe amounts? Needs design if yes. *Replaces "Units" under "Needs a decision".*
 
 ## Phase 1: Foundations
 
 - [ ] **T1.1 Development build.** Owner runs `eas login`, `init`, `update:configure`; build with `npx eas-cli@latest build --profile development`. Needed for real Apple/Google sign-in, push and on-device OCR. *Done when the app runs on a phone from a dev build.*
-- [ ] **T1.2 Backend client.** Install the SDK with `npx expo install`, pinned. Config only from env vars; list the names in `AGENTS.md`.
-- [ ] **T1.3 Schema.** Tables matching `src/data/types.ts`: people, kitchens, kitchen_members, items, to_buy, recipes, invites, notification_settings. Access rules so you only see kitchens you belong to. *Done when two test accounts can't see each other's kitchens.*
-- [ ] **T1.4 Store on the backend.** Keep the `actions` in `src/data/store.tsx` with the same names and inputs; each writes to the backend. Load on sign-in, subscribe to live changes, keep undo, cache on the device for offline. *Done when a change on one phone shows on another within seconds.*
+- [x] **T1.2 Backend client.** Install the SDK with `npx expo install`, pinned. Config only from env vars; list the names in `AGENTS.md`. *`src/data/supabase.ts`; `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.*
+- [x] **T1.3 Schema.** Tables matching `src/data/types.ts`: people, kitchens, kitchen_members, items, to_buy, recipes, invites, notification_settings. Access rules so you only see kitchens you belong to. *Done when two test accounts can't see each other's kitchens.* *In `supabase/migrations/`, applied and checked with two test users.*
+- [x] **T1.4 Store on the backend.** Keep the `actions` in `src/data/store.tsx` with the same names and inputs; each writes to the backend. Load on sign-in, subscribe to live changes, keep undo, cache on the device for offline. *Done when a change on one phone shows on another within seconds.* *Built (`remote.ts`, `store.tsx`, Decisions #83); not yet run on two phones. Offline writes are T1.6.*
+- [ ] **T1.5 Network error states with retry.** Every call that can fail (saving a change, loading the kitchen, joining, importing a recipe) needs an error state and a Retry, following the design system's error rules; the checklist asks that "every flow that can fail has an error state". Today error lines already say whether you're offline or the server failed (Decisions #89), but none offers Retry, and a failed kitchen write rolls back without telling you. *Done when, with the network off, each of the four shows an error with Retry, and Retry works once the network is back.*
+- [ ] **T1.6 Offline write queue.** Decision #83 says "No offline queue yet: a failed write rolls back". Instead, keep failed writes on the phone and retry them about every 5 seconds and when the app comes back to the front, so changes made offline aren't lost. The `supabase-backend` branch has a reference design in commit 977d7c1: `flush` and `RETRY_MS` in `src/data/store.tsx`, and the diff against the server's last copy in `src/data/sync.ts`. Log the change to #83 in `Decisions.md`. *Done when ticking items in airplane mode and turning the network back on brings the same changes to a second phone, and killing the app while offline doesn't lose them.*
 
 ## Phase 2: Accounts
 
-- [ ] **T2.1 Email and phone codes.** Real one-time codes; resend with a cooldown; remove `481726`.
-- [ ] **T2.2 Sign in with Apple.** Turn on `usesAppleSignIn`; pass Apple's token to the backend.
-- [ ] **T2.3 Sign in with Google.** Google OAuth (client IDs in env vars).
-- [ ] **T2.4 Stay signed in.** Session in `expo-secure-store`; "onboarded" saved on the account.
-- [ ] **T2.5 Log out and delete account.** Delete removes sign-in and name, keeps the kitchen for the others (server function).
+- [x] **T2.1 Email and phone codes.** Real one-time codes; resend with a cooldown; remove `481726`. *Real codes through Supabase Auth. `481726` stays for local mode only until T7.5. Phone codes need an SMS provider set up in Supabase (Decisions #87).*
+- [x] **T2.2 Sign in with Apple.** Turn on `usesAppleSignIn`; pass Apple's token to the backend. *Token passed in `src/data/auth.ts`; needs the dev build (T1.1) to try.*
+- [x] **T2.3 Sign in with Google.** Google OAuth (client IDs in env vars). *Through Supabase's OAuth page (`src/data/auth.ts`).*
+- [x] **T2.4 Stay signed in.** Session in `expo-secure-store`; "onboarded" saved on the account. *The session is kept in `expo-sqlite/localStorage` (`src/data/supabase.ts`), not `expo-secure-store`.*
+- [x] **T2.5 Log out and delete account.** Delete removes sign-in and name, keeps the kitchen for the others (server function). *The `delete_account` function is called from Account. The App Store requires in-app account deletion, so this covers that requirement (T7.4).*
+- [ ] **T2.6 Edit account fields.** Build whatever T0.4 decides for Email, Sign-in method and Units. The name sheet already exists and only needs to save to the server. *Done when each field T0.4 makes editable changes on the server and shows on the next sign-in.*
 
 ## Phase 3: Kitchens and sharing
 
-- [ ] **T3.1 Create a kitchen.** Just me and Me and my household make a real kitchen.
-- [ ] **T3.2 Invite links.** `cooked.app/join/<code>`, one person, 7 days; Make a new link cancels the old; system share sheet.
-- [ ] **T3.3 Join.** Server checks the code; universal links open the app; existing error for unknown or expired codes.
-- [ ] **T3.4 Household.** Rename, remove (rule from T0.3) with undo, leave; "Added by Sam" and activity lines from real data.
+- [x] **T3.1 Create a kitchen.** Just me and Me and my household make a real kitchen. *`create_kitchen` (`src/data/kitchenApi.ts`).*
+- [x] **T3.2 Invite links.** `cooked.app/join/<code>`, one person, 7 days; Make a new link cancels the old; system share sheet.
+- [ ] **T3.3 Join.** Server checks the code; universal links open the app; existing error for unknown or expired codes. Before joining, Join shows a preview of the kitchen the code belongs to (its name and who made it). *The server check and the error are built; universal links (`associatedDomains` and the apple-app-site-association file on `cooked.app`) aren't. The preview is being built now.*
+- [x] **T3.4 Household.** Rename, remove (rule from T0.3) with undo, leave; "Added by Sam" and activity lines from real data. *Only the maker removes people (Decisions #84). When the maker leaves, the earliest joiner becomes the maker; that hand-over is being built now.*
 
 ## Phase 4: Scanning
 
-- [ ] **T4.1 Receipts.** Photo → text (T0.2) → lines with `parseReceipt` in `src/data/receipt.ts` → Check your scan. Unreadable → Couldn't read this receipt. *The parser is done; still needs OCR (T0.2) and wiring into Scan.*
-- [ ] **T4.2 Fridge, Pantry, Freezer and Recipe modes.** Recognize items on a shelf; read a recipe page photo.
-- [ ] **T4.3 Use-soon dates.** `daysLeft` from the T0.3 rule instead of `DEFAULT_DAYS`.
+- [x] **T4.1 Receipts.** Photo → text (T0.2) → lines with `parseReceipt` in `src/data/receipt.ts` → Check your scan. Unreadable → Couldn't read this receipt. *ML Kit is wired into Scan (Decisions #92, #93); not yet checked against real receipt photos.*
+- [ ] **T4.2 Fridge, Pantry, Freezer and Recipe modes.** Recognize items on a shelf; read a recipe page photo. *Recipe mode is done (Decisions #94). The shelf modes wait on "Needs a decision".*
+- [ ] **T4.3 Use-soon dates.** `daysLeft` from the T0.3 rule instead of `DEFAULT_DAYS`. *The automatic part is done: a per-item shelf life (Decisions #95). Marking or changing it by hand is being built now.*
 
 ## Phase 5: Recipes
 
@@ -44,6 +48,8 @@ Suggested order: Phase 0 → 1 → 2 → 3 → 4 and 5 side by side → 6 → 7.
 - [x] **T5.2 Import from pasted text.** Title, ingredients and steps.
 - [x] **T5.3 Match ingredients.** Missing and have from real items with fuzzy names (`src/data/match.ts`).
 - [x] **T5.4 Tonight's pick.** The recipe that uses the most use-soon items.
+- [ ] **T5.5 Server-side link import.** Only if testers hit sites that block fetching from the phone, or the web version matters (on the web most sites block the fetch, Decisions #59). Same parser and same screens, run in a Supabase function. *Done when a link that fails on the phone imports through the server.*
+- [ ] **T5.6 Full sample recipes.** Chickpea curry, Berry overnight oats and Pesto pasta have no steps, only list data (Decisions #55). Either write their steps, or drop them when the sample data goes (T7.5). *Done when every sample recipe opens with steps and I made this, or is gone.*
 
 ## Phase 6: Notifications
 
@@ -55,7 +61,9 @@ Suggested order: Phase 0 → 1 → 2 → 3 → 4 and 5 side by side → 6 → 7.
 - [ ] **T7.1 Help, Privacy and Terms** pages at `cooked.app`. Privacy lists every service that gets user data.
 - [ ] **T7.2 App icon and splash** to replace the Expo placeholders.
 - [x] **T7.3 Tests** for the store, receipt parser, recipe import and ingredient matching (`npm test`). Keep adding as features land.
-- [ ] **T7.4 Ship.** Update to `preview`, test with friends, then `production` and the App Store.
+- [ ] **T7.4 Ship.** Update to `preview`, test with friends, then `production` and the App Store. The App Store also needs a store listing, screenshots and the privacy nutrition labels (every service that gets user data, matching T7.1). In-app account deletion is required and already built (T2.5).
+- [ ] **T7.5 Remove sample data and dev shortcuts.** Before launch, take out `src/data/seed.ts` (Rivera kitchen), the `SAMPLE_SCAN` and `SAMPLE_RECIPE_PAGE` fallbacks in Scan and `ocr.ts`, the `rivera-kitchen` join code, the **DEV error** button on Scan, `supabase/seed.sql`, and the notes about them in `AGENTS.md` and `context.md`. Keep what the tests need as test fixtures. *Done when a production build has no sample data or dev shortcuts and `npm test` still passes.*
+- [ ] **T7.6 Accessibility pass on a device.** VoiceOver labels on every control, Dynamic Type at the largest sizes, reduced motion, 44pt tap targets and 4.5:1 contrast for text that matters (design checklist). *Done when every flow in `design/screens/README.md` works with VoiceOver and at the largest text size on a phone.*
 
 ---
 
@@ -220,8 +228,8 @@ Account links to `cooked.app/help`, `/privacy` and `/terms`, which don't exist. 
 These are features the design mentions but that need the owner's choice before they can become tickets.
 
 - **Fridge, Pantry and Freezer scan modes.** Recognising food on a shelf from a photo needs an image model, either on the phone (big download, rough results) or a service (backend, costs per scan). Which, or drop it?
-- **Units.** Account shows "Cups and ounces" as read-only. Is metric wanted, and where do units show besides recipe amounts?
-- **Editing an item by hand** (quantity, date, place, marking a leftover as use soon). The design has Use and swipe to Use up, but no edit screen.
+- **Units, Email and Sign-in.** Now T0.4 and T2.6 above.
+- **Editing an item by hand** (quantity, place). The design has Use and swipe to Use up, but no edit screen. Marking an item use soon or changing its date by hand is decided (T0.3) and being built.
 - **Import from Safari's share sheet.** Sharing a recipe link straight to Cooked needs a share extension (a native config plugin and a new build). Wanted?
 - **Dark mode and iPad** (Decision #40: light mode and iPhone only). No designs yet.
 
@@ -283,7 +291,7 @@ Pushing failed with "could not read Username". Run `gh auth login` (or set up a 
 ### 8. Things only you can provide
 - App icon and splash artwork (ticket 10).
 - Help, Privacy and Terms pages at `cooked.app` (ticket 11).
-- Answers to "Needs a decision" above: shelf-scan modes, units, editing items by hand, Safari share, dark mode and iPad.
+- Answers to "Needs a decision" above and T0.4: shelf-scan modes, account fields and units, editing items by hand, Safari share, dark mode and iPad.
 
 ### 9. Ship to testers (ticket 12)
 `npx eas-cli@latest build --profile preview`, submit to TestFlight, then `npx eas-cli@latest update --channel preview --message "..." --environment preview` and check it reaches the build.
