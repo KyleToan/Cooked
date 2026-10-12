@@ -56,7 +56,7 @@ None yet. When there is, list the variable names here (never the values) and kee
 
 - Expo changes every SDK. Before using an Expo, EAS or React Native API, check the docs for this SDK (https://docs.expo.dev/versions/v57.0.0/) instead of relying on memory. https://docs.expo.dev/llms.txt indexes them.
 - `ios/` and `android/` are generated (Continuous Native Generation) and git-ignored. Never create or edit them; configure native behavior in `app.json` and config plugins.
-- Expo Go only includes Expo's bundled native modules. Everything in the app works in Expo Go today; adding a library with other native code means using a development build instead.
+- Expo Go only includes Expo's bundled native modules. Receipt reading uses ML Kit (native code), so it only works in a development build; in Expo Go and on the web, Scan shows the sample receipt in development. Everything else works in Expo Go; adding a library with other native code means using a development build instead.
 - Prefer Expo's own modules over third-party libraries.
 
 ### UI code rules

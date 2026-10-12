@@ -75,7 +75,7 @@ Faked until there's a backend:
 - **Sign-in.** Any email or number works and the code is always `481726`. Apple's button is Apple's own on iOS, but no real Apple or Google sign-in happens.
 - **Accounts and sync.** Everything lives in memory and resets when the app restarts, including having finished onboarding. Sam never changes anything.
 - **Kitchens.** Just me and Me and my household start a new, empty kitchen that the first scan fills. Joining only works with the code `rivera-kitchen`, which loads the sample Rivera kitchen.
-- **Receipt reading (OCR).** The camera takes a real photo (or you pick one), but Check your scan always shows the 7 sample Corner Market items. Scan has only the Receipt mode for now; the other modes come back when they work. The step after OCR is built: `parseReceipt` in `src/data/receipt.ts` turns receipt text into Check your scan lines, waiting for an OCR choice.
+- **Receipt reading (OCR)** is real in a development build: the photo is read on the phone with Google ML Kit (`src/data/ocr.ts`), and `parseReceipt` in `src/data/receipt.ts` turns the text into Check your scan lines. No food lines or a failed read shows "Couldn't read this receipt". Expo Go and the web have no ML Kit, so there Scan shows the 7 sample Corner Market items in development. Scan has only the Receipt mode for now. Not yet checked against real receipt photos.
 - **Recipe import** is real: a link is fetched on the device and its schema.org recipe data read; pasted text is split into ingredients and steps (`src/data/recipeImport.ts`). In a web browser most sites block the fetch, so links there show "No recipe on that page".
 - **Notifications.** The switches and send time are kept in memory; nothing is sent.
 - **Help, Privacy and Terms** open `cooked.app` pages that don't exist yet.
@@ -83,7 +83,7 @@ Faked until there's a backend:
 ## Open questions
 
 - Backend, accounts and real-time sync for a shared kitchen.
-- How receipt scanning works (on-device OCR such as Apple Vision, or a service) and how items get sorted into fridge, pantry or freezer.
+- How items get sorted into fridge, pantry or freezer beyond the keyword list in `receipt.ts`.
 - Whether recipe links should move from on-device fetching to a server.
 - How "use soon" dates are worked out (typical shelf life per item, or entered by hand).
 - Push notifications: the design has To Buy changes, a daily use-soon nudge, someone joining and a weekly summary.
