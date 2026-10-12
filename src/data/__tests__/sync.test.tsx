@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 
 import type { Loaded, Synced } from '@/data/remote';
+import { toSaved } from '@/data/saved';
 import { initialState, reducer, StoreProvider, useStore } from '@/data/store';
 
 jest.mock('expo-router', () => ({ useFocusEffect: () => undefined }));
@@ -121,5 +122,74 @@ describe('StoreProvider with a backend', () => {
     expect(box.store!.state.toBuy[0].done).toBe(false);
     // The rollback itself is not written.
     expect(mockWriteDiff).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('StoreProvider with a backend and a copy on the phone', () => {
+  const box: { store?: ReturnType<typeof useStore> } = {};
+  function Probe() {
+    const current = useStore();
+    useEffect(() => {
+      box.store = current;
+    });
+    return null;
+  }
+  const flush = () => act(async () => {});
+  const store = new Map<string, string>();
+  let renderer: ReactTestRenderer;
+
+  const cache = (userId: string) => {
+    const data = loaded();
+    const s = reducer(initialState(), { type: 'hydrate', data: { ...data, user: { ...data.user, id: userId } } });
+    store.set('cooked.state', toSaved(s, new Date()));
+  };
+  const mount = async () => {
+    await act(async () => {
+      renderer = create(
+        <StoreProvider>
+          <Probe />
+        </StoreProvider>,
+      );
+    });
+    await flush();
+  };
+
+  beforeEach(() => {
+    store.clear();
+    (globalThis as { localStorage?: unknown }).localStorage = {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+      removeItem: (k: string) => void store.delete(k),
+    };
+    // Offline: the load never comes back.
+    mockLoadAll.mockReset().mockReturnValue(new Promise(() => undefined));
+    mockWriteDiff.mockReset().mockResolvedValue(undefined);
+    (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+  });
+  afterEach(() => {
+    act(() => renderer.unmount());
+    delete (globalThis as { localStorage?: unknown }).localStorage;
+  });
+
+  test('opens to the restored kitchen at once, and the restore is not written to the server', async () => {
+    cache('u1');
+    await mount();
+    expect(box.store!.ready).toBe(true);
+    expect(box.store!.state.kitchen.id).toBe('k1');
+    expect(box.store!.state.session.onboarded).toBe(true);
+    expect(mockWriteDiff).not.toHaveBeenCalled();
+    // A real edit still goes up, as a diff against the restored copy.
+    await act(async () => box.store!.actions.toggleToBuy('t1', 'home'));
+    await flush();
+    expect(mockWriteDiff).toHaveBeenCalledTimes(1);
+  });
+
+  test("someone else's copy is dropped", async () => {
+    cache('u2');
+    await mount();
+    expect(box.store!.state.kitchen.id).toBeUndefined();
+    expect(box.store!.state.session.onboarded).toBe(false);
+    expect(store.has('cooked.state')).toBe(false);
+    expect(mockWriteDiff).not.toHaveBeenCalled();
   });
 });

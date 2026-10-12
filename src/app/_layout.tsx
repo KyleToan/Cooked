@@ -1,3 +1,5 @@
+// localStorage on iOS and Android, backed by SQLite; the store loads the saved kitchen from it.
+import 'expo-sqlite/localStorage/install';
 import { useEffect } from 'react';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
@@ -9,11 +11,14 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { CookingLoader } from '@/components/Loader';
 import { StoreProvider, useStore } from '@/data/store';
+import { useLocalNotifications } from '@/hooks/useLocalNotifications';
 import { color, fontFaces } from '@/theme';
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  // Native builds bundle the fonts (expo-font plugin in app.json), so this is already loaded there;
+  // it only loads them in Expo Go and on web.
   const [loaded, error] = useFonts(fontFaces);
 
   useEffect(() => {
@@ -40,6 +45,7 @@ export default function RootLayout() {
 function Routes() {
   const { state, ready } = useStore();
   const onboarded = state.session.onboarded;
+  useLocalNotifications(state);
 
   // Restoring the saved Supabase session and loading its kitchen on launch; instant without a backend.
   if (!ready) {

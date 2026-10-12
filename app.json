@@ -28,7 +28,22 @@
     },
     "plugins": [
       "expo-router",
-      "expo-font",
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./node_modules/@expo-google-fonts/alumni-sans/600SemiBold/AlumniSans_600SemiBold.ttf",
+            "./node_modules/@expo-google-fonts/alumni-sans/700Bold/AlumniSans_700Bold.ttf",
+            "./node_modules/@expo-google-fonts/albert-sans/400Regular/AlbertSans_400Regular.ttf",
+            "./node_modules/@expo-google-fonts/albert-sans/500Medium/AlbertSans_500Medium.ttf",
+            "./node_modules/@expo-google-fonts/albert-sans/600SemiBold/AlbertSans_600SemiBold.ttf",
+            "./node_modules/@expo-google-fonts/albert-sans/700Bold/AlbertSans_700Bold.ttf",
+            "./node_modules/@expo-google-fonts/caveat/400Regular/Caveat_400Regular.ttf",
+            "./node_modules/@expo-google-fonts/caveat/500Medium/Caveat_500Medium.ttf",
+            "./node_modules/@expo-google-fonts/caveat/700Bold/Caveat_700Bold.ttf"
+          ]
+        }
+      ],
       "expo-splash-screen",
       [
         "expo-camera",

@@ -3,9 +3,9 @@
 
 import type { ReactNode } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
-import Svg, { Circle, Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
-import { color, size } from '@/theme';
+import { color } from '@/theme';
 
 const GLASS = 0.4;
 
@@ -58,31 +58,6 @@ export function CornerGuides({ style, faded }: { style?: StyleProp<ViewStyle>; f
       <View style={[styles.corner, styles.bl]} />
       <View style={[styles.corner, styles.br]} />
     </View>
-  );
-}
-
-/*
- * Photos and Flash are drawn in the AppScan prototype but aren't among the 20
- * icons in design/system/icons. These are the prototype's own shapes, kept to
- * this screen. See Decisions.md.
- */
-const GLYPH = 22;
-
-export function PhotosGlyph({ tint = color.onInk }: { tint?: string }) {
-  return (
-    <Svg width={GLYPH} height={GLYPH} viewBox="0 0 24 24" fill="none" stroke={tint} strokeWidth={size.iconStroke} strokeLinecap="round" strokeLinejoin="round">
-      <Rect x="3.5" y="5" width="17" height="14" rx="2" />
-      <Path d="M3.5 16l5-4.5 4 3.5 3-2.5 5 4" />
-      <Circle cx="15.5" cy="9.5" r="1.4" />
-    </Svg>
-  );
-}
-
-export function FlashGlyph({ tint = color.onInk }: { tint?: string }) {
-  return (
-    <Svg width={GLYPH} height={GLYPH} viewBox="0 0 24 24" fill="none" stroke={tint} strokeWidth={size.iconStroke} strokeLinecap="round" strokeLinejoin="round">
-      <Path d="M13 3L5 13h6l-1 8 8-10h-6z" />
-    </Svg>
   );
 }
 

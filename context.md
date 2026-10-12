@@ -6,7 +6,7 @@ Everything an agent or new contributor needs to know about Cooked. Rules for age
 
 Cooked is a shared kitchen app for a household. You:
 
-- **Scan** a grocery receipt and Cooked puts each item where it lives. (Scanning a shelf is planned; recipes come in through Import.)
+- **Scan** a grocery receipt and Cooked puts each item where it lives, or a cookbook page to import the recipe. (Scanning a shelf is planned.)
 - **Track** what's in your Fridge, Pantry and Freezer, with quantities and what to use soon.
 - **Import** recipes from a link or pasted text and see what you already have for them.
 - **Share one To Buy list** with the people you live with.
@@ -38,7 +38,7 @@ The full design system is in `design/system/` and at https://claude.ai/artifact/
 - **Alumni Sans** for titles (bold) and section headings (semibold), **Albert Sans** for everything else, **Caveat** handwriting only on sticky notes.
 - Sticky notes in Cornsilk (Fridge), Papaya (Pantry) and Beige (Freezer).
 - Floating tab island: Home, Scan, Recipes.
-- 20 custom icons on a 24px grid.
+- 22 custom icons on a 24px grid.
 - Every screen must pass **Avoid the AI look** (`design/system/avoid-the-ai-look.md`).
 
 ## How sharing works in the design
@@ -68,19 +68,19 @@ The full design system is in `design/system/` and at https://claude.ai/artifact/
 
 ## What's built and what's faked
 
-Built (branch `build-screens`): onboarding (all three paths, Apple and Google, email or phone with a code), Home and the empty first-run Home, Your Kitchen with all four tabs, Recipes, Recipe, Import a recipe (loading, found and error states), Scan with the real camera, Check your scan, Couldn't read this receipt, Account with the delete sheet, Rivera kitchen, and Notifications. Every action changes the local store, and everything that removes something can be undone or asks first. Logging out clears the kitchen on this phone until there's a backend.
+Built (branch `build-screens`): onboarding (all three paths, Apple and Google, email or phone with a code), Home and the empty first-run Home, Your Kitchen with all four tabs, Recipes, Recipe, Import a recipe (loading, found and error states), Scan with the real camera, Check your scan, Couldn't read this receipt, Account with the delete sheet, Rivera kitchen, and Notifications. Every action changes the local store, and everything that removes something can be undone or asks first. The kitchen, To Buy, recipes, notification settings and finished onboarding are saved on the phone and survive a restart (`src/data/saved.ts`); when signed in to Supabase the server's copy replaces it on load (Decisions #99). Logging out clears the kitchen and the saved copy.
 
-Backend (Supabase, Decisions #82–88): the schema and RPCs are in `supabase/migrations/` and applied to the Supabase project (access rules checked with two test users), and the app code is built: real sign-in (`src/data/supabase.ts`, `auth.ts`), loading, write-through and realtime sync (`remote.ts`, `store.tsx`), and kitchen actions (`kitchenApi.ts`). It turns on when `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` are set; without them the app runs in the local mode below. The app itself hasn't been run against it yet.
+Backend (Supabase, Decisions #82–89): the schema and RPCs are in `supabase/migrations/` and applied to the Supabase project (access rules checked with two test users), and the app code is built: real sign-in (`src/data/supabase.ts`, `auth.ts`), loading, write-through and realtime sync (`remote.ts`, `store.tsx`), and kitchen actions (`kitchenApi.ts`). It turns on when `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` are set; without them the app runs in the local mode below. The app itself hasn't been run against it yet.
 
 Local mode (no env vars):
 
 - **Sign-in.** Any email or number works and the code is always `481726`. Apple's button is Apple's own on iOS, but no real Apple or Google sign-in happens.
-- **Accounts and sync.** Everything lives in memory and resets when the app restarts, including having finished onboarding. Sam never changes anything.
+- **Accounts and sync.** Everything lives on this phone only; nothing syncs. Sam never changes anything.
 - **Kitchens.** Just me and Me and my household start a new, empty kitchen that the first scan fills. Joining only works with the code `rivera-kitchen`, which loads the sample Rivera kitchen.
-
-- **Receipt reading (OCR)** happens on the phone with Google ML Kit (`src/data/ocr.ts`), then `parseReceipt` in `src/data/receipt.ts` turns the text into Check your scan lines. It needs a development build: in Expo Go and on web, development shows the 7 sample Corner Market items. Scan has only the Receipt mode for now.
+- **Receipt reading (OCR)** is real in a development build: the photo is read on the phone with Google ML Kit (`src/data/ocr.ts`), and `parseReceipt` in `src/data/receipt.ts` turns the text into Check your scan lines. No food lines or a failed read shows "Couldn't read this receipt". Expo Go and the web have no ML Kit, so there Scan shows the 7 sample Corner Market items in development. Not yet checked against real receipt photos.
+- **Recipe scanning.** Scan's Recipe mode reads a cookbook page the same way and opens Import with the text, which shows the recipe it found or "No recipe on that page". In Expo Go and on the web it uses a sample page in development. Not yet checked against real cookbook photos.
 - **Recipe import** is real: a link is fetched on the device and its schema.org recipe data read; pasted text is split into ingredients and steps (`src/data/recipeImport.ts`). In a web browser most sites block the fetch, so links there show "No recipe on that page".
-- **Notifications.** The switches and send time are kept in memory; nothing is sent.
+- **Notifications.** The use-soon nudge and the Sunday summary are scheduled on the phone from the current kitchen (Decisions #97). To Buy changes and joins need server push, which comes later (Decisions #87), so they're only saved. The switches and send time are saved on the phone.
 - **Help, Privacy and Terms** open `cooked.app` pages that don't exist yet.
 
 ## Open questions
@@ -89,7 +89,7 @@ Local mode (no env vars):
 - What happens to a kitchen when its creator leaves (no one left can remove people).
 - How items get sorted into fridge, pantry or freezer beyond the keyword table in `receipt.ts`.
 - Whether recipe links should move from on-device fetching to a server.
-- How "use soon" dates are worked out (typical shelf life per item, or entered by hand).
+- Whether "use soon" dates can be edited by hand. New items get a typical shelf life per item (Decisions #95).
 - Push notifications: the design has To Buy changes, a daily use-soon nudge, someone joining and a weekly summary.
 
 ## Notes from conversations

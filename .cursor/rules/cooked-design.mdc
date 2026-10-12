@@ -22,7 +22,7 @@ Before writing or changing any screen or component:
 - No black buttons, black cards or a black tab island.
 - Lists are flat rows with `line-soft` dividers, not cards.
 - Tap targets are at least 44pt, even when the drawn control is smaller.
-- Use only the 20 icons in `design/system/icons/`.
+- Use only the 22 icons in `design/system/icons/`.
 - Use the system keyboard, share sheet, camera and Sign in with Apple. The prototypes fake these.
 - Copy comes from the prototype. Don't rewrite it or invent new copy without asking.
 - Build only what the prototype shows. If something is missing (a state, an edge case), make the smallest choice that fits the design system and log it in `Decisions.md`.

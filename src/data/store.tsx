@@ -8,6 +8,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useReducer,
 import { useAuth } from './auth';
 import { guessPlace, makeId } from './helpers';
 import { checkRecipe, checkRecipes, usedWhenMade } from './match';
+import { shelfLifeFor } from './receipt';
+import { clearSaved, loadSaved, save, type Saved } from './saved';
 import {
   ALEX,
   NEW_INVITE_CODE,
@@ -59,8 +61,6 @@ export type State = {
   undo: Undo | null;
 };
 
-const DEFAULT_DAYS: Record<Place, number> = { fridge: 7, pantry: 180, freezer: 90 };
-
 export function initialState(): State {
   return {
     session: { onboarded: false, signIn: null, contact: '', path: null, lastScan: { fridge: [], pantry: [], freezer: [] } },
@@ -100,7 +100,9 @@ export type Action =
   | { type: 'finishOnboarding' }
   | { type: 'reset' }
   /** Server data replaces the local copy (load, realtime refetch, or rollback after a failed write). */
-  | { type: 'hydrate'; data: Partial<Loaded> };
+  | { type: 'hydrate'; data: Partial<Loaded> }
+  /** The copy kept on the phone, put back on launch. */
+  | { type: 'restore'; saved: Saved };
 
 const snap = (s: State): Snapshot => ({ items: s.items, toBuy: s.toBuy, kitchen: s.kitchen, recipes: s.recipes });
 
@@ -158,7 +160,7 @@ export function reducer(s: State, a: Action): State {
         qty: 1,
         unit: '',
         meta: `Added by ${s.user.name}`,
-        daysLeft: DEFAULT_DAYS[a.place],
+        daysLeft: shelfLifeFor(name, a.place),
         addedBy: s.user.id,
       };
       return { ...s, items: [...s.items, item], undo: null };
@@ -199,7 +201,7 @@ export function reducer(s: State, a: Action): State {
               qty: line.qty,
               unit: '',
               meta: 'From today’s receipt',
-              daysLeft: DEFAULT_DAYS[place],
+              daysLeft: shelfLifeFor(line.name, place),
               addedBy: s.user.id,
             },
           ];
@@ -315,6 +317,8 @@ export function reducer(s: State, a: Action): State {
       const session = { ...s.session, onboarded: onboarded ?? s.session.onboarded, contact: contact ?? s.session.contact };
       return { ...s, ...rest, kitchen: k, session, undo: null };
     }
+    case 'restore':
+      return { ...s, ...a.saved, undo: null };
   }
 }
 
@@ -355,21 +359,29 @@ function makeActions(dispatch: (a: Action) => void) {
     choosePath: (path: KitchenPath) => dispatch({ type: 'choosePath', path }),
     skipFirstScan: () => dispatch({ type: 'skipFirstScan' }),
     finishOnboarding: () => dispatch({ type: 'finishOnboarding' }),
-    /** Log out or delete the account: back to Welcome with the sample data. */
+    /** Log out or delete the account: back to Welcome with the sample data, and the saved copy cleared. */
     reset: () => dispatch({ type: 'reset' }),
   };
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, undefined, initialState);
+  // The copy kept on the phone, loaded on the first render before the splash hides, so a
+  // signed-in person opens to their kitchen (even offline) and onboarding doesn't flash.
+  const [cached] = useState(loadSaved);
+  const [state, dispatch] = useReducer(reducer, cached, (c) => (c ? reducer(initialState(), { type: 'restore', saved: c }) : initialState()));
   const { session, ready: authReady } = useAuth();
+  // With a backend, whose kitchen the phone's copy is; the server's load still wins.
+  const cachedFor = hasBackend ? cached?.user.id : undefined;
   // The person whose first load has finished, so the loader shows once per sign-in.
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
 
   // What the server is known to hold (`synced`), the last write it confirmed (`confirmed`),
   // and how many writes are still on their way.
-  const synced = useRef<Synced | null>(null);
-  const confirmed = useRef<Synced | null>(null);
+  // The restored copy is the baseline, like a hydrate, so it is never written back as local edits.
+  const restored: Synced | null =
+    hasBackend && cached ? { kitchen: state.kitchen, items: state.items, toBuy: state.toBuy, recipes: state.recipes } : null;
+  const synced = useRef<Synced | null>(restored);
+  const confirmed = useRef<Synced | null>(restored);
   const chain = useRef(Promise.resolve());
   const pending = useRef(0);
   const writes = useRef(0);
@@ -400,6 +412,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const userId = session?.user.id;
+  // The phone's copy belongs to someone else (or nobody is signed in any more): drop it.
+  useEffect(() => {
+    if (!authReady || !cachedFor || cachedFor === userId || state.user.id !== cachedFor) return;
+    synced.current = confirmed.current = null;
+    dispatch({ type: 'reset' });
+  }, [authReady, userId, cachedFor, state.user.id]);
+
   useEffect(() => {
     if (!authReady) return;
     if (!userId) {
@@ -411,6 +430,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       .catch(() => undefined)
       .finally(() => setLoadedFor(userId));
   }, [authReady, userId, reload]);
+
+  // Saved after every change, without the undo. Not signed in (or, with a backend, not this
+  // person's kitchen yet): nothing to keep, and log out clears the copy.
+  useEffect(() => {
+    if (!authReady) return;
+    const mine = hasBackend ? !!userId && state.user.id === userId : !!state.session.signIn;
+    if (mine) save(state);
+    else clearSaved();
+  }, [state, authReady, userId]);
 
   // Write-through: whatever changed since the server last matched goes up.
   useEffect(() => {
@@ -483,7 +511,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const timer = setTimeout(() => dispatch({ type: 'expireUndo', undo }), UNDO_MS);
     return () => clearTimeout(timer);
   }, [undo]);
-  const ready = authReady && (!userId || loadedFor === userId);
+  const ready = authReady && (!userId || loadedFor === userId || (cachedFor === userId && state.user.id === userId));
   const value = useMemo(() => ({ state: { ...state, recipes }, actions, reload, ready }), [state, recipes, actions, reload, ready]);
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

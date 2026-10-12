@@ -5,7 +5,8 @@
 import { beforeEach, describe, expect, test } from '@jest/globals';
 
 import { initialState, reducer, type Action, type State } from '@/data/store';
-import { ALEX, NEW_INVITE_CODE, SAM, SEED_ITEMS, SEED_KITCHEN, SEED_TO_BUY } from '@/data/seed';
+import { isDueSoon } from '@/data/helpers';
+import { ALEX, NEW_INVITE_CODE, SAMPLE_SCAN, SAM, SEED_ITEMS, SEED_KITCHEN, SEED_TO_BUY } from '@/data/seed';
 import type { ScanLine } from '@/data/types';
 
 const run = (s: State, ...actions: Action[]): State => actions.reduce(reducer, s);
@@ -103,9 +104,9 @@ describe('To Buy', () => {
 
 describe('items', () => {
   test('adding an item starts at 1 with the place default shelf life', () => {
-    const fridge = run(s, { type: 'addItem', name: ' Kale ', place: 'fridge' }).items.at(-1)!;
-    expect(fridge).toMatchObject({ name: 'Kale', place: 'fridge', qty: 1, unit: '', meta: 'Added by Alex', daysLeft: 7, addedBy: 'alex' });
-    expect(run(s, { type: 'addItem', name: 'Lentils', place: 'pantry' }).items.at(-1)!.daysLeft).toBe(180);
+    const fridge = run(s, { type: 'addItem', name: ' Tofu ', place: 'fridge' }).items.at(-1)!;
+    expect(fridge).toMatchObject({ name: 'Tofu', place: 'fridge', qty: 1, unit: '', meta: 'Added by Alex', daysLeft: 7, addedBy: 'alex' });
+    expect(run(s, { type: 'addItem', name: 'Cumin', place: 'pantry' }).items.at(-1)!.daysLeft).toBe(180);
     expect(run(s, { type: 'addItem', name: 'Ice', place: 'freezer' }).items.at(-1)!.daysLeft).toBe(90);
   });
 
@@ -138,9 +139,27 @@ describe('items', () => {
 
 describe('scanning', () => {
   test('new lines become items with the place default shelf life', () => {
-    const next = run(s, { type: 'addScanned', lines: [line('Kale', 'fridge', 2), line('Lentils', 'pantry')] });
-    expect(byName(next, 'Kale')[0]).toMatchObject({ place: 'fridge', qty: 2, daysLeft: 7, meta: 'From today’s receipt' });
-    expect(byName(next, 'Lentils')[0]).toMatchObject({ place: 'pantry', qty: 1, daysLeft: 180 });
+    const next = run(s, { type: 'addScanned', lines: [line('Tofu', 'fridge', 2), line('Cumin', 'pantry')] });
+    expect(byName(next, 'Tofu')[0]).toMatchObject({ place: 'fridge', qty: 2, daysLeft: 7, meta: 'From today’s receipt' });
+    expect(byName(next, 'Cumin')[0]).toMatchObject({ place: 'pantry', qty: 1, daysLeft: 180 });
+  });
+
+  test('new lines get the shelf life of what they are', () => {
+    const next = run(s, { type: 'addScanned', lines: [line('Kale', 'fridge'), line('Lentils', 'pantry')] });
+    expect(byName(next, 'Kale')[0].daysLeft).toBe(5);
+    expect(byName(next, 'Lentils')[0].daysLeft).toBe(365);
+  });
+
+  test('scanning the sample receipt flags chicken as use soon but not rice', () => {
+    const empty = { ...s, items: [] };
+    const next = run(empty, { type: 'addScanned', lines: [...SAMPLE_SCAN, line('Chicken thighs', 'fridge'), line('Rice', 'pantry')] });
+    expect(isDueSoon(byName(next, 'Chicken thighs')[0])).toBe(true);
+    expect(isDueSoon(byName(next, 'Rice')[0])).toBe(false);
+    expect(next.items.filter(isDueSoon).map((i) => i.name)).toEqual(['Chicken thighs']);
+  });
+
+  test('typed items get a shelf life too', () => {
+    expect(run(s, { type: 'addItem', name: 'Chicken breast', place: 'fridge' }).items.at(-1)!.daysLeft).toBe(2);
   });
 
   test('a line matching an item in the same place adds to it', () => {

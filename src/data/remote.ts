@@ -1,9 +1,13 @@
 // Mapping between the store's types and the Supabase tables (pure, tested), then the
 // network calls the store makes: load, write a diff, mark synced, listen for changes.
+import { bestByFromDays, daysFromBestBy } from './helpers';
 import { supabase } from './supabase';
 import type { Item, Kitchen, NotificationSettings, Person, Place, Recipe, ToBuyItem } from './types';
 
 // shortcut: hand-written row types, replace with generated src/data/db.ts once the Supabase project is linked.
+// The date math lives in helpers.ts; re-exported so callers and tests can keep importing it from here.
+export { bestByFromDays, daysFromBestBy };
+
 export type ItemRow = {
   id: string;
   kitchen_id: string;
@@ -55,26 +59,6 @@ export type KitchenRow = {
   created_by: string | null;
   synced_at: string | null;
 };
-
-const DAY = 24 * 60 * 60 * 1000;
-
-function localMidnight(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-}
-
-/** today + days as a local calendar date, 'YYYY-MM-DD'. */
-export function bestByFromDays(days: number, today: Date): string {
-  const d = localMidnight(today);
-  d.setDate(d.getDate() + days);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-
-/** Local calendar days from today to a 'YYYY-MM-DD' date. Rounded so DST days still count as one. */
-export function daysFromBestBy(bestBy: string, today: Date): number {
-  const [y, m, d] = bestBy.split('-').map(Number);
-  return Math.round((new Date(y, m - 1, d).getTime() - localMidnight(today).getTime()) / DAY);
-}
 
 export function itemToRow(item: Item, kitchenId: string, today: Date): ItemRow {
   return {

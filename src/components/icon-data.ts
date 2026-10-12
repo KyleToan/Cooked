@@ -82,6 +82,14 @@ export const iconData = {
       }
     }
   ],
+  "flash": [
+    {
+      "tag": "path",
+      "props": {
+        "d": "M13 3 5 13h6l-1 8 8-10h-6z"
+      }
+    }
+  ],
   "freezer": [
     {
       "tag": "path",
@@ -200,6 +208,32 @@ export const iconData = {
       "tag": "path",
       "props": {
         "d": "M9 12.5h6"
+      }
+    }
+  ],
+  "photos": [
+    {
+      "tag": "rect",
+      "props": {
+        "x": "4",
+        "y": "5",
+        "width": "16",
+        "height": "14",
+        "rx": "2"
+      }
+    },
+    {
+      "tag": "path",
+      "props": {
+        "d": "M4 16l4.5-4.5 4 3.5 3-2.5L20 16"
+      }
+    },
+    {
+      "tag": "circle",
+      "props": {
+        "cx": "15.5",
+        "cy": "9.5",
+        "r": "1.5"
       }
     }
   ],
