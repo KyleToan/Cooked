@@ -1,10 +1,11 @@
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import * as Notifications from 'expo-notifications';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Linking, Platform, StyleSheet, View } from 'react-native';
 
 import { ActionPill } from '@/components/ActionPill';
+import { ErrorLine } from '@/components/Controls';
 import { PushedHeader, SectionHeader } from '@/components/Header';
 import { Screen } from '@/components/Screen';
 import { SwitchRow } from '@/components/Settings';
@@ -12,7 +13,9 @@ import { Sheet } from '@/components/Sheet';
 import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
+import { saveNotifications } from '@/data/kitchenApi';
 import { useStore } from '@/data/store';
+import { hasBackend } from '@/data/supabase';
 import type { NotificationKey } from '@/data/types';
 import { color, radius, size, space } from '@/theme';
 
@@ -62,6 +65,14 @@ export default function NotificationsScreen() {
   const [permission, setPermission] = useState<Permission>(native ? 'undetermined' : 'unsupported');
   const [picking, setPicking] = useState(false);
   const [draft, setDraft] = useState(() => parseTime(n.useSoonTime));
+  const [saveFailed, setSaveFailed] = useState(false);
+
+  // Save every change to the profile (stored only; nothing is sent). Skips the settings as the screen opened with.
+  const opened = useRef(n);
+  useEffect(() => {
+    if (!hasBackend || n === opened.current) return;
+    saveNotifications(n).then((r) => setSaveFailed(r !== 'ok'));
+  }, [n]);
 
   // Read the permission on open, and again when coming back from the Settings app.
   const refresh = useCallback(() => {
@@ -172,6 +183,7 @@ export default function NotificationsScreen() {
             <TextLink label="Open Settings" onPress={() => Linking.openSettings().catch(() => {})} />
           </View>
         ) : null}
+        {saveFailed ? <ErrorLine text="We couldn’t save that. Check your connection and try again." /> : null}
         <Text variant="caption" color="inkMuted" style={styles.honest}>
           Nothing is sent yet. These choices are saved for when Cooked starts sending.
         </Text>

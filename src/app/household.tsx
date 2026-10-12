@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Share, StyleSheet, View } from 'react-native';
 
 import { ActionPill } from '@/components/ActionPill';
-import { Field } from '@/components/Controls';
+import { ErrorLine, Field } from '@/components/Controls';
 import { PushedHeader, SectionHeader } from '@/components/Header';
 import { Screen } from '@/components/Screen';
 import { PersonRow } from '@/components/Settings';
@@ -12,7 +12,9 @@ import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
 import { joinAnd } from '@/data/helpers';
+import * as api from '@/data/kitchenApi';
 import { useStore, useUndo } from '@/data/store';
+import { hasBackend } from '@/data/supabase';
 import { haptics } from '@/hooks/haptics';
 import type { Person } from '@/data/types';
 import { color, radius, size, space, type ColorName } from '@/theme';
@@ -22,7 +24,7 @@ const PAPERS: ColorName[] = ['papaya', 'beige', 'cornsilk'];
 /** Rename, People (remove asks first in a sheet, then offers undo), the invite link, Leave this kitchen. */
 export default function Household() {
   const router = useRouter();
-  const { state, actions } = useStore();
+  const { state, actions, reload } = useStore();
   const removed = useUndo('household');
   // Who the remove sheet is about. Kept after the sheet closes so its title doesn't blank mid-exit.
   const [removing, setRemoving] = useState<Person | null>(null);
@@ -31,10 +33,56 @@ export default function Household() {
   const [name, setName] = useState(state.kitchen.name);
   const [leaving, setLeaving] = useState(false);
   const [relinking, setRelinking] = useState(false);
+  // With a backend: the last failed call and the section it shows under, and whether a new link was made here.
+  const [error, setError] = useState<{ at: 'people' | 'invite' | 'leave'; text: string } | null>(null);
+  const [madeLink, setMadeLink] = useState(false);
 
   const kitchen = state.kitchen;
   const others = kitchen.people.filter((p) => p.id !== state.user.id);
   const link = `cooked.app/join/${kitchen.inviteCode}`;
+  // Only the person who made the kitchen can remove people (the server checks too).
+  // shortcut: reads the creator from the 'Made this kitchen' note, switch to kitchens.created_by once the store exposes it.
+  const canRemove = !hasBackend || kitchen.people.some((p) => p.id === state.user.id && p.note === 'Made this kitchen');
+  const kitchenId = kitchen.id ?? '';
+
+  /** Runs a server call; on success reloads the kitchen, on failure shows `fail` under the section. */
+  const call = async (at: 'people' | 'invite' | 'leave', fail: string, run: () => Promise<api.Result>) => {
+    setError(null);
+    const r = await run();
+    if (r !== 'ok') {
+      setError({ at, text: fail });
+      return false;
+    }
+    await reload();
+    return true;
+  };
+  const failLine = (at: 'people' | 'invite' | 'leave') => (error?.at === at ? <ErrorLine text={error.text} /> : null);
+
+  const remove = async (p: Person) => {
+    setConfirming(false);
+    if (!hasBackend) return actions.removePerson(p.id);
+    const r = await api.removeMember(kitchenId, p.id);
+    if (r !== 'ok') return setError({ at: 'people', text: `We couldn’t remove ${p.name}. Check your connection and try again.` });
+    setError(null);
+    // Mirror it locally, which also shows the undo bar for a few seconds.
+    actions.removePerson(p.id);
+  };
+
+  const undoRemove = async () => {
+    if (!hasBackend || !removing) return actions.undo();
+    const who = removing;
+    const r = await api.restoreMember(kitchenId, who.id);
+    if (r !== 'ok') {
+      const text =
+        r === 'in_other_kitchen'
+          ? `${who.name} joined another kitchen, so they can’t be added back.`
+          : `We couldn’t add ${who.name} back. Check your connection and try again.`;
+      return setError({ at: 'people', text });
+    }
+    setError(null);
+    actions.clearUndo('household');
+    await reload();
+  };
 
   const share = async () => {
     try {
@@ -79,7 +127,7 @@ export default function Household() {
               note={p.note}
               paper={PAPERS[i % PAPERS.length]}
               right={
-                you ? undefined : (
+                you || !canRemove ? undefined : (
                   <TextLink
                     label="Remove"
                     color="inkMuted"
@@ -99,9 +147,10 @@ export default function Household() {
             <Text variant="caption" color="inkMuted">
               {removed.text}
             </Text>
-            <TextLink label="Undo" onPress={actions.undo} />
+            <TextLink label="Undo" onPress={undoRemove} />
           </View>
         ) : null}
+        {failLine('people')}
       </View>
 
       <View style={styles.invite}>
@@ -115,12 +164,13 @@ export default function Household() {
           </Text>
         </View>
         <Text variant="caption" color="inkMuted">
-          {kitchen.newLink
+          {kitchen.newLink || madeLink
             ? 'New link made. The old one no longer works.'
             : 'Works for one person and runs out in 7 days. Anyone with it can join, so only send it to people you live with.'}
         </Text>
         <ActionPill label="Share invite link" variant="primary" height="bottom" onPress={share} />
         <TextLink label="Make a new link" align="center" onPress={() => setRelinking(true)} />
+        {failLine('invite')}
       </View>
 
       <View style={styles.leave}>
@@ -128,6 +178,7 @@ export default function Household() {
         <Text variant="micro" weight="regular" color="inkMuted" style={styles.center}>
           {others.length ? `${joinAnd(others.map((p) => p.name))} keeps the kitchen. ` : ''}You’ll start a new, empty one.
         </Text>
+        {failLine('leave')}
       </View>
 
       <Sheet
@@ -150,10 +201,7 @@ export default function Household() {
           color="errorInk"
           variant="button"
           align="center"
-          onPress={() => {
-            if (removing) actions.removePerson(removing.id);
-            setConfirming(false);
-          }}
+          onPress={() => (removing ? remove(removing) : setConfirming(false))}
         />
       </Sheet>
 
@@ -167,9 +215,12 @@ export default function Household() {
           color="inkMuted"
           variant="button"
           align="center"
-          onPress={() => {
-            actions.newInviteLink();
+          onPress={async () => {
             setRelinking(false);
+            if (!hasBackend) return actions.newInviteLink();
+            if (await call('invite', 'We couldn’t make a new link. Check your connection and try again.', () => api.newInvite(kitchenId))) {
+              setMadeLink(true);
+            }
           }}
         />
       </Sheet>
@@ -198,9 +249,10 @@ export default function Household() {
           color="errorInk"
           variant="button"
           align="center"
-          onPress={() => {
-            actions.leaveKitchen();
+          onPress={async () => {
             setLeaving(false);
+            if (!hasBackend) return actions.leaveKitchen();
+            await call('leave', 'We couldn’t leave the kitchen. Check your connection and try again.', api.leaveKitchen);
           }}
         />
       </Sheet>

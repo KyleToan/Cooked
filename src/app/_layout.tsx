@@ -3,10 +3,11 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { CookingLoader } from '@/components/Loader';
 import { StoreProvider, useStore } from '@/data/store';
 import { color, fontFaces } from '@/theme';
 
@@ -37,8 +38,17 @@ export default function RootLayout() {
 
 /** Onboarding until it has been finished once, then the app. Scan is shared by both. */
 function Routes() {
-  const { state } = useStore();
+  const { state, ready } = useStore();
   const onboarded = state.session.onboarded;
+
+  // Restoring the saved Supabase session and loading its kitchen on launch; instant without a backend.
+  if (!ready) {
+    return (
+      <View style={styles.loading} accessibilityLabel="Loading">
+        <CookingLoader />
+      </View>
+    );
+  }
 
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.surface } }}>
@@ -73,4 +83,5 @@ function Routes() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: color.surface },
 });

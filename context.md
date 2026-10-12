@@ -70,20 +70,24 @@ The full design system is in `design/system/` and at https://claude.ai/artifact/
 
 Built (branch `build-screens`): onboarding (all three paths, Apple and Google, email or phone with a code), Home and the empty first-run Home, Your Kitchen with all four tabs, Recipes, Recipe, Import a recipe (loading, found and error states), Scan with the real camera, Check your scan, Couldn't read this receipt, Account with the delete sheet, Rivera kitchen, and Notifications. Every action changes the local store, and everything that removes something can be undone or asks first. Logging out clears the kitchen on this phone until there's a backend.
 
-Faked until there's a backend:
+Backend (Supabase, Decisions #82–88): the schema and RPCs are in `supabase/migrations/`, and the app code is built: real sign-in (`src/data/supabase.ts`, `auth.ts`), loading, write-through and realtime sync (`remote.ts`, `store.tsx`), and kitchen actions (`kitchenApi.ts`). It turns on when `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` are set; without them the app runs in the local mode below. Not yet run against a live project.
+
+Local mode (no env vars):
 
 - **Sign-in.** Any email or number works and the code is always `481726`. Apple's button is Apple's own on iOS, but no real Apple or Google sign-in happens.
 - **Accounts and sync.** Everything lives in memory and resets when the app restarts, including having finished onboarding. Sam never changes anything.
 - **Kitchens.** Just me and Me and my household start a new, empty kitchen that the first scan fills. Joining only works with the code `rivera-kitchen`, which loads the sample Rivera kitchen.
-- **Receipt reading (OCR).** The camera takes a real photo (or you pick one), but Check your scan always shows the 7 sample Corner Market items. Scan has only the Receipt mode for now; the other modes come back when they work. The step after OCR is built: `parseReceipt` in `src/data/receipt.ts` turns receipt text into Check your scan lines, waiting for an OCR choice.
+
+- **Receipt reading (OCR)** happens on the phone with Google ML Kit (`src/data/ocr.ts`), then `parseReceipt` in `src/data/receipt.ts` turns the text into Check your scan lines. It needs a development build: in Expo Go and on web, development shows the 7 sample Corner Market items. Scan has only the Receipt mode for now.
 - **Recipe import** is real: a link is fetched on the device and its schema.org recipe data read; pasted text is split into ingredients and steps (`src/data/recipeImport.ts`). In a web browser most sites block the fetch, so links there show "No recipe on that page".
 - **Notifications.** The switches and send time are kept in memory; nothing is sent.
 - **Help, Privacy and Terms** open `cooked.app` pages that don't exist yet.
 
 ## Open questions
 
-- Backend, accounts and real-time sync for a shared kitchen.
-- How receipt scanning works (on-device OCR such as Apple Vision, or a service) and how items get sorted into fridge, pantry or freezer.
+- Offline use: writes need a connection for now, and a failed write rolls back.
+- What happens to a kitchen when its creator leaves (no one left can remove people).
+- How items get sorted into fridge, pantry or freezer beyond the keyword table in `receipt.ts`.
 - Whether recipe links should move from on-device fetching to a server.
 - How "use soon" dates are worked out (typical shelf life per item, or entered by hand).
 - Push notifications: the design has To Buy changes, a daily use-soon nudge, someone joining and a weekly summary.

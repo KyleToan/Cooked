@@ -3,10 +3,13 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { ActionPill } from '@/components/ActionPill';
+import { ErrorLine } from '@/components/Controls';
 import { OnbScreen } from '@/components/Onboarding';
 import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
+import * as api from '@/data/kitchenApi';
 import { useStore } from '@/data/store';
+import { hasBackend } from '@/data/supabase';
 import type { KitchenPath } from '@/data/types';
 import { color, radius, space } from '@/theme';
 
@@ -25,15 +28,27 @@ const RADIO = 22;
 /** Just me / Me and my household / I have an invite. */
 export default function Household() {
   const router = useRouter();
-  const { actions } = useStore();
+  const { state, actions, reload } = useStore();
   const [picked, setPicked] = useState<KitchenPath>('household');
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
 
-  const next = () => {
+  const next = async () => {
     if (picked === 'join') {
       router.push('/join');
       return;
     }
-    actions.choosePath(picked);
+    if (hasBackend) {
+      if (busy) return;
+      setBusy(true);
+      const r = await api.createKitchen(`${state.user.lastName || state.user.name} kitchen`);
+      if (r === 'ok') await reload();
+      setBusy(false);
+      setFailed(r !== 'ok');
+      if (r !== 'ok') return;
+    } else {
+      actions.choosePath(picked);
+    }
     router.push({ pathname: '/first-scan', params: { flow: picked } });
   };
 
@@ -61,7 +76,8 @@ export default function Household() {
           );
         })}
       </View>
-      <ActionPill label="Next" variant="primary" height="bottom" onPress={next} />
+      {failed ? <ErrorLine text="We couldn’t set up your kitchen. Check your connection and try again." /> : null}
+      <ActionPill label="Next" variant="primary" height="bottom" onPress={next} disabled={busy} />
     </OnbScreen>
   );
 }

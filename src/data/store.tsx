@@ -1,10 +1,11 @@
-// The local store: one reducer holds the kitchen, and every change goes
-// through the `actions` object at the bottom. A backend can replace this file
-// later without the screens changing.
+// The store: one reducer holds the kitchen, and every change goes through the
+// `actions` object at the bottom. With a backend, StoreProvider loads the kitchen
+// from Supabase, writes every change back and listens for other people's changes.
 
 import { useFocusEffect } from 'expo-router';
-import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
 
+import { useAuth } from './auth';
 import { guessPlace, makeId } from './helpers';
 import { checkRecipe, checkRecipes, usedWhenMade } from './match';
 import {
@@ -17,6 +18,8 @@ import {
   SEED_TO_BUY,
   STAPLES,
 } from './seed';
+import { loadAll, markSynced, subscribeKitchen, writeDiff, type Loaded, type Synced } from './remote';
+import { hasBackend } from './supabase';
 import type {
   Item,
   Kitchen,
@@ -95,7 +98,9 @@ export type Action =
   | { type: 'choosePath'; path: KitchenPath }
   | { type: 'skipFirstScan' }
   | { type: 'finishOnboarding' }
-  | { type: 'reset' };
+  | { type: 'reset' }
+  /** Server data replaces the local copy (load, realtime refetch, or rollback after a failed write). */
+  | { type: 'hydrate'; data: Partial<Loaded> };
 
 const snap = (s: State): Snapshot => ({ items: s.items, toBuy: s.toBuy, kitchen: s.kitchen, recipes: s.recipes });
 
@@ -302,10 +307,25 @@ export function reducer(s: State, a: Action): State {
       return { ...s, session: { ...s.session, onboarded: true }, undo: null };
     case 'reset':
       return initialState();
+    case 'hydrate': {
+      const { onboarded, contact, kitchen, ...rest } = a.data;
+      const user = rest.user ?? s.user;
+      // "Make a new link" stays said until the kitchen changes.
+      const k = kitchen === undefined ? s.kitchen : kitchen ? { ...kitchen, newLink: kitchen.id === s.kitchen.id && s.kitchen.newLink } : newKitchen(user);
+      const session = { ...s.session, onboarded: onboarded ?? s.session.onboarded, contact: contact ?? s.session.contact };
+      return { ...s, ...rest, kitchen: k, session, undo: null };
+    }
   }
 }
 
-type Store = { state: State; actions: ReturnType<typeof makeActions> };
+type Store = {
+  state: State;
+  actions: ReturnType<typeof makeActions>;
+  /** Re-fetches everything for the signed-in person. Does nothing without a backend or a session. */
+  reload: () => Promise<void>;
+  /** False while a signed-in person's first load is running. */
+  ready: boolean;
+};
 
 const StoreContext = createContext<Store | null>(null);
 
@@ -342,7 +362,118 @@ function makeActions(dispatch: (a: Action) => void) {
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, initialState);
-  const actions = useMemo(() => makeActions(dispatch), []);
+  const { session, ready: authReady } = useAuth();
+  // The person whose first load has finished, so the loader shows once per sign-in.
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
+
+  // What the server is known to hold (`synced`), the last write it confirmed (`confirmed`),
+  // and how many writes are still on their way.
+  const synced = useRef<Synced | null>(null);
+  const confirmed = useRef<Synced | null>(null);
+  const chain = useRef(Promise.resolve());
+  const pending = useRef(0);
+  const writes = useRef(0);
+  const reloadAfterWrites = useRef(false);
+  const sessionRef = useRef(session);
+  const kitchenId = useRef(state.kitchen.id);
+  // Declared before the load effect, so reload sees this render's session.
+  useEffect(() => {
+    sessionRef.current = session;
+    kitchenId.current = state.kitchen.id;
+  });
+
+  const reload = useCallback(async () => {
+    const s = sessionRef.current;
+    if (!hasBackend || !s) return;
+    const startedAt = writes.current;
+    const data = await loadAll(s.user.id, { email: s.user.email, phone: s.user.phone });
+    // A local change happened meanwhile: this load may miss it, so load again once it's written.
+    if (pending.current || writes.current !== startedAt) {
+      reloadAfterWrites.current = true;
+      return;
+    }
+    const snapshot: Synced = { kitchen: data.kitchen, items: data.items, toBuy: data.toBuy, recipes: data.recipes };
+    // Set before dispatching, so the write effect sees no difference and nothing echoes back.
+    synced.current = snapshot;
+    confirmed.current = snapshot;
+    dispatch({ type: 'hydrate', data });
+  }, []);
+
+  const userId = session?.user.id;
+  useEffect(() => {
+    if (!authReady) return;
+    if (!userId) {
+      synced.current = confirmed.current = null;
+      return;
+    }
+    // shortcut: a failed first load (offline) opens the app on local data, add a retry screen if testers hit it.
+    reload()
+      .catch(() => undefined)
+      .finally(() => setLoadedFor(userId));
+  }, [authReady, userId, reload]);
+
+  // Write-through: whatever changed since the server last matched goes up.
+  useEffect(() => {
+    const prev = synced.current;
+    const id = state.kitchen.id;
+    if (!hasBackend || !id || !prev || prev.kitchen?.id !== id) return;
+    if (prev.items === state.items && prev.toBuy === state.toBuy && prev.recipes === state.recipes && prev.kitchen?.name === state.kitchen.name) return;
+    const next: Synced = { kitchen: state.kitchen, items: state.items, toBuy: state.toBuy, recipes: state.recipes };
+    synced.current = next;
+    pending.current++;
+    writes.current++;
+    // One write at a time, in order, each against the one before it.
+    chain.current = chain.current
+      .then(() => writeDiff(id, prev, next, new Date()))
+      .then(
+        () => {
+          confirmed.current = next;
+        },
+        () => {
+          // shortcut: no offline queue, writes need a connection; add a queue if testers hit it.
+          const back = confirmed.current;
+          synced.current = back;
+          if (back) dispatch({ type: 'hydrate', data: back });
+          reloadAfterWrites.current = true;
+        },
+      )
+      .finally(() => {
+        pending.current--;
+        if (!pending.current && reloadAfterWrites.current) {
+          reloadAfterWrites.current = false;
+          reload().catch(() => undefined);
+        }
+      });
+  }, [state.kitchen, state.items, state.toBuy, state.recipes, reload]);
+
+  // Other people's changes. shortcut: whole refetch on any event, fine for household-sized kitchens.
+  const liveId = state.kitchen.id;
+  useEffect(() => {
+    if (!hasBackend || !liveId) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const unsubscribe = subscribeKitchen(liveId, () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        if (pending.current) reloadAfterWrites.current = true;
+        else reload().catch(() => undefined);
+      }, 300);
+    });
+    return () => {
+      clearTimeout(timer);
+      unsubscribe();
+    };
+  }, [liveId, reload]);
+
+  const actions = useMemo(() => {
+    const base = makeActions(dispatch);
+    return {
+      ...base,
+      addScanned: (lines: ScanLine[], opts?: { undo?: boolean }) => {
+        base.addScanned(lines, opts);
+        if (hasBackend && kitchenId.current) markSynced(kitchenId.current).catch(() => undefined);
+      },
+    };
+  }, []);
   // Screens see recipes checked against the kitchen, with Tonight's pick marked.
   const recipes = useMemo(() => checkRecipes(state.recipes, state.items), [state.recipes, state.items]);
   // Undo bars go away by themselves after a few seconds, unless a newer one replaced them.
@@ -352,7 +483,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const timer = setTimeout(() => dispatch({ type: 'expireUndo', undo }), UNDO_MS);
     return () => clearTimeout(timer);
   }, [undo]);
-  const value = useMemo(() => ({ state: { ...state, recipes }, actions }), [state, recipes, actions]);
+  const ready = authReady && (!userId || loadedFor === userId);
+  const value = useMemo(() => ({ state: { ...state, recipes }, actions, reload, ready }), [state, recipes, actions, reload, ready]);
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
 

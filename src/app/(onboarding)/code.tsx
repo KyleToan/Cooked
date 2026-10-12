@@ -9,11 +9,12 @@ import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
 import { useStore } from '@/data/store';
+import { supabase } from '@/data/supabase';
 import { haptics } from '@/hooks/haptics';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { color, radius, size, space, type } from '@/theme';
 
-/** Sign-in is faked: this is the only code that works. */
+/** Without a backend sign-in is faked: this is the only code that works. */
 const CODE = '481726';
 const LENGTH = 6;
 const FIRST_WAIT = 24;
@@ -34,6 +35,8 @@ export default function Code() {
   const input = useRef<TextInput>(null);
   const [code, setCode] = useState('');
   const [wrong, setWrong] = useState(false);
+  const [offline, setOffline] = useState(false);
+  const [checking, setChecking] = useState(false);
   const [secs, setSecs] = useState(FIRST_WAIT);
   const [focused, setFocused] = useState(true);
   const reduced = useReducedMotion();
@@ -54,26 +57,45 @@ export default function Code() {
 
   const contact = state.session.contact || 'alex.rivera@gmail.com';
   const byText = state.session.signIn === 'phone';
+  // The store keeps the phone number as shown ("+1 555…"); Supabase wants E.164.
+  const phone = `+${contact.replace(/\D/g, '')}`;
+
+  const failed = (isWrong: boolean) => {
+    setWrong(isWrong);
+    setOffline(!isWrong);
+    setCode('');
+    haptics.error();
+    if (isWrong) shake();
+  };
+
+  const check = async (digits: string) => {
+    if (!supabase) return digits === CODE ? router.push('/name') : failed(true);
+    setChecking(true);
+    const { error } = await supabase.auth.verifyOtp(
+      byText ? { phone, token: digits, type: 'sms' } : { email: contact, token: digits, type: 'email' },
+    );
+    setChecking(false);
+    if (!error) return router.push('/name');
+    // A 4xx means the code was wrong or expired; anything else (no status, 5xx) is the network or the server.
+    failed(!!error.status && error.status < 500);
+  };
 
   const onChange = (v: string) => {
     const digits = v.replace(/\D/g, '').slice(0, LENGTH);
+    if (checking) return;
     setCode(digits);
-    if (digits.length) setWrong(false);
-    if (digits.length === LENGTH) {
-      if (digits === CODE) {
-        router.push('/name');
-      } else {
-        setWrong(true);
-        setCode('');
-        haptics.error();
-        shake();
-      }
+    if (digits.length) {
+      setWrong(false);
+      setOffline(false);
     }
+    if (digits.length === LENGTH) check(digits);
   };
 
   const resend = () => {
+    supabase?.auth.signInWithOtp(byText ? { phone } : { email: contact }).then(({ error }) => error && setOffline(true));
     setSecs(RESEND_WAIT);
     setWrong(false);
+    setOffline(false);
     setCode('');
     input.current?.focus();
   };
@@ -140,6 +162,7 @@ export default function Code() {
           accessibilityLabel="6-digit code"
         />
         {wrong ? <ErrorLine text={`That code didn’t work. Use the newest ${byText ? 'text' : 'email'}.`} /> : null}
+        {offline ? <ErrorLine text="We couldn’t check the code. Check your connection and try again." /> : null}
         <View style={styles.sent}>
           <Text variant="caption" color="inkMuted">
             Sent to {contact} ·{' '}
