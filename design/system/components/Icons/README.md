@@ -1,6 +1,6 @@
 # Icons
 
-Twenty icons drawn for Cooked, all on one 24px grid with a 1.8 stroke, rounded ends and rounded corners. Use only these in the app.
+Twenty-two icons drawn for Cooked, all on one 24px grid with a 1.8 stroke, rounded ends and rounded corners. Use only these in the app.
 
 ## The set
 
@@ -9,6 +9,7 @@ Twenty icons drawn for Cooked, all on one 24px grid with a 1.8 stroke, rounded e
 | Navigation | `home`, `scan`, `recipes`, `back`, `close` |
 | Kitchen | `fridge`, `pantry`, `freezer`, `to-buy`, `receipt`, `use-soon` |
 | Actions | `import`, `search`, `add`, `check` |
+| Camera | `photos`, `flash` |
 | People | `household`, `account` |
 | Loading | `loading`, `syncing`, `cooking` |
 
