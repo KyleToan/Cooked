@@ -29,6 +29,10 @@ const FAMILIES = {
 };
 const WEIGHT_NAMES = { 400: 'Regular', 500: 'Medium', 600: 'SemiBold', 700: 'Bold' };
 const face = (family, weight) => `${FAMILIES[family].prefix}_${weight}${WEIGHT_NAMES[weight]}`;
+// iOS finds a font bundled by the expo-font plugin by its PostScript name; Android and web by its file name.
+// shortcut: assumes Google Fonts' "Family-Weight" PostScript names (true for every face here), check a new face's .ttf.
+const postScript = (family, weight) => `${FAMILIES[family].prefix}-${WEIGHT_NAMES[weight]}`;
+const fontPath = (family, weight) => `./node_modules/${FAMILIES[family].pkg}/${weight}${WEIGHT_NAMES[weight]}/${face(family, weight)}.ttf`;
 
 // Weights the type styles use, plus the ones the screens use outside them
 // (600 labels on sage buttons, 400 counts on sticky notes).
@@ -44,7 +48,7 @@ for (const group of tokens.type.groups) {
     const lh = typeof s.lineHeight === 'number' ? Math.round(size * s.lineHeight) : px(s.lineHeight);
     const ls = s.letterSpacing ? Math.round(parseFloat(s.letterSpacing) * size * 100) / 100 : 0;
     faces[family].add(s.fontWeight);
-    const props = [`fontFamily: '${face(family, s.fontWeight)}'`, `fontSize: ${size}`, `lineHeight: ${lh}`];
+    const props = [`fontFamily: font.${face(family, s.fontWeight)}`, `fontSize: ${size}`, `lineHeight: ${lh}`];
     if (ls) props.push(`letterSpacing: ${ls}`);
     typeLines.push(`${doc(s.usage)}  ${camel(s.name)}: { ${props.join(', ')} },`);
   }
@@ -53,7 +57,13 @@ for (const group of tokens.type.groups) {
 // ---- Shadows -------------------------------------------------------------
 // React Native's new architecture understands CSS box-shadow strings.
 
-const out = [HEADER];
+const out = [HEADER, "import { Platform } from 'react-native';\n", "const ios = Platform.OS === 'ios';\n"];
+out.push('/** Font face names: the PostScript name on iOS, the file name on Android and web. */');
+out.push('export const font = {');
+for (const [family, weights] of Object.entries(faces)) {
+  for (const w of [...weights].sort()) out.push(`  ${face(family, w)}: ios ? '${postScript(family, w)}' : '${face(family, w)}',`);
+}
+out.push('} as const;\n');
 out.push('export const color = {');
 for (const t of list(tokens.color)) out.push(`${doc(t.usage)}  ${camel(t.name)}: '${t.value.toUpperCase()}',`);
 out.push('} as const;\n');
@@ -84,15 +94,26 @@ writeFileSync(join(root, 'src/theme/tokens.ts'), out.join('\n') + '\n');
 
 // ---- Font loading --------------------------------------------------------
 
+// The same faces are bundled into the native build by the expo-font plugin in app.json; useFonts() only loads them
+// where that build isn't there (Expo Go and web).
 const fontOut = [HEADER];
 const fontKeys = [];
+const fontPaths = [];
 for (const [family, weights] of Object.entries(faces)) {
   const names = [...weights].sort().map((w) => face(family, w));
   fontKeys.push(...names);
+  fontPaths.push(...[...weights].sort().map((w) => fontPath(family, w)));
   fontOut.push(`import { ${names.join(', ')} } from '${FAMILIES[family].pkg}';`);
 }
-fontOut.push('', '/** Every font face the app uses, for useFonts(). */');
-fontOut.push(`export const fontFaces = { ${fontKeys.join(', ')} };`);
+fontOut.push("import { font } from './tokens';");
+fontOut.push('', '/** Every font face the app uses, for useFonts() in Expo Go and on web. Native builds bundle them. */');
+fontOut.push(`export const fontFaces = { ${fontKeys.map((k) => `[font.${k}]: ${k}`).join(', ')} };`);
+
+const appPlugins = JSON.parse(readFileSync(join(root, 'app.json'), 'utf8')).expo.plugins;
+const bundled = appPlugins.find((p) => Array.isArray(p) && p[0] === 'expo-font')?.[1]?.fonts ?? [];
+if (JSON.stringify(bundled) !== JSON.stringify(fontPaths)) {
+  throw new Error(`app.json's expo-font plugin must list exactly these fonts:\n${JSON.stringify(fontPaths, null, 2)}`);
+}
 writeFileSync(join(root, 'src/theme/fonts.ts'), fontOut.join('\n') + '\n');
 
 // ---- Icons ---------------------------------------------------------------
