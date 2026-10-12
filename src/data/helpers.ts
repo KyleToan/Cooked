@@ -117,11 +117,9 @@ export function nextAt(time: string, now = new Date(), weekday?: number): Date {
   return d;
 }
 
-/** The use-soon nudge: "Chicken thighs and spinach need using." Null when nothing needs using. */
+/** The use-soon nudge: "Chicken thighs and Spinach need using.", names as stored. Null when nothing needs using. */
 export function nudgeText(items: Item[]): string | null {
-  const names = items
-    .filter(isUseSoon)
-    .map((i, n) => (n === 0 ? i.name : i.name.charAt(0).toLowerCase() + i.name.slice(1)));
+  const names = items.filter(isUseSoon).map((i) => i.name);
   if (names.length === 0) return null;
   const shown = names.length > 3 ? [...names.slice(0, 2), `${names.length - 2} more`] : names;
   return `${joinAnd(shown)} ${names.length === 1 ? 'needs' : 'need'} using.`;

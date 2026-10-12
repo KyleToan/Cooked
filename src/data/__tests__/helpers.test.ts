@@ -147,9 +147,9 @@ describe('notifications', () => {
   test('use-soon text for 0, 1, 2 and many items', () => {
     expect(nudgeText([item()])).toBeNull();
     expect(nudgeText([soon('Spinach'), item({ name: 'Rice' })])).toBe('Spinach needs using.');
-    expect(nudgeText([soon('Chicken thighs'), soon('Spinach')])).toBe('Chicken thighs and spinach need using.');
-    expect(nudgeText([soon('Milk'), soon('Feta'), soon('Basil')])).toBe('Milk, feta and basil need using.');
-    expect(nudgeText(['Milk', 'Feta', 'Basil', 'Eggs'].map(soon))).toBe('Milk, feta and 2 more need using.');
+    expect(nudgeText([soon('Chicken thighs'), soon('Spinach')])).toBe('Chicken thighs and Spinach need using.');
+    expect(nudgeText([soon('Milk'), soon('Greek yogurt'), soon('Basil')])).toBe('Milk, Greek yogurt and Basil need using.');
+    expect(nudgeText(['Milk', 'Feta', 'Basil', 'Eggs'].map(soon))).toBe('Milk, Feta and 2 more need using.');
   });
 
   test('used-up items are left out', () => {
