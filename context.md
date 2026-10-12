@@ -68,16 +68,16 @@ The full design system is in `design/system/` and at https://claude.ai/artifact/
 
 ## What's built and what's faked
 
-Built (branch `build-screens`): onboarding (all three paths, Apple and Google, email or phone with a code), Home and the empty first-run Home, Your Kitchen with all four tabs, Recipes, Recipe, Import a recipe (loading, found and error states), Scan with the real camera, Check your scan, Couldn't read this receipt, Account with the delete sheet, Rivera kitchen, and Notifications. Every action changes the local store, and everything that removes something can be undone or asks first. Logging out clears the kitchen on this phone until there's a backend.
+Built (branch `build-screens`): onboarding (all three paths, Apple and Google, email or phone with a code), Home and the empty first-run Home, Your Kitchen with all four tabs, Recipes, Recipe, Import a recipe (loading, found and error states), Scan with the real camera, Check your scan, Couldn't read this receipt, Account with the delete sheet, Rivera kitchen, and Notifications. Every action changes the local store, and everything that removes something can be undone or asks first. The kitchen, To Buy, recipes, notification settings and finished onboarding are saved on the phone and survive a restart (`src/data/saved.ts`). Logging out clears the kitchen and the saved copy until there's a backend.
 
 Faked until there's a backend:
 
 - **Sign-in.** Any email or number works and the code is always `481726`. Apple's button is Apple's own on iOS, but no real Apple or Google sign-in happens.
-- **Accounts and sync.** Everything lives in memory and resets when the app restarts, including having finished onboarding. Sam never changes anything.
+- **Accounts and sync.** Everything lives on this phone only; nothing syncs. Sam never changes anything.
 - **Kitchens.** Just me and Me and my household start a new, empty kitchen that the first scan fills. Joining only works with the code `rivera-kitchen`, which loads the sample Rivera kitchen.
 - **Receipt reading (OCR).** The camera takes a real photo (or you pick one), but Check your scan always shows the 7 sample Corner Market items. Scan has only the Receipt mode for now; the other modes come back when they work. The step after OCR is built: `parseReceipt` in `src/data/receipt.ts` turns receipt text into Check your scan lines, waiting for an OCR choice.
 - **Recipe import** is real: a link is fetched on the device and its schema.org recipe data read; pasted text is split into ingredients and steps (`src/data/recipeImport.ts`). In a web browser most sites block the fetch, so links there show "No recipe on that page".
-- **Notifications.** The switches and send time are kept in memory; nothing is sent.
+- **Notifications.** The switches and send time are saved on the phone; nothing is sent.
 - **Help, Privacy and Terms** open `cooked.app` pages that don't exist yet.
 
 ## Open questions

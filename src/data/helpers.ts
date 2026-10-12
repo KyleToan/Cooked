@@ -99,3 +99,23 @@ export function makeId(prefix: string): string {
 export function scanFlow(f: unknown): ScanFlow {
   return f === 'onb' || f === 'onbsolo' ? f : 'app';
 }
+
+const DAY = 24 * 60 * 60 * 1000;
+
+function localMidnight(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+/** today + days as a local calendar date, 'YYYY-MM-DD'. */
+export function bestByFromDays(days: number, today: Date): string {
+  const d = localMidnight(today);
+  d.setDate(d.getDate() + days);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** Local calendar days from today to a 'YYYY-MM-DD' date. Rounded so DST days still count as one. */
+export function daysFromBestBy(bestBy: string, today: Date): number {
+  const [y, m, d] = bestBy.split('-').map(Number);
+  return Math.round((new Date(y, m - 1, d).getTime() - localMidnight(today).getTime()) / DAY);
+}

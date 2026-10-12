@@ -47,7 +47,8 @@
         }
       ],
       "@react-native-community/datetimepicker",
-      "expo-image"
+      "expo-image",
+      "expo-sqlite"
     ],
     "runtimeVersion": {
       "policy": "fingerprint"
