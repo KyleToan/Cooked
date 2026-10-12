@@ -120,7 +120,7 @@ If those files disagree, `README.md` and `tokens.json` win. A few older lines ar
 - **Tab island.** Floating white pill (300 × 68) with Home, Scan and Recipes; a grey underscore marks the active tab.
 - **Undo, not confirm.** Ticking off or using up an item shows an undo bar. Deleting an account, leaving a kitchen or removing someone asks first; the safe choice is never the red one.
 - **Accessible.** 4.5:1 contrast for text that matters, 44pt minimum tap targets.
-- **Icons.** Only the 20 in `design/system/icons/` (24px grid, 1.8 stroke).
+- **Icons.** Only the 22 in `design/system/icons/` (24px grid, 1.8 stroke).
 
 ## Checklist for a new screen
 
