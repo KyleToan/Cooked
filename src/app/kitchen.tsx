@@ -1,11 +1,13 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ScrollView, Share, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Share, StyleSheet, View } from 'react-native';
+import Animated, { FadeIn, LinearTransition, ReduceMotion } from 'react-native-reanimated';
 
 import { ActionPill } from '@/components/ActionPill';
 import { UndoBar } from '@/components/Controls';
 import { PushedHeader, SectionHeader } from '@/components/Header';
 import { Icon } from '@/components/Icon';
+import type { IconName } from '@/components/icon-data';
 import { KitchenRow } from '@/components/ListRows';
 import { Screen } from '@/components/Screen';
 import { SearchField } from '@/components/SearchField';
@@ -24,17 +26,22 @@ import { color, radius, size, space, type ColorName } from '@/theme';
 
 type Tab = Place | 'tobuy';
 
-const TABS: { id: Tab; label: string; paper: ColorName }[] = [
-  { id: 'fridge', label: 'Fridge', paper: PAPER.fridge },
-  { id: 'pantry', label: 'Pantry', paper: PAPER.pantry },
-  { id: 'freezer', label: 'Freezer', paper: PAPER.freezer },
+const TABS: { id: Tab; label: string; icon: IconName; paper: ColorName }[] = [
+  { id: 'fridge', label: 'Fridge', icon: 'fridge', paper: PAPER.fridge },
+  { id: 'pantry', label: 'Pantry', icon: 'pantry', paper: PAPER.pantry },
+  { id: 'freezer', label: 'Freezer', icon: 'freezer', paper: PAPER.freezer },
   // To Buy isn't a place, so it has no paper. Picked, it gets the picker's sage-ink
   // ring on white instead of a sage fill: sage fill is kept for the one action button.
-  { id: 'tobuy', label: 'To Buy', paper: 'surface' },
+  { id: 'tobuy', label: 'To Buy', icon: 'to-buy', paper: 'surface' },
 ];
 
-/** Above this text size the four tabs no longer fit side by side, so they scroll sideways. */
-const TABS_SCROLL_SCALE = 1.35;
+/**
+ * The picked tab grows from an icon circle into a pill with its label, and the
+ * others slide over to make room. Critically damped, about 0.3s; no motion when
+ * the person has asked for less.
+ */
+const TAB_MOVE = LinearTransition.springify().duration(300).dampingRatio(1).reduceMotion(ReduceMotion.System);
+const LABEL_IN = FadeIn.duration(180).delay(60).reduceMotion(ReduceMotion.System);
 
 /** Per place: what the first section is called and the add row's placeholder. */
 const PLACE_COPY: Record<Place, { soonTitle: string; soonIsDate: boolean; restTitle: string; add: string; where: string }> = {
@@ -51,8 +58,6 @@ export default function Kitchen() {
   const { state, actions } = useStore();
   const undo = useUndo('kitchen');
   const animate = useLayoutMotion();
-  const { fontScale } = useWindowDimensions();
-  const scrollTabs = fontScale > TABS_SCROLL_SCALE;
 
   const [tab, setTab] = useState<Tab>(isTab(params.tab) ? params.tab : 'fridge');
   const [query, setQuery] = useState('');
@@ -83,21 +88,27 @@ export default function Kitchen() {
   const tabs = TABS.map((t) => {
     const on = t.id === tab;
     return (
-      <Tap
-        key={t.id}
-        accessibilityRole="tab"
-        accessibilityState={{ selected: on }}
-        onPress={() => pick(t.id)}
-        style={[
-          styles.tab,
-          scrollTabs ? styles.tabScroll : styles.tabFit,
-          on ? [t.id === 'tobuy' ? styles.tabOnRing : styles.tabOn, { backgroundColor: color[t.paper] }] : styles.tabOff,
-        ]}
-      >
-        <Text variant="button" weight={on ? 'semibold' : 'medium'} color={on ? 'ink' : 'inkMuted'} style={styles.tabLabel}>
-          {t.label}
-        </Text>
-      </Tap>
+      <Animated.View key={t.id} layout={TAB_MOVE} style={on ? styles.tabSlotOn : null}>
+        <Tap
+          accessibilityRole="tab"
+          accessibilityLabel={t.label}
+          accessibilityState={{ selected: on }}
+          onPress={() => pick(t.id)}
+          style={[
+            styles.tab,
+            on ? [styles.tabWide, t.id === 'tobuy' ? styles.tabOnRing : styles.tabOn, { backgroundColor: color[t.paper] }] : styles.tabOff,
+          ]}
+        >
+          <Icon name={t.icon} size={size.iconSm} color={on ? 'ink' : 'inkMuted'} />
+          {on ? (
+            <Animated.View entering={LABEL_IN} style={styles.tabLabel}>
+              <Text variant="button" weight="semibold" color="ink" numberOfLines={1}>
+                {t.label}
+              </Text>
+            </Animated.View>
+          ) : null}
+        </Tap>
+      </Animated.View>
     );
   });
 
@@ -132,22 +143,9 @@ export default function Kitchen() {
 
         <SearchField placeholder={placeholder} value={query} onChangeText={setQuery} />
 
-        {scrollTabs ? (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            accessibilityRole="tablist"
-            accessibilityLabel="Where"
-            style={styles.tabsBleed}
-            contentContainerStyle={[styles.tabs, styles.tabsScrollContent]}
-          >
-            {tabs}
-          </ScrollView>
-        ) : (
-          <View accessibilityRole="tablist" accessibilityLabel="Where" style={styles.tabs}>
-            {tabs}
-          </View>
-        )}
+        <View accessibilityRole="tablist" accessibilityLabel="Where" style={styles.tabs}>
+          {tabs}
+        </View>
 
         {tab === 'tobuy' ? (
           <ToBuyTab matches={matches} others={others} query={query.trim()} clearQuery={() => setQuery('')} />
@@ -351,21 +349,19 @@ function ToBuyTab({
 const styles = StyleSheet.create({
   root: { flex: 1 },
   sync: { flexDirection: 'row', alignItems: 'center', gap: space.s1 + 2 },
-  tabs: { flexDirection: 'row', gap: space.s2 },
-  // Full-bleed so the scrolling tabs slide under the screen edge, not the gutter.
-  tabsBleed: { marginHorizontal: -space.s5, flexGrow: 0 },
-  tabsScrollContent: { paddingHorizontal: space.s5 },
+  tabs: { flexDirection: 'row', alignItems: 'center', gap: space.s2 },
+  // The picked pill may shrink (very large text) so the circles always fit.
+  tabSlotOn: { flexShrink: 1 },
   tab: {
     minHeight: size.targetMin,
-    paddingVertical: space.s2,
-    paddingHorizontal: space.s3,
+    minWidth: size.targetMin,
     borderRadius: radius.pill,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  tabFit: { flex: 1, paddingHorizontal: space.s1 },
-  tabScroll: { paddingHorizontal: space.s4 },
-  tabLabel: { textAlign: 'center' },
+  tabWide: { paddingVertical: space.s1, paddingLeft: space.s3, paddingRight: space.s4, gap: space.s2 },
+  tabLabel: { flexShrink: 1 },
   tabOn: { borderWidth: 1, borderColor: color.line },
   tabOnRing: { borderWidth: 1.5, borderColor: color.sageInk },
   tabOff: { backgroundColor: color.surfaceSunken },
