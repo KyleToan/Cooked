@@ -1,6 +1,6 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
-import Animated from 'react-native-reanimated';
+import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 import { PLACE_LABEL } from '@/data/helpers';
 import type { ToBuyItem } from '@/data/types';
@@ -52,8 +52,17 @@ export function TodoList({ items, done, total, onToggle, onAdd, right, helper, a
   );
 }
 
+/** Critically damped, about 0.3s; instant when the person has asked for less motion. */
+const FILL_SPRING = { duration: 300, dampingRatio: 1, reduceMotion: ReduceMotion.System } as const;
+
 export function ProgressBar({ value }: { value: number }) {
   const pct = Math.round(Math.min(1, Math.max(0, value)) * 100);
+  // Starts where it is, so the first render doesn't animate; later changes spring.
+  const width = useSharedValue(pct);
+  useEffect(() => {
+    width.set(withSpring(pct, FILL_SPRING));
+  }, [pct, width]);
+  const fill = useAnimatedStyle(() => ({ width: `${width.get()}%` }));
   return (
     <View
       style={styles.track}
@@ -61,7 +70,7 @@ export function ProgressBar({ value }: { value: number }) {
       accessibilityLabel="To Buy progress"
       accessibilityValue={{ min: 0, max: 100, now: pct }}
     >
-      <View style={[styles.fill, { width: `${pct}%` }]} />
+      <Animated.View style={[styles.fill, fill]} />
     </View>
   );
 }
@@ -134,6 +143,6 @@ const styles = StyleSheet.create({
     borderBottomColor: color.lineSoft,
   },
   rowText: { flex: 1, minWidth: 0, gap: 2, paddingVertical: space.s2 },
-  add: { minHeight: size.rowHeight, paddingVertical: space.s2, flexDirection: 'row', alignItems: 'center', gap: space.s3 + 2 },
+  add: { minHeight: size.rowHeight, paddingVertical: space.s2, flexDirection: 'row', alignItems: 'center', gap: space.roomy },
   addInput: { ...type.body, flex: 1, minWidth: 0, color: color.ink, paddingVertical: 0, outlineWidth: 0 },
 });

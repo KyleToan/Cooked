@@ -4,12 +4,10 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Linking, Platform, StyleSheet, View } from 'react-native';
 
-import { ActionPill } from '@/components/ActionPill';
 import { ErrorLine } from '@/components/Controls';
 import { PushedHeader, SectionHeader } from '@/components/Header';
 import { Screen } from '@/components/Screen';
 import { SwitchRow } from '@/components/Settings';
-import { Sheet } from '@/components/Sheet';
 import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
@@ -19,7 +17,7 @@ import { failure, saveNotifications } from '@/data/kitchenApi';
 import { useStore } from '@/data/store';
 import { hasBackend } from '@/data/supabase';
 import type { NotificationKey } from '@/data/types';
-import { color, radius, size, space } from '@/theme';
+import { color, radius, shadow, size, space } from '@/theme';
 
 const ROWS: { key: NotificationKey; title: string; sub: string; time?: boolean }[] = [
   { key: 'toBuy', title: 'To Buy changes', sub: 'When someone adds to To Buy while you’re out. Grouped, so you get one buzz, not five.' },
@@ -62,8 +60,6 @@ export default function NotificationsScreen() {
   const { state, actions } = useStore();
   const n = state.notifications;
   const [permission, setPermission] = useState<Permission>(native ? 'undetermined' : 'unsupported');
-  const [picking, setPicking] = useState(false);
-  const [draft, setDraft] = useState(() => parseTime(n.useSoonTime));
   const [saveFailed, setSaveFailed] = useState<Failure | null>(null);
 
   // Save every change to the profile (stored only; nothing is sent). Skips the settings as the screen opened with.
@@ -123,9 +119,6 @@ export default function NotificationsScreen() {
         mode: 'time',
         onValueChange: (_e, d) => actions.setUseSoonTime(formatTime(d)),
       });
-    } else if (Platform.OS === 'ios') {
-      setDraft(value);
-      setPicking(true);
     } else {
       const i = WEB_TIMES.indexOf(n.useSoonTime);
       actions.setUseSoonTime(WEB_TIMES[(i + 1) % WEB_TIMES.length]);
@@ -159,17 +152,29 @@ export default function NotificationsScreen() {
                 <Text variant="caption" color="inkMuted">
                   Send it at
                 </Text>
-                <Tap
-                  accessibilityRole="button"
-                  accessibilityLabel={`Send it at ${n.useSoonTime}`}
-                  accessibilityHint="Opens a time picker"
-                  onPress={openTime}
-                  style={styles.timePill}
-                >
-                  <Text variant="button" weight="semibold">
-                    {n.useSoonTime}
-                  </Text>
-                </Tap>
+                {/* iOS: the system's compact time button in the row, saved as it changes. */}
+                {Platform.OS === 'ios' ? (
+                  <DateTimePicker
+                    value={parseTime(n.useSoonTime)}
+                    mode="time"
+                    display="compact"
+                    themeVariant="light"
+                    accentColor={color.sageInk}
+                    onValueChange={(_e, d) => actions.setUseSoonTime(formatTime(d))}
+                  />
+                ) : (
+                  <Tap
+                    accessibilityRole="button"
+                    accessibilityLabel={`Send it at ${n.useSoonTime}`}
+                    accessibilityHint="Opens a time picker"
+                    onPress={openTime}
+                    style={styles.timePill}
+                  >
+                    <Text variant="button" weight="semibold">
+                      {n.useSoonTime}
+                    </Text>
+                  </Tap>
+                )}
               </View>
             ) : null}
           </SwitchRow>
@@ -192,11 +197,15 @@ export default function NotificationsScreen() {
         <SectionHeader title="What it looks like" />
         <View style={styles.card}>
           <View style={styles.mark}>
-            <Text variant="sectionTitle">C</Text>
+            <Text variant="sectionTitle" color="noteInk">
+              C
+            </Text>
           </View>
           <View style={styles.grow}>
             <View style={styles.cardTop}>
-              <Text variant="link">Cooked</Text>
+              <Text variant="caption" weight="semibold">
+                Cooked
+              </Text>
               <Text variant="micro" weight="regular" color="inkMuted">
                 now
               </Text>
@@ -205,29 +214,6 @@ export default function NotificationsScreen() {
           </View>
         </View>
       </View>
-
-      {Platform.OS === 'ios' ? (
-        <Sheet visible={picking} onClose={() => setPicking(false)} title="Send the nudge at">
-          <DateTimePicker
-            value={draft}
-            mode="time"
-            display="spinner"
-            themeVariant="light"
-            textColor={color.ink}
-            onValueChange={(_e, d) => setDraft(d)}
-            style={styles.picker}
-          />
-          <ActionPill
-            label="Done"
-            variant="primary"
-            height="bottom"
-            onPress={() => {
-              actions.setUseSoonTime(formatTime(draft));
-              setPicking(false);
-            }}
-          />
-        </Sheet>
-      ) : null}
     </Screen>
   );
 }
@@ -238,24 +224,25 @@ const styles = StyleSheet.create({
   timePill: {
     minHeight: size.targetMin,
     paddingVertical: space.s1,
-    paddingHorizontal: space.s3 + 2,
+    paddingHorizontal: space.roomy,
     borderRadius: radius.pill,
     backgroundColor: color.surfaceSunken,
     justifyContent: 'center',
   },
   blocked: { flexDirection: 'row', alignItems: 'center', gap: space.s3, paddingTop: space.s2 },
   honest: { paddingTop: space.s2 },
-  picker: { alignSelf: 'stretch' },
-  preview: { gap: space.s2 + 2 },
+  preview: { gap: space.cozy },
+  // Looks like an iOS banner: white, round, floating. The mark is paper, since sage fills only the primary button.
   card: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: space.s3,
     paddingVertical: space.s3,
-    paddingHorizontal: space.s3 + 2,
-    borderRadius: radius.field + 2,
-    backgroundColor: color.surfaceSunken,
+    paddingHorizontal: space.roomy,
+    borderRadius: radius.card,
+    backgroundColor: color.surface,
+    ...shadow.island,
   },
-  mark: { width: APP_MARK, height: APP_MARK, borderRadius: radius.check + 2, backgroundColor: color.sage, alignItems: 'center', justifyContent: 'center' },
+  mark: { width: APP_MARK, height: APP_MARK, borderRadius: radius.check + 2, backgroundColor: color.cornsilk, alignItems: 'center', justifyContent: 'center' },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between' },
 });

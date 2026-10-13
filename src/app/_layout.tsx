@@ -10,9 +10,10 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { CookingLoader } from '@/components/Loader';
+import { Text } from '@/components/Text';
 import { StoreProvider, useStore } from '@/data/store';
 import { useLocalNotifications } from '@/hooks/useLocalNotifications';
-import { color, fontFaces } from '@/theme';
+import { color, fontFaces, space } from '@/theme';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -52,6 +53,7 @@ function Routes() {
     return (
       <View style={styles.loading} accessibilityLabel="Loading">
         <CookingLoader />
+        <Text color="inkMuted">Opening your kitchen…</Text>
       </View>
     );
   }
@@ -88,5 +90,5 @@ function Routes() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: color.surface },
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.s4, backgroundColor: color.surface },
 });

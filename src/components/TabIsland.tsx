@@ -1,7 +1,7 @@
 import type { BottomTabBarProps } from 'expo-router/tabs';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View, type LayoutRectangle } from 'react-native';
-import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import { Pressable, StyleSheet, View, type LayoutChangeEvent, type LayoutRectangle } from 'react-native';
+import Animated, { ReduceMotion, useAnimatedStyle, useReducedMotion, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { haptics } from '@/hooks/haptics';
@@ -16,7 +16,7 @@ type Tab = { key: TabKey; label: string; icon: IconName; href: '/' | '/kitchen' 
 
 const TABS: Tab[] = [
   { key: 'home', label: 'Home', icon: 'home', href: '/' },
-  { key: 'kitchen', label: 'Fridge', icon: 'fridge', href: '/kitchen' },
+  { key: 'kitchen', label: 'Kitchen', icon: 'fridge', href: '/kitchen' },
   { key: 'recipes', label: 'Recipes', icon: 'recipes', href: '/recipes' },
 ];
 
@@ -30,6 +30,10 @@ export const CHROME_TEXT_MAX = 1.3;
 
 /** Critically damped, about 0.3s; instant when the person has asked for less motion. */
 const SLIDE = { duration: 300, dampingRatio: 1, reduceMotion: ReduceMotion.System } as const;
+/** A pressed tab sinks a little and springs back on the same spring. */
+const PRESSED = 0.94;
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 /** Distance from the bottom of the screen to the bottom of the island. */
 export function islandEdge(insetBottom: number) {
@@ -37,11 +41,12 @@ export function islandEdge(insetBottom: number) {
 }
 
 /**
- * The floating tab island: Home, Fridge (Your Kitchen) and Recipes. Scan lives
+ * The floating tab island: Home, Kitchen (Your Kitchen) and Recipes. Scan lives
  * in Home's top bar.
- * The grey underscore slides to the picked tab.
+ * The grey underscore slides to the picked tab. Tapping the picked tab again calls `onReselect`
+ * (the tab bar uses it to scroll that screen to the top).
  */
-export function TabIsland({ active }: { active: TabKey }) {
+export function TabIsland({ active, onReselect }: { active: TabKey; onReselect?: () => void }) {
   const goToTab = useGoToTab();
   const insets = useSafeAreaInsets();
   const [tabs, setTabs] = useState<Partial<Record<TabKey, LayoutRectangle>>>({});
@@ -61,47 +66,26 @@ export function TabIsland({ active }: { active: TabKey }) {
   return (
     <View pointerEvents="box-none" style={[styles.wrap, { bottom: islandEdge(insets.bottom) }]}>
       <View accessibilityRole="tablist" style={styles.island}>
-        {TABS.map((tab) => {
-          const on = tab.key === active;
-          const onPress = () => {
-            if (on) return;
-            haptics.select();
-            goToTab(tab.href);
-          };
-          return (
-            <Pressable
-              key={tab.key}
-              accessibilityRole="tab"
-              accessibilityLabel={tab.label}
-              accessibilityState={{ selected: on }}
-              onPress={onPress}
-              onLayout={(e) => {
-                const l = e.nativeEvent.layout;
-                setTabs((t) => {
-                  const old = t[tab.key];
-                  return old && old.x === l.x && old.width === l.width && old.y === l.y ? t : { ...t, [tab.key]: l };
-                });
-              }}
-              style={styles.tab}
-            >
-              <Icon name={tab.icon} size={ISLAND_ICON} color={on ? 'ink' : 'inkMuted'} />
-              <Text
-                variant="micro"
-                color={on ? 'ink' : 'inkMuted'}
-                weight={on ? 'semibold' : 'medium'}
-                numberOfLines={1}
-                maxFontSizeMultiplier={CHROME_TEXT_MAX}
-              >
-                {tab.label}
-              </Text>
-              {/* Keeps the room for the underscore; the one that moves is drawn over the island. */}
-              <View
-                style={styles.mark}
-                onLayout={tab.key === 'home' ? (e) => setMarkTop(e.nativeEvent.layout.y) : undefined}
-              />
-            </Pressable>
-          );
-        })}
+        {TABS.map((tab) => (
+          <IslandTab
+            key={tab.key}
+            tab={tab}
+            on={tab.key === active}
+            onPress={() => {
+              haptics.select();
+              if (tab.key === active) onReselect?.();
+              else goToTab(tab.href);
+            }}
+            onLayout={(e) => {
+              const l = e.nativeEvent.layout;
+              setTabs((t) => {
+                const old = t[tab.key];
+                return old && old.x === l.x && old.width === l.width && old.y === l.y ? t : { ...t, [tab.key]: l };
+              });
+            }}
+            onMarkLayout={tab.key === 'home' ? (e) => setMarkTop(e.nativeEvent.layout.y) : undefined}
+          />
+        ))}
         {target && markTop !== null ? (
           <Animated.View
             pointerEvents="none"
@@ -113,10 +97,62 @@ export function TabIsland({ active }: { active: TabKey }) {
   );
 }
 
+function IslandTab({
+  tab,
+  on,
+  onPress,
+  onLayout,
+  onMarkLayout,
+}: {
+  tab: Tab;
+  on: boolean;
+  onPress: () => void;
+  onLayout: (e: LayoutChangeEvent) => void;
+  onMarkLayout?: (e: LayoutChangeEvent) => void;
+}) {
+  const reduced = useReducedMotion();
+  const scale = useSharedValue(1);
+  const press = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
+  return (
+    <AnimatedPressable
+      accessibilityRole="tab"
+      accessibilityLabel={tab.label}
+      accessibilityState={{ selected: on }}
+      onPress={onPress}
+      onPressIn={() => {
+        if (!reduced) scale.set(withSpring(PRESSED, SLIDE));
+      }}
+      onPressOut={() => scale.set(withSpring(1, SLIDE))}
+      onLayout={onLayout}
+      style={[styles.tab, press]}
+    >
+      <Icon name={tab.icon} size={ISLAND_ICON} color={on ? 'ink' : 'inkMuted'} filled={on && tab.key === 'home'} />
+      <Text
+        variant="micro"
+        color={on ? 'ink' : 'inkMuted'}
+        weight={on ? 'semibold' : 'medium'}
+        numberOfLines={1}
+        maxFontSizeMultiplier={CHROME_TEXT_MAX}
+      >
+        {tab.label}
+      </Text>
+      {/* Keeps the room for the underscore; the one that moves is drawn over the island. */}
+      <View style={styles.mark} onLayout={onMarkLayout} />
+    </AnimatedPressable>
+  );
+}
+
 /** The island as the tab bar of the (tabs) navigator. */
-export function TabBar({ state }: BottomTabBarProps) {
-  const name = state.routes[state.index]?.name;
-  return <TabIsland active={name === 'recipes' ? 'recipes' : name === 'kitchen' ? 'kitchen' : 'home'} />;
+export function TabBar({ state, navigation }: BottomTabBarProps) {
+  const route = state.routes[state.index];
+  const name = route?.name;
+  return (
+    <TabIsland
+      active={name === 'recipes' ? 'recipes' : name === 'kitchen' ? 'kitchen' : 'home'}
+      // React Navigation's re-tap event: `useScrollToTop` in Screen listens for it.
+      onReselect={() => route && navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true })}
+    />
+  );
 }
 
 /** Bottom padding a scrolling tab screen needs so its last row clears the island ("about 130px"). */
@@ -127,7 +163,7 @@ const styles = StyleSheet.create({
   island: {
     width: size.islandWidth,
     height: size.islandHeight,
-    padding: space.s1 + 2,
+    padding: space.tight,
     flexDirection: 'row',
     gap: space.s1,
     borderRadius: radius.pill,

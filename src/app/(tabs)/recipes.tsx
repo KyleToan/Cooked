@@ -10,7 +10,6 @@ import { RecipeRow } from '@/components/ListRows';
 import { Screen } from '@/components/Screen';
 import { SearchField } from '@/components/SearchField';
 import { BigNote } from '@/components/StickyNote';
-import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
 import { canMakeNow } from '@/data/helpers';
@@ -23,7 +22,7 @@ type Filter = 'all' | 'now' | 'almost' | 'imported';
 const FILTERS: { value: Filter; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'now', label: 'Can make now' },
-  { value: 'almost', label: 'Missing 1–2' },
+  { value: 'almost', label: 'Missing 1 or 2' },
   { value: 'imported', label: 'Imported' },
 ];
 
@@ -65,6 +64,9 @@ export default function Recipes() {
     if (param) router.setParams({ q: undefined });
   };
   const open = (id: string) => router.push({ pathname: '/recipe/[id]', params: { id } });
+  const tonightMeta = tonight
+    ? [tonight.time, tonight.servings, tonight.missing.length ? `you have ${tonight.have} of ${tonight.need}` : `you have all ${tonight.need} things`].filter(Boolean).join(' · ')
+    : '';
 
   return (
     <Screen island top="tab">
@@ -84,14 +86,18 @@ export default function Recipes() {
       {tonight && tonightShown ? (
         <View style={styles.tonight}>
           <SectionHeader title="Tonight" />
-          <BigNote paper="cornsilk" tilt={-0.8}>
-            <Tap accessibilityRole="link" onPress={() => open(tonight.id)}>
-              <Text variant="noteTitle" color="noteInk">
-                {tonight.title}
-              </Text>
-            </Tap>
+          {/* The whole note is one link (one VoiceOver stop); See recipe stays as its visible button. */}
+          <BigNote
+            paper="cornsilk"
+            tilt={-0.8}
+            onPress={() => open(tonight.id)}
+            accessibilityLabel={[tonight.title, tonightMeta, tonight.tonight].filter(Boolean).join(', ')}
+          >
+            <Text variant="noteTitle" color="noteInk">
+              {tonight.title}
+            </Text>
             <Text variant="caption" color="noteInkSoft">
-              {[tonight.time, tonight.servings, tonight.missing.length ? `you have ${tonight.have} of ${tonight.need}` : `you have all ${tonight.need} things`].filter(Boolean).join(' · ')}
+              {tonightMeta}
             </Text>
             <View style={styles.soonLine}>
               <Icon name="use-soon" size={16} color="bronzeInk" />
@@ -134,9 +140,9 @@ export default function Recipes() {
 const styles = StyleSheet.create({
   grow: { flex: 1 },
   searchRow: { flexDirection: 'row', alignItems: 'center', gap: space.s3 },
-  tonight: { gap: space.s2 + 2 },
-  soonLine: { flexDirection: 'row', alignItems: 'center', gap: space.s1 + 2 },
+  tonight: { gap: space.cozy },
+  soonLine: { flexDirection: 'row', alignItems: 'center', gap: space.tight },
   cook: { marginTop: space.s1 },
-  list: { gap: space.s1 + 2 },
+  list: { gap: space.tight },
   empty: { paddingVertical: space.s4 + 2, minHeight: size.rowHeight, gap: space.s3 },
 });

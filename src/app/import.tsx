@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 
 import { ActionPill } from '@/components/ActionPill';
-import { ErrorLine, Segmented } from '@/components/Controls';
+import { Checkbox, ErrorLine, Segmented } from '@/components/Controls';
 import { CookingLoader } from '@/components/Loader';
 import { Sheet } from '@/components/Sheet';
 import { Tap } from '@/components/Tap';
@@ -21,10 +21,12 @@ import { color, radius, size, space, type } from '@/theme';
 type Mode = 'link' | 'text';
 type Step = 'edit' | 'loading' | 'done' | 'error';
 
-/** The shortest time the loader shows, so a quick import doesn't flash. */
+/** The shortest time the loader shows for a link, so a quick fetch doesn't flash. */
 const MIN_READ_MS = 800;
 const TEXT_HEIGHT = 132;
 const FOCUS_BORDER = 1.5;
+/** Room on the field's right for the Paste button. */
+const PASTE_ROOM = size.targetMin + space.s5;
 
 export default function Import() {
   const router = useRouter();
@@ -41,6 +43,7 @@ export default function Import() {
   const [hint, setHint] = useState('');
   const [parsed, setParsed] = useState<Recipe | null>(null);
   const [focused, setFocused] = useState(false);
+  const [addMissing, setAddMissing] = useState(true);
 
   const lines = countIngredients(text);
   const close = () => router.back();
@@ -50,7 +53,8 @@ export default function Import() {
     // Links are fetched on the device; pasted text is read straight away.
     const controller = new AbortController();
     const read = mode === 'text' ? Promise.resolve(parseRecipeFromText(text, state.items)) : importFromLink(link, state.items, controller.signal);
-    const wait = new Promise((done) => setTimeout(done, MIN_READ_MS));
+    // Pasted text is read at once, so it skips the minimum and goes straight to the result.
+    const wait = mode === 'text' ? null : new Promise((done) => setTimeout(done, MIN_READ_MS));
     let live = true;
     Promise.all([read, wait]).then(([recipe]) => {
       if (!live) return;
@@ -117,43 +121,58 @@ export default function Import() {
               setHint('');
             }}
           />
+          {/* Touch and hold in the field pastes without asking; Paste makes iOS ask each time. */}
           {mode === 'link' ? (
-            <TextInput
-              value={link}
-              onChangeText={(v) => {
-                setLink(v);
-                setHint('');
-              }}
-              placeholder="Touch and hold to paste a link"
-              placeholderTextColor={color.inkSubtle}
-              accessibilityLabel="Recipe link"
-              keyboardType="url"
-              textContentType="URL"
-              autoCapitalize="none"
-              autoCorrect={false}
-              returnKeyType="go"
-              onSubmitEditing={start}
-              onFocus={() => setFocused(true)}
-              onBlur={() => setFocused(false)}
-              style={[styles.input, styles.linkField, focused && styles.focused]}
-            />
-          ) : (
-            <>
+            <View>
               <TextInput
-                value={text}
+                value={link}
                 onChangeText={(v) => {
-                  setText(v);
+                  setLink(v);
                   setHint('');
                 }}
-                placeholder="Touch and hold to paste the recipe. Messy is fine."
+                placeholder="Touch and hold to paste a link"
                 placeholderTextColor={color.inkSubtle}
-                accessibilityLabel="Recipe text"
-                multiline
-                textAlignVertical="top"
+                accessibilityLabel="Recipe link"
+                keyboardType="url"
+                textContentType="URL"
+                autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="go"
+                onSubmitEditing={start}
                 onFocus={() => setFocused(true)}
                 onBlur={() => setFocused(false)}
-                style={[styles.input, styles.textArea, focused && styles.focused]}
+                style={[styles.input, styles.linkField, focused && styles.focused]}
               />
+              <Tap accessibilityRole="button" accessibilityLabel="Paste from clipboard" onPress={paste} style={[styles.paste, styles.pasteLink]}>
+                <Text variant="link" weight="semibold" color="sageInk">
+                  Paste
+                </Text>
+              </Tap>
+            </View>
+          ) : (
+            <>
+              <View>
+                <TextInput
+                  value={text}
+                  onChangeText={(v) => {
+                    setText(v);
+                    setHint('');
+                  }}
+                  placeholder="Touch and hold to paste the recipe. Messy is fine."
+                  placeholderTextColor={color.inkSubtle}
+                  accessibilityLabel="Recipe text"
+                  multiline
+                  textAlignVertical="top"
+                  onFocus={() => setFocused(true)}
+                  onBlur={() => setFocused(false)}
+                  style={[styles.input, styles.textArea, focused && styles.focused]}
+                />
+                <Tap accessibilityRole="button" accessibilityLabel="Paste from clipboard" onPress={paste} style={[styles.paste, styles.pasteText]}>
+                  <Text variant="link" weight="semibold" color="sageInk">
+                    Paste
+                  </Text>
+                </Tap>
+              </View>
               <Text variant="caption" color={text && lines ? 'ink' : 'inkMuted'} weight={text && lines ? 'semibold' : undefined}>
                 {text
                   ? lines
@@ -164,8 +183,6 @@ export default function Import() {
             </>
           )}
           {hint ? <ErrorLine text={hint} /> : null}
-          {/* Touch and hold in the field pastes without asking; this button makes iOS ask each time. */}
-          <ActionPill label="Paste from clipboard" height="header" onPress={paste} />
           <ActionPill label="Import recipe" variant="primary" height="bottom" onPress={start} />
         </View>
       ) : null}
@@ -229,22 +246,17 @@ export default function Import() {
               </View>
             ))}
           </View>
-          {missing ? (
-            // To Buy notes point at a saved recipe, so adding them saves it too. The label says so.
-            <Tap
-              accessibilityRole="button"
-              accessibilityState={{ selected: added }}
-              accessibilityHint={added ? 'Takes them off To Buy. The recipe stays saved.' : undefined}
-              onPress={() => {
-                actions.importRecipe(saved);
-                actions.toggleRecipeToBuy(saved.id);
-              }}
-              style={[styles.missingBtn, added && styles.missingAdded]}
-            >
-              <Text variant="button" weight="semibold" color={added ? 'sageInk' : 'ink'} style={styles.center}>
-                {added ? `Saved · ${missing} added to To Buy` : `Save and add ${missing} missing to To Buy`}
+          {missing && !added ? (
+            <View style={styles.checkRow}>
+              <Checkbox
+                checked={addMissing}
+                onPress={() => setAddMissing(!addMissing)}
+                label={`Add the ${missing} missing to To Buy`}
+              />
+              <Text variant="button" weight="regular" style={styles.grow}>
+                Add the {missing} missing to To Buy
               </Text>
-            </Tap>
+            </View>
           ) : null}
           <ActionPill
             label="Save to Recipes"
@@ -252,6 +264,8 @@ export default function Import() {
             height="bottom"
             onPress={() => {
               actions.importRecipe(saved);
+              // To Buy notes point at a saved recipe, so they're added after saving it.
+              if (missing && addMissing && !added) actions.toggleRecipeToBuy(saved.id);
               goToTab('/recipes');
             }}
           />
@@ -262,7 +276,7 @@ export default function Import() {
 }
 
 const styles = StyleSheet.create({
-  body: { gap: space.s3 + 2 },
+  body: { gap: space.roomy },
   input: {
     ...type.body,
     color: color.ink,
@@ -272,20 +286,36 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: color.controlLine,
   },
-  // minHeight and padding, not a fixed height, so larger text sizes still fit.
+  // minHeight and padding, not a fixed height, so larger text sizes still fit. Both leave room on the right for Paste.
   linkField: {
     minHeight: size.controlHeight + space.s1,
-    paddingHorizontal: space.s3 + 2,
+    paddingLeft: space.roomy,
+    paddingRight: PASTE_ROOM,
     paddingVertical: space.s3,
   },
   textArea: {
     minHeight: TEXT_HEIGHT,
-    padding: space.s3 + 2,
+    padding: space.roomy,
+    paddingRight: PASTE_ROOM,
   },
+  // Paste sits inside the field's right edge (the link field) or top-right corner (the text area).
+  paste: {
+    position: 'absolute',
+    right: 0,
+    minWidth: size.targetMin,
+    minHeight: size.targetMin,
+    paddingHorizontal: space.roomy,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pasteLink: { top: 0, bottom: 0 },
+  pasteText: { top: 0 },
+  checkRow: { flexDirection: 'row', alignItems: 'center', gap: space.s2, marginLeft: -space.s2 - 2 },
+  grow: { flex: 1 },
   // A thicker sage-ink outline while typing; the padding gives back the extra half point so nothing shifts.
   focused: { borderWidth: FOCUS_BORDER, borderColor: color.sageInk, margin: -(FOCUS_BORDER - 1) },
-  loading: { alignItems: 'center', gap: space.s3 + 2, paddingTop: space.s5 + space.s1 + 2, paddingBottom: space.s5 * 2 },
-  errLink: { paddingVertical: space.s3, paddingHorizontal: space.s3 + 2, borderRadius: radius.control, backgroundColor: color.surfaceSunken },
+  loading: { alignItems: 'center', gap: space.roomy, paddingTop: space.s5 + space.tight, paddingBottom: space.s5 * 2 },
+  errLink: { paddingVertical: space.s3, paddingHorizontal: space.roomy, borderRadius: radius.control, backgroundColor: color.surfaceSunken },
   found: {
     minHeight: space.s5 * 2,
     flexDirection: 'row',
@@ -294,17 +324,4 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: color.lineSoft,
   },
-  missingBtn: {
-    minHeight: size.controlHeight,
-    paddingVertical: space.s2,
-    paddingHorizontal: space.s4,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.pill,
-    backgroundColor: color.surfaceSunken,
-    borderWidth: 1,
-    borderColor: color.surfaceSunken,
-  },
-  center: { textAlign: 'center' },
-  missingAdded: { backgroundColor: color.surface, borderColor: color.line },
 });

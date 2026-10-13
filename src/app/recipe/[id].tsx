@@ -4,19 +4,19 @@ import { useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
 
 import { ActionPill } from '@/components/ActionPill';
-import { PushedHeader, SectionHeader } from '@/components/Header';
+import { UndoBar } from '@/components/Controls';
+import { BackButton, PushedHeader, SectionHeader } from '@/components/Header';
 import { ToBuyToggle } from '@/components/ListRows';
 import { Screen } from '@/components/Screen';
-import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
 import { isUseSoon, PLACE_LABEL, recipeMeta } from '@/data/helpers';
 import { matches, usedWhenMade } from '@/data/match';
 import { STAPLES } from '@/data/seed';
 import { useStore, useUndo } from '@/data/store';
-import { color, radius, size, space } from '@/theme';
+import { color, radius, shadow, size, space } from '@/theme';
 
-const PHOTO_HEIGHT = 200;
+const PHOTO_HEIGHT = 260;
 
 export default function RecipeScreen() {
   const router = useRouter();
@@ -50,33 +50,46 @@ export default function RecipeScreen() {
   const used = usedWhenMade(recipe, made?.snapshot.items ?? state.items, STAPLES).length;
   const canMake = recipe.ingredients.length > 0;
 
-  const footer = canMake ? (
+  // While the undo bar shows, the footer steps aside so the bar floats at the bottom on its own.
+  const footer = canMake && !made ? (
     <>
-      {made ? (
-        <View accessibilityRole="alert" style={styles.made}>
-          <Text variant="button" style={styles.grow}>
-            Took {used} things out of your kitchen
-          </Text>
-          <Tap accessibilityRole="button" accessibilityLabel="Undo: I made this" onPress={actions.undo} style={styles.undo}>
-            <Text variant="button" weight="semibold" color="sageInk">
-              Undo
-            </Text>
-          </Tap>
-        </View>
-      ) : (
-        <ActionPill label="I made this" variant="primary" height="bottom" onPress={() => actions.madeRecipe(recipe.id)} />
-      )}
+      <ActionPill label="I made this" variant="primary" height="bottom" onPress={() => actions.madeRecipe(recipe.id)} />
       <Text variant="micro" color="inkMuted" weight="regular" style={styles.center}>
-        {made ? 'Oil and spices stay in the pantry.' : 'We’ll take what you used out of your kitchen.'}
+        We’ll take what you used out of your kitchen.
       </Text>
     </>
   ) : undefined;
+  const photo = recipe.photo && !photoFailed ? recipe.photo : undefined;
 
   return (
-    <Screen footer={footer} gap={space.s5 + 2}>
+    <Screen
+      footer={footer}
+      gap={space.s5 + 2}
+      raised={!!made}
+      overlay={made ? <UndoBar island={false} text={`Took ${used} things out of your kitchen`} onUndo={actions.undo} onDismiss={() => actions.clearUndo(made.scope)} /> : null}
+    >
+      {photo ? (
+        <View>
+          <Image
+            source={{ uri: photo }}
+            contentFit="cover"
+            transition={150}
+            accessible
+            accessibilityRole="image"
+            accessibilityLabel={`Photo of ${recipe.title}`}
+            onError={() => setPhotoFailed(true)}
+            style={styles.photo}
+          />
+          {/* With a photo on top, the back button floats over it and the title sits below. */}
+          <View style={styles.floatingBack}>
+            <BackButton onPress={() => router.back()} label="Back to recipes" />
+          </View>
+        </View>
+      ) : null}
+
       <PushedHeader
         title={recipe.title}
-        onBack={() => router.back()}
+        onBack={photo ? undefined : () => router.back()}
         backLabel="Back to recipes"
         below={
           <Text variant="caption" color="inkMuted">
@@ -84,19 +97,6 @@ export default function RecipeScreen() {
           </Text>
         }
       />
-
-      {recipe.photo && !photoFailed ? (
-        <Image
-          source={{ uri: recipe.photo }}
-          contentFit="cover"
-          transition={150}
-          accessible
-          accessibilityRole="image"
-          accessibilityLabel={`Photo of ${recipe.title}`}
-          onError={() => setPhotoFailed(true)}
-          style={styles.photo}
-        />
-      ) : null}
 
       {recipe.missing.length ? (
         <View style={styles.list}>
@@ -184,10 +184,15 @@ function Amount({ value }: { value?: string }) {
 const styles = StyleSheet.create({
   grow: { flex: 1, minWidth: 0, gap: 1 },
   center: { textAlign: 'center' },
-  photo: {
-    height: PHOTO_HEIGHT,
-    borderRadius: radius.field,
-    overflow: 'hidden',
+  // Full bleed: out past the 20pt gutter on both sides, square at the screen edges.
+  photo: { height: PHOTO_HEIGHT, marginHorizontal: -space.s5 },
+  floatingBack: {
+    position: 'absolute',
+    top: space.s3,
+    left: 0,
+    borderRadius: radius.pill,
+    backgroundColor: color.surface,
+    ...shadow.island,
   },
   list: { gap: space.s1 },
   row: {
@@ -204,16 +209,4 @@ const styles = StyleSheet.create({
   steps: { gap: space.s3 },
   step: { flexDirection: 'row', gap: space.s2 },
   stepNo: { minWidth: space.s5 },
-  made: {
-    minHeight: size.controlHeight + space.s1,
-    paddingVertical: space.s1,
-    paddingLeft: space.s4 + 2,
-    paddingRight: space.s1 + 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: color.line,
-  },
-  undo: { minHeight: size.targetMin, paddingHorizontal: space.s3 + 2, justifyContent: 'center' },
 });

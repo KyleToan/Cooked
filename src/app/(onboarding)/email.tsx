@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { ActionPill } from '@/components/ActionPill';
@@ -9,12 +9,16 @@ import { Text } from '@/components/Text';
 import { failText, failureOf, type Failure } from '@/data/errors';
 import { useStore } from '@/data/store';
 import { supabase } from '@/data/supabase';
-import { color, radius, size, space } from '@/theme';
+import { space } from '@/theme';
 
 type Mode = 'email' | 'phone';
 
 const looksLikeEmail = (v: string) => /^\S+@\S+\.\S+$/.test(v.trim());
-const looksLikePhone = (v: string) => v.replace(/\D/g, '').length >= 7;
+// US numbers only for now, so exactly ten digits.
+const looksLikePhone = (v: string) => v.replace(/\D/g, '').length === 10;
+
+/** How long typing has to pause before we say what's missing. */
+const SETTLE_MS = 600;
 
 /** Email or phone, one field, Send code. No password. */
 export default function Email() {
@@ -26,7 +30,15 @@ export default function Email() {
   const [sending, setSending] = useState(false);
   const [failed, setFailed] = useState<Failure | null>(null);
 
+  const value = mode === 'email' ? email : phone;
   const ready = mode === 'email' ? looksLikeEmail(email) : looksLikePhone(phone);
+  // The value typing last paused on; the hint only shows for that, never mid-word.
+  const [settled, setSettled] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setSettled(value), SETTLE_MS);
+    return () => clearTimeout(t);
+  }, [value]);
+  const hint = !ready && !!value.trim() && settled === value;
   const send = async () => {
     if (!ready || sending) return;
     if (supabase) {
@@ -50,6 +62,12 @@ export default function Email() {
         mode === 'email'
           ? 'We’ll send a code to make sure it’s you. No password needed.'
           : 'We’ll text you a code to make sure it’s you. No password needed.'
+      }
+      bottom={
+        <>
+          {failed ? <ErrorLine text={failText('send the code', failed)} /> : null}
+          <ActionPill label="Send code" variant="primary" height="bottom" onPress={send} disabled={!ready} busy={sending} />
+        </>
       }
     >
       <Segmented
@@ -80,9 +98,9 @@ export default function Email() {
       ) : (
         <View style={styles.phone}>
           {/* Only US numbers for now; picking a country comes later. */}
-          <View style={styles.country} accessibilityLabel="Country code, plus 1">
-            <Text>+1</Text>
-          </View>
+          <Text accessible accessibilityLabel="Country code, plus 1">
+            +1
+          </Text>
           <View style={styles.grow}>
             <Field
               key="phone"
@@ -101,27 +119,16 @@ export default function Email() {
         </View>
       )}
 
-      {failed ? <ErrorLine text={failText('send the code', failed)} /> : null}
-
-      <ActionPill label="Send code" variant="primary" height="bottom" onPress={send} disabled={!ready || sending} />
+      {hint ? (
+        <Text variant="caption" color="inkMuted" accessibilityLiveRegion="polite">
+          {mode === 'email' ? 'Enter a full email address' : 'Enter a 10-digit number'}
+        </Text>
+      ) : null}
     </OnbScreen>
   );
 }
 
-const COUNTRY_W = 92;
-
 const styles = StyleSheet.create({
-  phone: { flexDirection: 'row', gap: space.s2 + 2 },
+  phone: { flexDirection: 'row', alignItems: 'center', gap: space.s3 },
   grow: { flex: 1 },
-  country: {
-    width: COUNTRY_W,
-    // Grows with the phone field beside it at large text sizes.
-    minHeight: size.controlHeight + space.s3 - 2,
-    paddingVertical: space.s1,
-    borderRadius: radius.control,
-    borderWidth: 1,
-    borderColor: color.controlLine,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
 });

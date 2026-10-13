@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { ActionPill, PillRow } from '@/components/ActionPill';
+import { Chevron } from '@/components/Chevron';
 import { UndoBar } from '@/components/Controls';
 import { SectionHeader, TopBar } from '@/components/Header';
 import { Icon } from '@/components/Icon';
@@ -13,10 +14,10 @@ import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
 import { AddRow, TodoList } from '@/components/TodoList';
-import { count, inStock, isUseSoon, PLACE_LABEL, PLACES, sortToBuy, toBuyProgress } from '@/data/helpers';
+import { count, greeting, inStock, isUseSoon, PLACE_LABEL, PLACES, sortToBuy, toBuyProgress } from '@/data/helpers';
 import { useStore, useUndo } from '@/data/store';
 import type { ToBuyItem } from '@/data/types';
-import { size, space } from '@/theme';
+import { color, size, space } from '@/theme';
 
 /** Home shows the first three things still to get; the full list is the To Buy tab. */
 const HOME_TO_BUY = 3;
@@ -102,10 +103,11 @@ export default function Home() {
       island
       raised={!!undo}
       top="tab"
-      overlay={undo ? <UndoBar text={undo.text} onUndo={actions.undo} /> : null}
+      overlay={undo ? <UndoBar text={undo.text} onUndo={actions.undo} onDismiss={() => actions.clearUndo(undo.scope)} /> : null}
     >
       <TopBar
         title="Cooked"
+        line={greeting(state.user.name)}
         onScan={() => router.push('/scan')}
         onAccount={() => router.push('/account')}
       />
@@ -122,6 +124,7 @@ export default function Home() {
               <Text variant="caption" color="inkMuted">
                 {r.where}
               </Text>
+              <Chevron direction="right" />
             </Tap>
           ))}
           {results.length === 0 ? (
@@ -158,8 +161,8 @@ export default function Home() {
         </>
       ) : (
         <>
+          {/* Scan is the round button in the top bar, so Import is the only pill here. */}
           <PillRow>
-            <ActionPill label="Scan a receipt" variant="primary" icon="scan" fill onPress={() => router.push('/scan')} />
             <ActionPill label="Import recipe" icon="import" fill onPress={() => router.push('/import')} />
           </PillRow>
 
@@ -168,7 +171,7 @@ export default function Home() {
               <SectionHeader title="Your Kitchen" />
               {state.kitchen.syncedAgo ? (
                 <View style={styles.sync}>
-                  <Icon name="syncing" size={13} color="inkMuted" />
+                  <Icon name="syncing" size={size.iconSm} color="inkMuted" />
                   <Text variant="caption" color="inkMuted">
                     Synced {state.kitchen.syncedAgo} from a receipt
                   </Text>
@@ -200,12 +203,12 @@ export default function Home() {
 
 const styles = StyleSheet.create({
   grow: { flex: 1 },
-  result: { minHeight: size.rowHeight, flexDirection: 'row', alignItems: 'center', gap: space.s3 },
+  result: { minHeight: size.rowHeight, flexDirection: 'row', alignItems: 'center', gap: space.s3, borderBottomWidth: 1, borderBottomColor: color.lineSoft },
   noMatch: { gap: space.s1, paddingTop: space.s4 },
-  kitchen: { gap: space.s3 + 2 },
+  kitchen: { gap: space.roomy },
   kitchenHead: { gap: space.s1 },
-  sync: { flexDirection: 'row', alignItems: 'center', gap: space.s1 + 2 },
-  notes: { flexDirection: 'row', gap: space.s3, paddingTop: space.s2 + 2, paddingHorizontal: 2, paddingBottom: space.s1 },
-  emptyNote: { marginHorizontal: space.s1, gap: space.s2 + 2, paddingTop: space.s5 + 2, paddingHorizontal: space.s5 },
+  sync: { flexDirection: 'row', alignItems: 'center', gap: space.tight },
+  notes: { flexDirection: 'row', gap: space.s3, paddingTop: space.cozy, paddingHorizontal: 2, paddingBottom: space.s1 },
+  emptyNote: { marginHorizontal: space.s1, gap: space.cozy, paddingTop: space.s5 + 2, paddingHorizontal: space.s5 },
   emptyToBuy: { gap: space.s3 },
 });

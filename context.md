@@ -37,7 +37,7 @@ The full design system is in `design/system/` and at https://claude.ai/artifact/
 - **Bronze** only marks food to use soon. **Red** (`error-ink`) only for errors and destructive text.
 - **Alumni Sans** for titles (bold) and section headings (semibold), **Albert Sans** for everything else, **Caveat** handwriting only on sticky notes.
 - Sticky notes in Cornsilk (Fridge), Papaya (Pantry) and Beige (Freezer).
-- Floating tab island: Home, Fridge, Recipes. Fridge is the Your Kitchen tab. Home's top bar has Scan (round, top left), Cooked centred and Account (top right).
+- Floating tab island: Home, Kitchen (fridge icon), Recipes. Kitchen is the Your Kitchen tab. Home's top bar has Scan (round, top left), Cooked centred with the greeting under it, and Account (round, top right).
 - 22 custom icons on a 24px grid.
 - Every screen must pass **Avoid the AI look** (`design/system/avoid-the-ai-look.md`).
 

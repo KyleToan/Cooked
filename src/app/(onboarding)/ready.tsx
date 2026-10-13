@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import Animated, { ReduceMotion, useReducedMotion, withDelay, withSpring, withTiming } from 'react-native-reanimated';
 
 import { ActionPill } from '@/components/ActionPill';
 import { ErrorLine } from '@/components/Controls';
@@ -11,7 +12,27 @@ import { failText, type Failure } from '@/data/errors';
 import * as api from '@/data/kitchenApi';
 import { useStore } from '@/data/store';
 import { hasBackend } from '@/data/supabase';
+import { haptics } from '@/hooks/haptics';
 import { space } from '@/theme';
+
+/** The notes drop onto the door in turn: from 24pt up, a slightly soft spring, 60ms apart. */
+const DROP = { duration: 400, dampingRatio: 0.8, reduceMotion: ReduceMotion.System } as const;
+const DROP_FROM = -24;
+const STAGGER = 60;
+const FADE = 200;
+/** When the last note has landed (its delay plus most of the spring). */
+const LANDED = STAGGER * 2 + 300;
+
+const drop = (delay: number) => () => {
+  'worklet';
+  return {
+    initialValues: { opacity: 0, transform: [{ translateY: DROP_FROM }] },
+    animations: {
+      opacity: withDelay(delay, withTiming(1, { duration: FADE })),
+      transform: [{ translateY: withDelay(delay, withSpring(0, DROP)) }],
+    },
+  };
+};
 
 /** What the first scan put away, To Buy empty, Go to my kitchen. */
 export default function Ready() {
@@ -20,6 +41,16 @@ export default function Ready() {
   const [failed, setFailed] = useState<Failure | null>(null);
   const scan = state.session.lastScan;
   const count = PLACES.reduce((n, p) => n + scan[p].length, 0);
+  const reduced = useReducedMotion();
+
+  // One buzz as the last note lands; with Reduce Motion the notes are already there.
+  useEffect(() => {
+    if (!count) return;
+    const t = setTimeout(haptics.success, reduced ? 0 : LANDED);
+    return () => clearTimeout(t);
+    // Once, on arrival.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const finish = async () => {
     if (hasBackend) {
@@ -46,20 +77,21 @@ export default function Ready() {
       bottom={
         <>
           {failed ? <ErrorLine text={failText('finish setting up', failed)} /> : null}
-          <ActionPill label="Go to my kitchen" variant="primary" height="bottom" onPress={finish} disabled={busy} />
+          <ActionPill label="Go to my kitchen" variant="primary" height="bottom" onPress={finish} busy={busy} />
         </>
       }
     >
       {count ? (
         <View style={styles.notes}>
-          {PLACES.map((p) => (
-            <PaperNote
-              key={p}
-              label={PLACE_LABEL[p]}
-              body={scan[p].map((n) => n.toLowerCase()).join(', ')}
-              paper={PAPER[p]}
-              tilt={NOTE_TILT[p]}
-            />
+          {PLACES.map((p, i) => (
+            <Animated.View key={p} entering={reduced ? undefined : drop(i * STAGGER)} style={styles.drop}>
+              <PaperNote
+                label={PLACE_LABEL[p]}
+                body={scan[p].map((n) => n.toLowerCase()).join(', ')}
+                paper={PAPER[p]}
+                tilt={NOTE_TILT[p]}
+              />
+            </Animated.View>
           ))}
         </View>
       ) : null}
@@ -71,5 +103,6 @@ export default function Ready() {
 }
 
 const styles = StyleSheet.create({
-  notes: { flexDirection: 'row', gap: space.s3, paddingTop: space.s2 + 2, paddingHorizontal: 2, paddingBottom: space.s1, marginVertical: space.s2 },
+  drop: { flex: 1 },
+  notes: { flexDirection: 'row', gap: space.s3, paddingTop: space.cozy, paddingHorizontal: 2, paddingBottom: space.s1, marginVertical: space.s2 },
 });

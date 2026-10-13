@@ -1,19 +1,41 @@
 // Pieces only the camera screens use. The camera is the one place see-through
 // dark controls are allowed, because they sit over a live feed.
 
-import type { ReactNode } from 'react';
-import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { BlurView } from 'expo-blur';
+import { useEffect, useState, type ReactNode } from 'react';
+import { AccessibilityInfo, Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { color } from '@/theme';
 
 const GLASS = 0.4;
+const BLUR = 30;
+// Android's BlurView only fakes the blur unless it wraps the camera as a blur target, so it keeps the flat wash.
+const CAN_BLUR = Platform.OS !== 'android';
 
-/** A dark see-through backing for a control over the camera feed. */
+/** True while Reduce Transparency is on (iOS); the glass then turns flat. */
+function useReduceTransparency() {
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    AccessibilityInfo.isReduceTransparencyEnabled().then(setOn);
+    const sub = AccessibilityInfo.addEventListener('reduceTransparencyChanged', setOn);
+    return () => sub.remove();
+  }, []);
+  return on;
+}
+
+/** A dark blurred backing for a control over the camera feed; `on` is a flat white fill. */
 export function Glass({ style, children, on }: { style?: StyleProp<ViewStyle>; children?: ReactNode; on?: boolean }) {
+  const flat = useReduceTransparency() || !CAN_BLUR;
   return (
     <View style={[styles.glassBox, style]}>
-      <View style={[StyleSheet.absoluteFill, on ? styles.on : styles.glass]} />
+      {on ? (
+        <View style={[StyleSheet.absoluteFill, styles.on]} />
+      ) : flat ? (
+        <View style={[StyleSheet.absoluteFill, styles.glass]} />
+      ) : (
+        <BlurView tint="dark" intensity={BLUR} style={StyleSheet.absoluteFill} />
+      )}
       {children}
     </View>
   );

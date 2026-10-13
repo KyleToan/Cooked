@@ -1,5 +1,8 @@
-import type { ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import { useEffect, useState, type ReactNode } from 'react';
+import { AccessibilityInfo, StyleSheet, View } from 'react-native';
+
+import { haptics } from '@/hooks/haptics';
 
 import { color, radius, size, space, type ColorName } from '@/theme';
 import { ActionPill } from './ActionPill';
@@ -110,6 +113,42 @@ export function PersonRow({ name, note, paper, right }: { name: string; note: st
   );
 }
 
+/** How long "Copied" stays under the invite link. */
+const COPIED_MS = 2000;
+
+/** The invite link in a quiet box. Tapping it copies the link and says "Copied" for a moment. */
+export function InviteLink({ link }: { link: string }) {
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (!copied) return;
+    const t = setTimeout(() => setCopied(false), COPIED_MS);
+    return () => clearTimeout(t);
+  }, [copied]);
+  const copy = async () => {
+    await Clipboard.setStringAsync(`https://${link}`);
+    haptics.success();
+    AccessibilityInfo.announceForAccessibility('Copied');
+    setCopied(true);
+  };
+  return (
+    <View style={styles.inviteWrap}>
+      <Tap accessibilityRole="button" accessibilityLabel="Copy invite link" accessibilityHint={link} onPress={copy} style={styles.link}>
+        <Text variant="micro" weight="regular" color="inkMuted">
+          Invite link
+        </Text>
+        <Text variant="button" weight="regular">
+          {link}
+        </Text>
+      </Tap>
+      {copied ? (
+        <Text variant="caption" color="inkMuted">
+          Copied
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
 /** The end of Account: a grey Log out pill, Delete account in `error-ink`, and the app version. */
 export function AccountEnding({ onLogOut, onDelete, version }: { onLogOut: () => void; onDelete: () => void; version: string }) {
   return (
@@ -146,6 +185,17 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: color.lineSoft,
   },
-  ending: { gap: space.s1 + 2, paddingTop: space.s2 },
+  inviteWrap: { gap: space.s1 },
+  link: {
+    minHeight: size.controlHeight + space.s3 - 2,
+    paddingVertical: space.s2,
+    paddingHorizontal: space.s4,
+    justifyContent: 'center',
+    gap: 2,
+    borderRadius: radius.control,
+    borderWidth: 1,
+    borderColor: color.line,
+  },
+  ending: { gap: space.tight, paddingTop: space.s2 },
   center: { textAlign: 'center' },
 });

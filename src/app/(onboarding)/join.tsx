@@ -112,6 +112,19 @@ export default function Join() {
       onBack={() => router.back()}
       title="Join a kitchen"
       sub="Paste the invite link someone sent you, or type the code at the end of it."
+      bottom={
+        <>
+          {failMessage ? <ErrorLine text={failMessage} /> : null}
+          <ActionPill
+            label={note ? `Join ${note.kitchen}` : 'Join'}
+            variant="primary"
+            height="bottom"
+            onPress={join}
+            disabled={hasBackend ? !code : !found}
+            busy={busy}
+          />
+        </>
+      }
     >
       <Field
         label="Invite link or code"
@@ -126,7 +139,6 @@ export default function Join() {
       />
       {!value ? <ActionPill label="Paste invite link" height="header" onPress={paste} /> : null}
       {notFound ? <ErrorLine text="We couldn’t find a kitchen with that code. Check the link and try again." /> : null}
-      {failMessage ? <ErrorLine text={failMessage} /> : null}
       {note ? (
         <BigNote paper="beige" tilt={-1} style={styles.note}>
           <Text variant="noteTitle" color="noteInk" maxFontSizeMultiplier={NOTE_TITLE_MAX}>
@@ -138,17 +150,10 @@ export default function Join() {
           </Text>
         </BigNote>
       ) : null}
-      <ActionPill
-        label={note ? `Join ${note.kitchen}` : 'Join'}
-        variant="primary"
-        height="bottom"
-        onPress={join}
-        disabled={hasBackend ? !code || busy : !found}
-      />
     </OnbScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  note: { paddingTop: space.s4, gap: space.s1 + 2 },
+  note: { paddingTop: space.s4, gap: space.tight },
 });

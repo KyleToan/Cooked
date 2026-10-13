@@ -54,7 +54,17 @@ export default function Household() {
   };
 
   return (
-    <OnbScreen onBack={() => router.back()} title="Who do you cook with?" sub="You can change this later.">
+    <OnbScreen
+      onBack={() => router.back()}
+      title="Who do you cook with?"
+      sub="You can change this later."
+      bottom={
+        <>
+          {failed ? <ErrorLine text={failText('set up your kitchen', failed)} /> : null}
+          <ActionPill label="Next" variant="primary" height="bottom" onPress={next} busy={busy} />
+        </>
+      }
+    >
       <View accessibilityRole="radiogroup" accessibilityLabel="Who do you cook with" style={styles.choices}>
         {CHOICES.map((c) => {
           const on = c.id === picked;
@@ -77,15 +87,13 @@ export default function Household() {
           );
         })}
       </View>
-      {failed ? <ErrorLine text={failText('set up your kitchen', failed)} /> : null}
-      <ActionPill label="Next" variant="primary" height="bottom" onPress={next} disabled={busy} />
     </OnbScreen>
   );
 }
 
 const styles = StyleSheet.create({
   choices: { gap: space.s3 },
-  choice: { flexDirection: 'row', alignItems: 'center', gap: space.s3 + 2, padding: space.s4, borderRadius: radius.field },
+  choice: { flexDirection: 'row', alignItems: 'center', gap: space.roomy, padding: space.s4, borderRadius: radius.field },
   on: { backgroundColor: color.beige, borderWidth: 1.5, borderColor: color.sageInk },
   off: { backgroundColor: color.surface, borderWidth: 1, borderColor: color.line },
   text: { flex: 1, gap: 3 },

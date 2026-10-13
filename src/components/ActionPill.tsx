@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { ReduceMotion, useAnimatedStyle, useReducedMotion, useSharedValue, withSpring } from 'react-native-reanimated';
 
 import { color, radius, size, space } from '@/theme';
 import { Icon } from './Icon';
 import type { IconName } from './icon-data';
+import { Spinner } from './Loader';
 import { Tap } from './Tap';
 import { Text } from './Text';
 
@@ -18,8 +20,14 @@ type Props = {
   /** Share its row with the pill beside it. The bottom height always spans the full width. */
   fill?: boolean;
   disabled?: boolean;
+  /** Working on it: a spinner takes the icon's place and presses are ignored. */
+  busy?: boolean;
   accessibilityLabel?: string;
 };
+
+/** Pressed pills sink a little and spring back, critically damped. */
+const PRESSED = 0.97;
+const SPRING = { duration: 300, dampingRatio: 1, reduceMotion: ReduceMotion.System } as const;
 
 const HEIGHT = { home: size.controlHeight, header: size.targetMin, bottom: size.controlHeight + space.s1 };
 
@@ -32,17 +40,26 @@ export function ActionPill({
   height = 'home',
   fill,
   disabled,
+  busy,
   accessibilityLabel,
 }: Props) {
   const primary = variant === 'primary';
   const bottom = height === 'bottom';
+  const reduced = useReducedMotion();
+  const scale = useSharedValue(1);
+  const press = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
+  const ink = disabled ? 'inkSubtle' : 'ink';
   return (
     <Tap
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      accessibilityState={{ disabled }}
-      onPress={onPress}
-      disabled={disabled}
+      accessibilityState={{ disabled, busy }}
+      onPress={busy ? undefined : onPress}
+      onPressIn={() => {
+        if (!reduced && !busy) scale.set(withSpring(PRESSED, SPRING));
+      }}
+      onPressOut={() => scale.set(withSpring(1, SPRING))}
+      disabled={disabled || busy}
       style={[
         styles.pill,
         { minHeight: HEIGHT[height] },
@@ -50,13 +67,18 @@ export function ActionPill({
         bottom && styles.wide,
         { backgroundColor: primary && !disabled ? color.sage : color.surfaceSunken },
         height === 'header' && styles.compact,
+        press,
       ]}
     >
-      {icon ? <Icon name={icon} size={size.iconSm} color={primary ? 'ink' : 'sageInk'} /> : null}
+      {busy ? (
+        <Spinner size={size.iconSm} color={ink} />
+      ) : icon ? (
+        <Icon name={icon} size={size.iconSm} color={primary ? 'ink' : 'sageInk'} />
+      ) : null}
       <Text
         variant={bottom ? 'body' : 'button'}
         weight={primary || bottom ? 'semibold' : 'medium'}
-        color={disabled ? 'inkSubtle' : 'ink'}
+        color={ink}
         style={styles.label}
       >
         {label}

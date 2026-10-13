@@ -180,8 +180,8 @@ export default function Code() {
 }
 
 const styles = StyleSheet.create({
-  group: { gap: space.s2 + 2 },
-  boxes: { flexDirection: 'row', gap: space.s2 + 2 },
+  group: { gap: space.cozy },
+  boxes: { flexDirection: 'row', gap: space.cozy },
   box: {
     flex: 1,
     minHeight: BOX_H,

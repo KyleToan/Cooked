@@ -37,7 +37,16 @@ export default function Name() {
   };
 
   return (
-    <OnbScreen onBack={() => router.back()} title="What should we call you?">
+    <OnbScreen
+      onBack={() => router.back()}
+      title="What should we call you?"
+      bottom={
+        <>
+          {failed ? <ErrorLine text={failText('save your name', failed)} /> : null}
+          <ActionPill label="Next" variant="primary" height="bottom" onPress={next} disabled={!name.trim()} busy={busy} />
+        </>
+      }
+    >
       <Field
         label="First name"
         value={name}
@@ -65,8 +74,6 @@ export default function Name() {
           </View>
         </View>
       </View>
-      {failed ? <ErrorLine text={failText('save your name', failed)} /> : null}
-      <ActionPill label="Next" variant="primary" height="bottom" onPress={next} disabled={!name.trim() || busy} />
     </OnbScreen>
   );
 }
@@ -78,7 +85,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: space.s3,
     paddingVertical: space.s3,
-    paddingHorizontal: space.s3 + 2,
+    paddingHorizontal: space.roomy,
     borderRadius: radius.control,
     backgroundColor: color.surfaceSunken,
   },

@@ -40,8 +40,8 @@ export const color = {
   inkSubtle: '#8C8C86',
   /** Crossed-out done items only. 2.6:1 on surface: FLAGGED. */
   inkOff: '#A3A39D',
-  /** The short grey underscore under the active tab icon in the island. */
-  tabMark: '#B5B5AF',
+  /** The short underscore under the active tab icon in the island. Same as ink-muted (5.2:1), so the mark reads at a glance. */
+  tabMark: '#6E6E68',
   /** Checkmark inside a checked box (on sage-ink). */
   onInk: '#FFFFFF',
   /** Links, icons inside pills, the checked checkbox, an on switch, focused field borders and Undo. 6.4:1 on surface. */
@@ -86,9 +86,9 @@ export const type = {
   /** Section links on the right. */
   link: { fontFamily: font.AlbertSans_600SemiBold, fontSize: 14, lineHeight: 20 },
   /** Meta lines under a section title; progress counts. */
-  caption: { fontFamily: font.AlbertSans_400Regular, fontSize: 13, lineHeight: 18 },
+  caption: { fontFamily: font.AlbertSans_400Regular, fontSize: 13, lineHeight: 18, letterSpacing: 0.05 },
   /** Tags and row notes. */
-  micro: { fontFamily: font.AlbertSans_500Medium, fontSize: 12, lineHeight: 16 },
+  micro: { fontFamily: font.AlbertSans_500Medium, fontSize: 12, lineHeight: 16, letterSpacing: 0.1 },
   /** Sticky note name. Only on sticky notes. */
   noteTitle: { fontFamily: font.Caveat_700Bold, fontSize: 28, lineHeight: 28 },
   /** Sticky note count or short status. */
@@ -100,8 +100,14 @@ export const space = {
   s1: 4,
   /** Icon-to-label gap in pills; title-to-meta gap. */
   s2: 8,
+  /** Between space-1 and space-2: icon-to-text gaps in small pills and meta lines. */
+  tight: 6,
+  /** Between space-2 and space-3: gaps inside rows and controls, vertical padding in compact rows. */
+  cozy: 10,
   /** Gap between paired pills; gap inside a section. */
   s3: 12,
+  /** Between space-3 and space-4: inner padding of fields, pills and notes. */
+  roomy: 14,
   /** Card side padding; gap from section title to its content. */
   s4: 16,
   /** Page side gutter. */
