@@ -14,7 +14,7 @@ import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
 import { AddRow, TodoList } from '@/components/TodoList';
-import { count, greeting, inStock, isUseSoon, PLACE_LABEL, PLACES, sortToBuy, toBuyProgress } from '@/data/helpers';
+import { count, greeting, inStock, isUseSoon, PLACE_LABEL, PLACES, sortToBuy, syncedLabel, toBuyProgress } from '@/data/helpers';
 import { useStore, useUndo } from '@/data/store';
 import type { ToBuyItem } from '@/data/types';
 import { color, size, space } from '@/theme';
@@ -48,6 +48,8 @@ export default function Home() {
   useFocusEffect(useCallback(() => setOpened(snapshot(latest.current)), []));
   const shown = sortToBuy(state.toBuy.filter((t) => opened.shown.has(t.id) || !opened.all.has(t.id)));
   const progress = toBuyProgress(state.toBuy);
+  const synced = syncedLabel(state.kitchen);
+  const shared = state.kitchen.people.length > 1;
 
   const notes = useMemo(() => {
     const soon = PLACES.map((p) => stock.filter((i) => i.place === p && isUseSoon(i)).length);
@@ -90,7 +92,9 @@ export default function Home() {
       <View style={styles.emptyToBuy}>
         <SectionHeader title="To Buy" />
         <Text variant="caption" color="inkMuted">
-          Your shared list is empty. Add the first thing you’re out of, and everyone in your kitchen will see it.
+          {shared
+            ? 'Your shared list is empty. Add the first thing you’re out of, and everyone in your kitchen will see it.'
+            : 'Your list is empty. Add the first thing you’re out of.'}
         </Text>
         <AddRow placeholder="Add an item…" label="Add an item" onSubmit={actions.addToBuy} />
       </View>
@@ -169,11 +173,11 @@ export default function Home() {
           <View style={styles.kitchen}>
             <View style={styles.kitchenHead}>
               <SectionHeader title="Your Kitchen" />
-              {state.kitchen.syncedAgo ? (
+              {synced ? (
                 <View style={styles.sync}>
                   <Icon name="syncing" size={size.iconSm} color="inkMuted" />
                   <Text variant="caption" color="inkMuted">
-                    Synced {state.kitchen.syncedAgo} from a receipt
+                    Synced {synced} from a receipt
                   </Text>
                 </View>
               ) : null}

@@ -6,6 +6,9 @@ import { useEffect, useState } from 'react';
 
 import { supabase } from './supabase';
 
+/** Longest the launch screen waits to restore the saved session; on a stalled network the app opens anyway. */
+const RESTORE_WAIT_MS = 8000;
+
 /** The Supabase session, and whether the saved one has been restored yet. Ready at once without a backend. */
 export function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
@@ -13,12 +16,21 @@ export function useAuth() {
 
   useEffect(() => {
     if (!supabase) return;
+    const waited = setTimeout(() => setReady(true), RESTORE_WAIT_MS);
     supabase.auth
       .getSession()
       .then(({ data }) => setSession(data.session))
-      .finally(() => setReady(true));
+      .catch(() => undefined)
+      .finally(() => {
+        clearTimeout(waited);
+        setReady(true);
+      });
+    // A session restored after the wait still arrives here and signs the person in.
     const { data } = supabase.auth.onAuthStateChange((_event, s) => setSession(s));
-    return () => data.subscription.unsubscribe();
+    return () => {
+      clearTimeout(waited);
+      data.subscription.unsubscribe();
+    };
   }, []);
 
   return { session, ready };

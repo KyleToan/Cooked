@@ -1,8 +1,11 @@
 // Mapping between the store's types and the Supabase tables (pure, tested), then the
 // network calls the store makes: load, write a diff, mark synced, listen for changes.
-import { bestByFromDays, daysFromBestBy } from './helpers';
+import { bestByFromDays, daysFromBestBy, syncedAgo } from './helpers';
 import { supabase } from './supabase';
 import type { Item, Kitchen, NotificationSettings, Person, Place, Recipe, ToBuyItem } from './types';
+
+// Lives in helpers.ts now (Home and Kitchen count from a local scan time too); re-exported for callers and tests.
+export { syncedAgo };
 
 // shortcut: hand-written row types, replace with generated src/data/db.ts once the Supabase project is linked.
 // The date math lives in helpers.ts; re-exported so callers and tests can keep importing it from here.
@@ -159,15 +162,6 @@ export function rowToRecipe(row: RecipeRow): Recipe {
   };
 }
 
-/** "just now", "5m ago", "2h ago", "3d ago"; '' before the first sync. */
-export function syncedAgo(syncedAt: string | null, now: Date): string {
-  if (!syncedAt) return '';
-  const mins = Math.floor((now.getTime() - new Date(syncedAt).getTime()) / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  if (mins < 60 * 24) return `${Math.floor(mins / 60)}h ago`;
-  return `${Math.floor(mins / (60 * 24))}d ago`;
-}
 
 /**
  * What changed between two versions of a table. The reducer replaces a changed

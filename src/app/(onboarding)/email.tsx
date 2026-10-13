@@ -44,9 +44,10 @@ export default function Email() {
     if (supabase) {
       setSending(true);
       setFailed(null);
-      const { error } = await supabase.auth.signInWithOtp(
-        mode === 'email' ? { email: email.trim() } : { phone: `+1${phone.replace(/\D/g, '')}` },
-      );
+      // A thrown call (no network at all) counts as offline, so the button never spins forever.
+      const { error } = await supabase.auth
+        .signInWithOtp(mode === 'email' ? { email: email.trim() } : { phone: `+1${phone.replace(/\D/g, '')}` })
+        .catch(() => ({ error: { status: undefined } }));
       setSending(false);
       if (error) return setFailed(failureOf(error.status));
     }

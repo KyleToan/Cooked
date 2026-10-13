@@ -91,6 +91,14 @@ export function KitchenRow({ item, startQty, soon, open, onToggleOpen, actionLab
             <Stepper value={item.qty} onChange={onQty} />
           </View>
           {extra}
+          {/* The swipe is a shortcut; this is where people find Use up without knowing it exists. */}
+          {canUseUp ? (
+            <Tap accessibilityRole="button" accessibilityLabel={`Use up ${item.name}`} onPress={markUsedUp} style={styles.useAll}>
+              <Text variant="link" color="inkMuted">
+                Use it all up
+              </Text>
+            </Tap>
+          ) : null}
         </Animated.View>
       ) : null}
     </View>
@@ -354,6 +362,7 @@ const TOGGLE_ICON = 14;
 const THUMB = 56;
 
 const styles = StyleSheet.create({
+  useAll: { minHeight: size.targetMin, justifyContent: 'center', alignSelf: 'flex-start' },
   divider: { borderBottomWidth: 1, borderBottomColor: color.lineSoft },
   grow: { flex: 1, minWidth: 0, gap: 2 },
   kitchenRow: {

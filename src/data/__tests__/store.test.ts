@@ -5,7 +5,7 @@
 import { beforeEach, describe, expect, test } from '@jest/globals';
 
 import { initialState, reducer, type Action, type State } from '@/data/store';
-import { isDueSoon, shortDate } from '@/data/helpers';
+import { isDueSoon, shortDate, syncedLabel } from '@/data/helpers';
 import { ALEX, NEW_INVITE_CODE, SAMPLE_SCAN, SAM, SEED_ITEMS, SEED_KITCHEN, SEED_TO_BUY } from '@/data/seed';
 import type { ScanLine } from '@/data/types';
 
@@ -244,10 +244,22 @@ describe('scanning', () => {
     expect(next.undo).toBeNull();
   });
 
+  test('keeps when the scan was added, so "Synced" ages instead of saying "just now" for good', () => {
+    const next = run(s, { type: 'addScanned', lines: [line('Kale', 'fridge')], at: '2026-10-13T08:00:00Z' });
+    expect(next.kitchen.syncedAt).toBe('2026-10-13T08:00:00Z');
+    expect(syncedLabel(next.kitchen, new Date('2026-10-13T10:30:00Z'))).toBe('2h ago');
+  });
+
+  test('a scan of only new things says so plainly', () => {
+    const next = run(s, { type: 'addScanned', lines: [line('Kale', 'fridge')], undo: true });
+    expect(next.undo?.text).toBe('Added 1 item to your kitchen');
+  });
+
   test('with undo, Home offers to put the whole scan back', () => {
     const lines = [line('Kale', 'fridge', 2), line('eggs', 'fridge', 12), line('Bag', 'skip'), line(' ', 'pantry')];
     const next = run(s, { type: 'addScanned', lines, undo: true });
-    expect(next.undo).toMatchObject({ text: 'Added 2 items to your kitchen', scope: 'home' });
+    // Eggs were already in the fridge, so the bar says why the counts barely moved.
+    expect(next.undo).toMatchObject({ text: 'Added 2 items, 1 already in your kitchen', scope: 'home' });
     const undone = run(next, { type: 'undo' });
     expect(undone.items).toBe(s.items);
     expect(undone.toBuy).toBe(s.toBuy);
@@ -396,9 +408,24 @@ describe('kitchen', () => {
     expect(next.undo).toBeNull();
   });
 
+  test('signing in starts as a new person, not the sample Alex Rivera', () => {
+    const next = run(s, { type: 'signIn', method: 'email', contact: 'jo@example.com' });
+    expect(next.user).toEqual({ id: 'me', name: '', note: '', email: 'jo@example.com' });
+    expect(run(s, { type: 'signIn', method: 'phone', contact: '+1 5551234' }).user.email).toBeUndefined();
+    const solo = run(run(next, { type: 'setName', name: 'Jo' }), { type: 'choosePath', path: 'solo' });
+    expect(solo.kitchen).toMatchObject({ name: 'Jo’s kitchen', inviteCode: 'jo-kitchen' });
+    expect(solo.kitchen.people).toEqual([{ id: 'me', name: 'Jo', note: 'Made this kitchen', email: 'jo@example.com' }]);
+  });
+
+  test('a person who signs in and joins is not the maker of the sample kitchen', () => {
+    const joined = run(run(s, { type: 'signIn', method: 'email', contact: 'jo@example.com' }), { type: 'choosePath', path: 'join' });
+    expect(joined.kitchen.people.map((p) => p.id)).toEqual(['me', 'alex', 'sam']);
+    expect(joined.kitchen.people[0].note).not.toBe('Made this kitchen');
+  });
+
   test('a new kitchen uses the first name when there is no last name', () => {
     const named = { ...s, user: { id: 'jo', name: 'Jo Anne', note: '' } };
-    expect(run(named, { type: 'leaveKitchen' }).kitchen).toMatchObject({ name: 'Jo Anne kitchen', inviteCode: 'jo-anne-kitchen' });
+    expect(run(named, { type: 'leaveKitchen' }).kitchen).toMatchObject({ name: 'Jo Anne’s kitchen', inviteCode: 'jo-anne-kitchen' });
   });
 
   test('an accented name makes a clean invite code', () => {

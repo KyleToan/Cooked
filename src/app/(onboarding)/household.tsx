@@ -8,8 +8,10 @@ import { OnbScreen } from '@/components/Onboarding';
 import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
 import { failText, type Failure } from '@/data/errors';
+import { kitchenName } from '@/data/helpers';
 import * as api from '@/data/kitchenApi';
 import { useStore } from '@/data/store';
+import { pendingInvite } from '@/data/pendingInvite';
 import { hasBackend } from '@/data/supabase';
 import type { KitchenPath } from '@/data/types';
 import { color, radius, space } from '@/theme';
@@ -30,7 +32,8 @@ const RADIO = 22;
 export default function Household() {
   const router = useRouter();
   const { state, actions, reload } = useStore();
-  const [picked, setPicked] = useState<KitchenPath>('household');
+  // Opened from an invite link: start on I have an invite.
+  const [picked, setPicked] = useState<KitchenPath>(pendingInvite.code ? 'join' : 'household');
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState<Failure | null>(null);
 
@@ -42,8 +45,9 @@ export default function Household() {
     if (hasBackend) {
       if (busy) return;
       setBusy(true);
-      const r = await api.createKitchen(`${state.user.lastName || state.user.name} kitchen`);
-      if (r === 'ok') await reload();
+      // Safe to repeat after coming back to this step: the server answers a second call with the same kitchen.
+      const r = await api.createKitchen(kitchenName(state.user));
+      if (r === 'ok') await reload().catch(() => undefined);
       setBusy(false);
       setFailed(api.failure(r));
       if (r !== 'ok') return;

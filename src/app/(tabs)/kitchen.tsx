@@ -26,7 +26,7 @@ import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
 import { AddRow, TodoList } from '@/components/TodoList';
-import { count, dateIn, daysUntil, isDueSoon, joinAnd, shortDate, sortToBuy, toBuyProgress } from '@/data/helpers';
+import { count, dateIn, daysUntil, isDueSoon, joinAnd, shortDate, sortToBuy, syncedLabel, toBuyProgress } from '@/data/helpers';
 import { useStore, useUndo } from '@/data/store';
 import type { Item, Place } from '@/data/types';
 import { haptics } from '@/hooks/haptics';
@@ -83,10 +83,11 @@ export default function Kitchen() {
   const [startQty] = useState(() => Object.fromEntries(state.items.map((i) => [i.id, i.qty])));
 
   const others = state.kitchen.people.filter((p) => p.id !== state.user.id).map((p) => p.name);
-  const synced = state.kitchen.syncedAgo ? `synced ${state.kitchen.syncedAgo}` : '';
+  const ago = syncedLabel(state.kitchen);
+  const synced = ago ? `synced ${ago}` : '';
   const statusLine = others.length
     ? [`Shared with ${joinAnd(others)}`, synced].filter(Boolean).join(' · ')
-    : synced && `Synced ${state.kitchen.syncedAgo}`;
+    : synced && `Synced ${ago}`;
 
   const q = query.trim().toLowerCase();
   const matches = (name: string) => !q || name.toLowerCase().includes(q);
@@ -290,7 +291,7 @@ function StockTab({
   const openDate = (i: Item) => {
     const value = dateIn(i.daysLeft);
     if (Platform.OS === 'android') {
-      DateTimePickerAndroid.open({ value, mode: 'date', onValueChange: (_e, d) => setBestBy(i.id, daysUntil(d)) });
+      DateTimePickerAndroid.open({ value, mode: 'date', minimumDate: new Date(), onValueChange: (_e, d) => setBestBy(i.id, daysUntil(d)) });
     } else if (Platform.OS === 'ios') {
       setDraft(value);
       setPicking(i);
@@ -412,6 +413,7 @@ function StockTab({
           title={copy.restTitle}
           meta={count(rest.length, 'item')}
           right={
+            rest.length < 2 ? undefined : (
             <Tap
               accessibilityRole="button"
               accessibilityLabel={`Sort, ${sort === 'az' ? 'A to Z' : 'by use-by date'}. Changes the order.`}
@@ -425,6 +427,7 @@ function StockTab({
                 Sort: {sort === 'az' ? 'A to Z' : 'Use by'}
               </Text>
             </Tap>
+            )
           }
         />
         {rest.map((i) => row(i, false))}
@@ -437,6 +440,7 @@ function StockTab({
             value={draft}
             mode="date"
             display="inline"
+            minimumDate={new Date()}
             accentColor={color.sageInk}
             themeVariant="light"
             textColor={color.ink}
@@ -476,9 +480,13 @@ function ToBuyTab({
   const scanLine = 'Scan your receipt after shopping and we’ll tick things off for you.';
   const helper = others.length ? `${joinAnd(others)} sees this list too. ${scanLine}` : scanLine;
 
-  const share = () => {
-    const left = sortToBuy(state.toBuy).filter((t) => !t.done);
-    Share.share({ message: ['To Buy', ...left.map((t) => `• ${t.name}`)].join('\n') });
+  const left = sortToBuy(state.toBuy).filter((t) => !t.done);
+  const share = async () => {
+    try {
+      await Share.share({ message: ['To Buy', ...left.map((t) => `• ${t.name}`)].join('\n') });
+    } catch {
+      // The share sheet isn't available (some browsers) or closed with an error; nothing to undo.
+    }
   };
 
   if (query && list.length === 0) {
@@ -508,7 +516,7 @@ function ToBuyTab({
         onAdd={actions.addToBuy}
         addLabel="Add an item to To Buy"
         helper={helper}
-        right={<ActionPill label="Share" height="header" onPress={share} accessibilityLabel="Share list" />}
+        right={left.length ? <ActionPill label="Share" height="header" onPress={share} accessibilityLabel="Share list" /> : undefined}
       />
     </View>
   );

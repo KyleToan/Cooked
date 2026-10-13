@@ -26,6 +26,8 @@ export type Kitchen = {
   newLink: boolean;
   /** "2h ago", "just now"; empty before the first scan. Home says "Synced 2h ago from a receipt". */
   syncedAgo: string;
+  /** When the last receipt was added on this phone (ISO). When set, `syncedLabel` counts from it instead of `syncedAgo`. */
+  syncedAt?: string;
 };
 
 export type Item = {

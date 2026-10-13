@@ -16,6 +16,8 @@ import { size, space } from '@/theme';
 export default function Welcome() {
   const router = useRouter();
   const next = () => router.push('/sign-in');
+  // Same sign-in either way; Log in only changes the greeting, so the second link isn't a copy of the first.
+  const logIn = () => router.push({ pathname: '/sign-in', params: { intent: 'login' } });
 
   return (
     <OnbScreen
@@ -27,7 +29,7 @@ export default function Welcome() {
             <Text variant="button" weight="regular" color="inkMuted">
               Already cooking with us?{' '}
             </Text>
-            <Tap accessibilityRole="link" onPress={next} style={styles.loginLink}>
+            <Tap accessibilityRole="link" onPress={logIn} style={styles.loginLink}>
               <Text variant="button" weight="semibold" color="sageInk">
                 Log in
               </Text>

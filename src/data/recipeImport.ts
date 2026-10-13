@@ -427,18 +427,32 @@ export function normalizeUrl(link: string): string {
 
 /** Fetches the page on the device and reads its recipe. Null when it can't be loaded or has none. */
 export async function importFromLink(link: string, items: Item[] = [], signal?: AbortSignal): Promise<Recipe | null> {
+  return (await readLink(link, items, signal)).recipe;
+}
+
+/**
+ * The recipe on a page, and whether the page could be reached at all, so Import can tell
+ * "no connection" apart from "no recipe on that page" (Decision #89). A page that answered
+ * with an error status was reached.
+ */
+export async function readLink(
+  link: string,
+  items: Item[] = [],
+  signal?: AbortSignal,
+): Promise<{ recipe: Recipe | null; reached: boolean }> {
   const url = normalizeUrl(link);
-  if (!hostOf(url)) return null;
+  if (!hostOf(url)) return { recipe: null, reached: true };
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   const onAbort = () => controller.abort();
   signal?.addEventListener('abort', onAbort);
   try {
     const res = await fetch(url, { signal: controller.signal, headers: { Accept: 'text/html,application/xhtml+xml' } });
-    if (!res.ok) return null;
-    return parseRecipeFromHtml(await res.text(), url, items);
+    if (!res.ok) return { recipe: null, reached: true };
+    return { recipe: parseRecipeFromHtml(await res.text(), url, items), reached: true };
   } catch {
-    return null;
+    // No network, a timeout, or (in a browser) a blocked request: the page was never read.
+    return { recipe: null, reached: false };
   } finally {
     clearTimeout(timer);
     signal?.removeEventListener('abort', onAbort);

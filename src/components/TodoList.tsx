@@ -30,14 +30,15 @@ export function TodoList({ items, done, total, onToggle, onAdd, right, helper, a
   return (
     <View style={styles.section}>
       <View style={styles.head}>
-        <SectionHeader title="To Buy" meta={`${done} of ${total} done`} right={right} />
+        <SectionHeader title="To Buy" meta={total ? `${done} of ${total} done` : undefined} right={right} />
         {helper ? (
           <Text variant="caption" color="inkMuted">
             {helper}
           </Text>
         ) : null}
       </View>
-      <ProgressBar value={total ? done / total : 0} />
+      {/* An empty list has no progress to show. */}
+      {total ? <ProgressBar value={done / total} /> : null}
       <View>
         {items.map((item) => (
           <Animated.View key={item.id} layout={ROW_LAYOUT}>

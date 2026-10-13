@@ -43,6 +43,26 @@ export function count(n: number, one: string, many = `${one}s`): string {
 }
 
 /** "tomatoes and feta", "pine nuts, parmesan and garlic". */
+/** "just now", "5m ago", "2h ago", "3d ago"; '' before the first sync. */
+export function syncedAgo(syncedAt: string | null, now: Date): string {
+  if (!syncedAt) return '';
+  const mins = Math.floor((now.getTime() - new Date(syncedAt).getTime()) / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  if (mins < 60 * 24) return `${Math.floor(mins / 60)}h ago`;
+  return `${Math.floor(mins / (60 * 24))}d ago`;
+}
+
+/** "2h ago" for Home and Kitchen: counted from the last scan on this phone, or the server's answer. */
+export function syncedLabel(kitchen: { syncedAgo: string; syncedAt?: string }, now = new Date()): string {
+  return kitchen.syncedAt ? syncedAgo(kitchen.syncedAt, now) : kitchen.syncedAgo;
+}
+
+/** A kitchen named after the person: a family name as is ("Rivera kitchen"), a first name as a possessive ("Jo’s kitchen"). */
+export function kitchenName(person: { name: string; lastName?: string }): string {
+  return person.lastName ? `${person.lastName} kitchen` : `${person.name}’s kitchen`;
+}
+
 export function joinAnd(words: string[]): string {
   if (words.length <= 1) return words[0] ?? '';
   return `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}`;

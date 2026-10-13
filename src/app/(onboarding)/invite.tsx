@@ -20,8 +20,12 @@ export default function Invite() {
   const link = `cooked.app/join/${state.kitchen.inviteCode}`;
 
   const share = async () => {
-    const result = await Share.share({ message: `Join ${state.kitchen.name} on Cooked: https://${link}` });
-    if (result.action !== Share.dismissedAction) setShared(true);
+    try {
+      const result = await Share.share({ message: `Join ${state.kitchen.name} on Cooked: https://${link}` });
+      if (result.action !== Share.dismissedAction) setShared(true);
+    } catch {
+      // No share sheet here (some browsers), or it closed with an error. The link above can still be copied.
+    }
   };
 
   return (

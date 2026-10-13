@@ -55,7 +55,7 @@ export default function Code() {
     return () => clearTimeout(t);
   }, [secs]);
 
-  const contact = state.session.contact || 'alex.rivera@gmail.com';
+  const contact = state.session.contact;
   const byText = state.session.signIn === 'phone';
   // The store keeps the phone number as shown ("+1 555…"); Supabase wants E.164.
   const phone = `+${contact.replace(/\D/g, '')}`;
@@ -72,9 +72,10 @@ export default function Code() {
   const check = async (digits: string) => {
     if (!supabase) return digits === CODE ? router.push('/name') : failed('wrong');
     setChecking(true);
-    const { error } = await supabase.auth.verifyOtp(
-      byText ? { phone, token: digits, type: 'sms' } : { email: contact, token: digits, type: 'email' },
-    );
+    // A thrown call (no network at all) counts as offline, so the boxes never stay locked.
+    const { error } = await supabase.auth
+      .verifyOtp(byText ? { phone, token: digits, type: 'sms' } : { email: contact, token: digits, type: 'email' })
+      .catch(() => ({ error: { status: undefined } }));
     setChecking(false);
     if (!error) return router.push('/name');
     // A 4xx means the code was wrong or expired; no status is the network, a 5xx is the server.
@@ -107,7 +108,7 @@ export default function Code() {
       title="Enter the code"
       bottom={
         <View style={styles.timer}>
-          {secs > 0 && !wrong ? (
+          {secs > 0 ? (
             <Text variant="caption" color="inkMuted" accessibilityLiveRegion="polite">
               Send a new code in 0:{String(secs).padStart(2, '0')}
             </Text>
@@ -166,7 +167,7 @@ export default function Code() {
         {trouble ? <ErrorLine text={failText('check the code', trouble)} /> : null}
         <View style={styles.sent}>
           <Text variant="caption" color="inkMuted">
-            Sent to {contact} ·{' '}
+            Sent to {contact || (byText ? 'your phone' : 'your email')} ·{' '}
           </Text>
           <Tap accessibilityRole="link" accessibilityLabel={`Change ${byText ? 'number' : 'email'}`} onPress={() => router.back()} style={styles.change}>
             <Text variant="caption" weight="semibold" color="sageInk">

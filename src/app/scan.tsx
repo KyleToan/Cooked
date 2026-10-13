@@ -55,6 +55,25 @@ const FLASH_IN = 40;
 const FLASH_OUT = 80;
 /** How dark the capture blink gets. */
 const BLINK = 0.6;
+/** Longest a photo may take to read before it counts as unreadable, so "Reading…" can't stay up forever. */
+const READ_LIMIT_MS = 20000;
+
+/** The photo's text, or a rejection once `READ_LIMIT_MS` passes. */
+function readWithLimit(uri: string): Promise<string | null> {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error('Reading took too long')), READ_LIMIT_MS);
+    readText(uri).then(
+      (text) => {
+        clearTimeout(t);
+        resolve(text);
+      },
+      (e) => {
+        clearTimeout(t);
+        reject(e);
+      },
+    );
+  });
+}
 
 /**
  * Full-screen camera with corner guides, Photos, Flash and a Receipt / Recipe
@@ -116,7 +135,7 @@ export default function Scan() {
   const readRecipe = async (uri: string | undefined) => {
     let text: string | null;
     try {
-      text = uri ? await readText(uri) : null;
+      text = uri ? await readWithLimit(uri) : null;
     } catch {
       text = '';
     }
@@ -132,7 +151,7 @@ export default function Scan() {
     let lines: ScanLine[] = [];
     let store: string | null = null;
     try {
-      const text = uri ? await readText(uri) : null;
+      const text = uri ? await readWithLimit(uri) : null;
       // No reader in this build (Expo Go, web): the sample receipt keeps the screens usable in development.
       if (text === null) {
         lines = __DEV__ ? SAMPLE_SCAN : [];
@@ -153,6 +172,13 @@ export default function Scan() {
 
   const capture = async () => {
     if (busy) return;
+    // Without the camera there's no photo to read, so the shutter asks for it instead of reporting an unreadable receipt.
+    // Development builds without a camera (simulator, web) carry on to the sample scan.
+    if (!granted && !__DEV__) {
+      if (permission?.canAskAgain === false) Linking.openSettings();
+      else requestPermission();
+      return;
+    }
     haptics.tap();
     // A quick dark blink over the preview, like the system Camera, says the photo was taken. Reduce Motion keeps just the haptic.
     if (!reduced) flashOpacity.set(withSequence(withTiming(BLINK, { duration: FLASH_IN }), withTiming(0, { duration: FLASH_OUT })));
@@ -386,7 +412,8 @@ const styles = StyleSheet.create({
   shutterDot: { width: SHUTTER_DOT, height: SHUTTER_DOT, borderRadius: radius.pill, backgroundColor: color.onInk },
   // The prototype's strip: a 56pt glass pill inset 6pt, so each mode is a 44pt target.
   strip: { height: STRIP, marginTop: space.s5, marginHorizontal: space.s5, borderRadius: radius.pill },
-  modes: { flex: 1, padding: STRIP_PAD, flexDirection: 'row', gap: space.s1 },
+  // Stretch: Glass centres its children, which would shrink the row to its labels and the pill to a dot.
+  modes: { flex: 1, alignSelf: 'stretch', padding: STRIP_PAD, flexDirection: 'row', gap: space.s1 },
   mode: { flex: 1, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   // The picked mode: a white pill that slides between modes under the labels.
   modePill: {

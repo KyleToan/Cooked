@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -94,12 +94,21 @@ export default function ScanReview() {
     }
   };
 
+  // Opened without a scan (an app reload or a link): back to the camera.
+  if (!read.length) return <Redirect href={{ pathname: '/scan', params: { flow } }} />;
+
   return (
     <Screen
       gap={space.s4 + 2}
       footer={
         <>
-          <ActionPill label={`Add ${count(keep.length, 'item')} to your kitchen`} variant="primary" height="bottom" onPress={add} />
+          <ActionPill
+            label={keep.length ? `Add ${count(keep.length, 'item')} to your kitchen` : 'Nothing to add'}
+            variant="primary"
+            height="bottom"
+            onPress={add}
+            disabled={!keep.length}
+          />
           <TextLink label="Retake photo" align="center" onPress={() => router.back()} />
         </>
       }

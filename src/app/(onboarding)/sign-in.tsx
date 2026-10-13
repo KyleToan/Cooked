@@ -1,5 +1,5 @@
 import * as AppleAuthentication from 'expo-apple-authentication';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Linking, Platform, StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
@@ -11,7 +11,7 @@ import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
 import { Canceled, signInWithApple, signInWithGoogle } from '@/data/auth';
 import { useStore } from '@/data/store';
-import { brand, color, radius, size, space } from '@/theme';
+import { brand, color, radius, size, space, type } from '@/theme';
 
 const BUTTON_H = size.controlHeight + space.s1;
 const LOGO = 20;
@@ -25,6 +25,7 @@ const DIMMED = 0.5;
 export default function SignIn() {
   const router = useRouter();
   const { actions } = useStore();
+  const loggingIn = useLocalSearchParams<{ intent?: string }>().intent === 'login';
   const [appleButton, setAppleButton] = useState(false);
   // The provider being signed in with, which shows a spinner in place of its logo.
   const [busy, setBusy] = useState<'apple' | 'google' | null>(null);
@@ -57,20 +58,35 @@ export default function SignIn() {
     <OnbScreen
       onBack={() => router.back()}
       backIcon="close"
-      title="Log in or sign up"
-      sub="Pick how you want to get in. Your kitchen stays the same whichever you choose."
+      title={loggingIn ? 'Welcome back' : 'Log in or sign up'}
+      sub={
+        loggingIn
+          ? 'Log in the way you signed up, and your kitchen is right where you left it.'
+          : 'Pick how you want to get in. Your kitchen stays the same whichever you choose.'
+      }
       bottom={
-        <Text variant="caption" color="inkMuted">
-          By continuing, you agree to Cooked’s{' '}
-          <Text variant="caption" weight="semibold" color="sageInk" accessibilityRole="link" onPress={() => Linking.openURL('https://cooked.app/terms')}>
-            Terms
-          </Text>{' '}
-          and{' '}
-          <Text variant="caption" weight="semibold" color="sageInk" accessibilityRole="link" onPress={() => Linking.openURL('https://cooked.app/privacy')}>
-            Privacy Policy
+        // Each link reaches a 44pt target through its hit area, without making the line taller.
+        <View style={styles.legal}>
+          <Text variant="caption" color="inkMuted">
+            By continuing, you agree to Cooked’s{' '}
           </Text>
-          .
-        </Text>
+          <Tap accessibilityRole="link" drawn={type.caption.lineHeight} onPress={() => Linking.openURL('https://cooked.app/terms')}>
+            <Text variant="caption" weight="semibold" color="sageInk">
+              Terms
+            </Text>
+          </Tap>
+          <Text variant="caption" color="inkMuted">
+            {' '}and{' '}
+          </Text>
+          <Tap accessibilityRole="link" drawn={type.caption.lineHeight} onPress={() => Linking.openURL('https://cooked.app/privacy')}>
+            <Text variant="caption" weight="semibold" color="sageInk">
+              Privacy Policy
+            </Text>
+          </Tap>
+          <Text variant="caption" color="inkMuted">
+            .
+          </Text>
+        </View>
       }
     >
       <View style={styles.buttons}>
@@ -136,6 +152,7 @@ function GoogleLogo() {
 
 const styles = StyleSheet.create({
   buttons: { gap: space.s3 },
+  legal: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' },
   apple: { height: BUTTON_H, width: '100%' },
   outline: {
     minHeight: BUTTON_H,

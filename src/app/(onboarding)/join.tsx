@@ -13,6 +13,7 @@ import { failText } from '@/data/errors';
 import * as api from '@/data/kitchenApi';
 import { SEED_ITEMS, SEED_KITCHEN, SEED_TO_BUY, SAM } from '@/data/seed';
 import { useStore } from '@/data/store';
+import { pendingInvite } from '@/data/pendingInvite';
 import { hasBackend } from '@/data/supabase';
 import { space } from '@/theme';
 
@@ -37,13 +38,14 @@ const FAILED: Partial<Record<api.Result, string>> = {
 export default function Join() {
   const router = useRouter();
   const { actions, reload } = useStore();
-  const [value, setValue] = useState('');
+  // The code from an invite link, if the app was opened by one; checked at once like a paste.
+  const [value, setValue] = useState(pendingInvite.code ?? '');
   // The server's answer for the code that was last tried; cleared when the code changes.
   const [failed, setFailed] = useState<{ code: string; result: api.Result } | null>(null);
   const [busy, setBusy] = useState(false);
   // The value we've decided is finished: pasted, submitted, or not typed into for a moment.
   // "Couldn't find a kitchen" only shows for that, never while someone is still typing.
-  const [checked, setChecked] = useState('');
+  const [checked, setChecked] = useState(pendingInvite.code ?? '');
   // What the server said about the last settled code: its kitchen, or null when there's none.
   const [peek, setPeek] = useState<{ code: string; info: api.InvitePeek | null } | null>(null);
 
@@ -91,12 +93,13 @@ export default function Join() {
 
   const join = async () => {
     setChecked(value);
+    pendingInvite.code = null;
     if (hasBackend) {
       if (!code || busy) return;
       setBusy(true);
       let r = await api.joinKitchen(code);
       if (r === 'ok') r = await api.finishOnboarding();
-      if (r === 'ok') await reload();
+      if (r === 'ok') await reload().catch(() => undefined);
       setBusy(false);
       if (r !== 'ok') return setFailed({ code, result: r });
       actions.finishOnboarding();

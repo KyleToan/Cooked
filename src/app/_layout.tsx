@@ -81,6 +81,8 @@ function Routes() {
           }}
         />
       </Stack.Protected>
+      {/* Invite links: stores the code for onboarding's Join, then redirects. */}
+      <Stack.Screen name="join/[code]" />
       <Stack.Screen name="scan" options={{ presentation: 'fullScreenModal' }} />
       <Stack.Screen name="scan-review" options={{ presentation: 'fullScreenModal' }} />
       <Stack.Screen name="scan-unreadable" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />

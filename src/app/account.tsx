@@ -37,7 +37,9 @@ export default function Account() {
 
   const user = state.user;
   const method = state.session.signIn ?? 'email';
-  const email = user.email ?? state.session.contact;
+  // Phone sign-ins have a number, not an email; Apple and Google without a backend have neither.
+  const byPhone = method === 'phone';
+  const email = byPhone ? state.session.contact : (user.email ?? state.session.contact);
   const fullName = [user.name, user.lastName].filter(Boolean).join(' ');
   const others = state.kitchen.people.filter((p) => p.id !== user.id).map((p) => p.name);
   const version = (Constants.expoConfig?.version ?? '1.0').split('.').slice(0, 2).join('.');
@@ -94,7 +96,7 @@ export default function Account() {
         />
         <SettingsRow
           label="Notifications"
-          description="To Buy changes and a daily use-soon nudge"
+          description="A daily use-soon nudge and a weekly summary"
           onPress={() => router.push('/notifications')}
         />
       </View>
@@ -107,7 +109,7 @@ export default function Account() {
             setFailed(null);
             setEditingName(true);
           }} />
-        <SettingsRow label="Email" value={email} />
+        {email ? <SettingsRow label={byPhone ? 'Phone' : 'Email'} value={email} /> : null}
         <SettingsRow label="Sign-in" value={SIGN_IN[method]} />
       </View>
 

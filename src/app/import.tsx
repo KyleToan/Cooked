@@ -13,7 +13,8 @@ import { TextLink } from '@/components/TextLink';
 import { haptics } from '@/hooks/haptics';
 import { useGoToTab } from '@/hooks/useGoToTab';
 import { lastScan } from '@/data/ocr';
-import { countIngredients, foundList, importFromLink, parseRecipeFromText } from '@/data/recipeImport';
+import { failText } from '@/data/errors';
+import { countIngredients, foundList, parseRecipeFromText, readLink } from '@/data/recipeImport';
 import { useStore } from '@/data/store';
 import type { Recipe } from '@/data/types';
 import { color, radius, size, space, type } from '@/theme';
@@ -44,6 +45,8 @@ export default function Import() {
   const [parsed, setParsed] = useState<Recipe | null>(null);
   const [focused, setFocused] = useState(false);
   const [addMissing, setAddMissing] = useState(true);
+  // False when the last link couldn't be reached at all, which is a connection problem, not a page without a recipe.
+  const [reached, setReached] = useState(true);
 
   const lines = countIngredients(text);
   const close = () => router.back();
@@ -52,12 +55,16 @@ export default function Import() {
     if (step !== 'loading') return;
     // Links are fetched on the device; pasted text is read straight away.
     const controller = new AbortController();
-    const read = mode === 'text' ? Promise.resolve(parseRecipeFromText(text, state.items)) : importFromLink(link, state.items, controller.signal);
+    const read =
+      mode === 'text'
+        ? Promise.resolve({ recipe: parseRecipeFromText(text, state.items), reached: true })
+        : readLink(link, state.items, controller.signal);
     // Pasted text is read at once, so it skips the minimum and goes straight to the result.
     const wait = mode === 'text' ? null : new Promise((done) => setTimeout(done, MIN_READ_MS));
     let live = true;
-    Promise.all([read, wait]).then(([recipe]) => {
+    Promise.all([read, wait]).then(([{ recipe, reached: got }]) => {
       if (!live) return;
+      setReached(got);
       setParsed(recipe);
       setStep(recipe ? 'done' : 'error');
       if (recipe) haptics.success();
@@ -93,9 +100,13 @@ export default function Import() {
   const added = saved?.onToBuy ?? false;
   const meta = saved ? [saved.time, saved.servings].filter(Boolean).join(' · ') : '';
 
-  const title = step === 'done' && saved ? saved.title : step === 'error' ? 'No recipe on that page' : 'Import a recipe';
+  const offline = step === 'error' && !reached;
+  const title =
+    step === 'done' && saved ? saved.title : offline ? 'Couldn’t open that page' : step === 'error' ? 'No recipe on that page' : 'Import a recipe';
   const sub =
-    step === 'error'
+    offline
+      ? `${failText('open that page', 'offline')} Or paste the recipe text instead.`
+      : step === 'error'
       ? scanned
         ? 'We couldn’t find an ingredient list in that photo. Try a sharper photo, or paste the text.'
         : 'We couldn’t find ingredients or steps there. It may be a list of recipes, or behind a login.'

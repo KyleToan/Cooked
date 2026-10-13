@@ -8,6 +8,7 @@ import {
   normalizeUrl,
   parseRecipeFromHtml,
   parseRecipeFromText,
+  readLink,
 } from '@/data/recipeImport';
 import type { Item } from '@/data/types';
 
@@ -303,5 +304,16 @@ describe('links', () => {
 
     global.fetch = jest.fn().mockRejectedValue(new TypeError('Network request failed')) as unknown as typeof fetch;
     expect(await importFromLink('https://example.com/cors')).toBeNull();
+  });
+
+  test('readLink tells a page with no recipe apart from a page it never reached', async () => {
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, text: () => Promise.resolve('<html><p>Hi</p></html>') }) as unknown as typeof fetch;
+    expect(await readLink('https://example.com/about')).toEqual({ recipe: null, reached: true });
+
+    global.fetch = jest.fn().mockResolvedValue({ ok: false, text: () => Promise.resolve('') }) as unknown as typeof fetch;
+    expect(await readLink('https://example.com/404')).toEqual({ recipe: null, reached: true });
+
+    global.fetch = jest.fn().mockRejectedValue(new TypeError('Network request failed')) as unknown as typeof fetch;
+    expect(await readLink('https://example.com/offline')).toEqual({ recipe: null, reached: false });
   });
 });

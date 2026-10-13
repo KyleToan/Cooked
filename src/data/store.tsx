@@ -7,7 +7,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useReducer,
 import { AccessibilityInfo } from 'react-native';
 
 import { useAuth } from './auth';
-import { guessPlace, makeId, shortDate, USE_SOON_DAYS } from './helpers';
+import { guessPlace, kitchenName, makeId, shortDate, USE_SOON_DAYS } from './helpers';
 import { checkRecipe, checkRecipes, usedWhenMade } from './match';
 import { shelfLifeFor } from './receipt';
 import { clearSaved, loadSaved, save, type Saved } from './saved';
@@ -83,7 +83,7 @@ export type Action =
   | { type: 'itemToBuy'; id: string }
   | { type: 'setUseSoon'; id: string; on: boolean }
   | { type: 'setBestBy'; id: string; daysLeft: number }
-  | { type: 'addScanned'; lines: ScanLine[]; undo?: boolean }
+  | { type: 'addScanned'; lines: ScanLine[]; undo?: boolean; at?: string }
   | { type: 'toggleRecipeToBuy'; id: string }
   | { type: 'madeRecipe'; id: string }
   | { type: 'importRecipe'; recipe: Recipe }
@@ -117,11 +117,17 @@ const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().t
 const slug = (name: string) =>
   name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'my';
 
+/** Longest the launch screen waits for the first kitchen load before opening on the phone's copy. */
+const LOAD_WAIT_MS = 10000;
+
+/** The id a person has on this phone before a backend gives them one. */
+const NEW_PERSON_ID = 'me';
+
 /** A new, empty kitchen named after the person: "Rivera kitchen", cooked.app/join/rivera-kitchen. */
 const newKitchen = (user: Person): Kitchen => {
   const family = user.lastName || user.name;
   return {
-    name: `${family} kitchen`,
+    name: kitchenName(user),
     people: [{ ...user, note: 'Made this kitchen' }],
     inviteCode: `${slug(family)}-kitchen`,
     newLink: false,
@@ -198,11 +204,14 @@ export function reducer(s: State, a: Action): State {
     case 'addScanned': {
       let items = s.items;
       let toBuy = s.toBuy;
+      // Lines that topped up something already in the kitchen, so the undo bar can say why the counts barely moved.
+      let merged = 0;
       for (const line of a.lines) {
         if (line.place === 'skip' || !line.name.trim()) continue;
         const place = line.place;
         const existing = items.find((i) => i.place === place && sameName(i.name, line.name));
         if (existing) {
+          merged += 1;
           items = items.map((i) =>
             i.id === existing.id ? { ...i, qty: i.qty + line.qty, amountText: undefined, meta: 'From today’s receipt' } : i,
           );
@@ -224,12 +233,15 @@ export function reducer(s: State, a: Action): State {
         // Bought it, so it comes off To Buy.
         toBuy = toBuy.map((t) => (!t.done && sameName(t.name, line.name) ? { ...t, done: true } : t));
       }
-      const kitchen = { ...s.kitchen, syncedAgo: 'just now' };
+      const kitchen = { ...s.kitchen, syncedAgo: 'just now', syncedAt: a.at };
       const lastScan: Record<Place, string[]> = { fridge: [], pantry: [], freezer: [] };
       for (const l of a.lines) if (l.place !== 'skip' && l.name.trim()) lastScan[l.place].push(l.name.trim());
       const session = { ...s.session, lastScan };
       const added = a.lines.filter((l) => l.place !== 'skip' && l.name.trim()).length;
-      const undo = a.undo && added ? withUndo(s, `Added ${added} ${added === 1 ? 'item' : 'items'} to your kitchen`, 'home') : null;
+      const text = merged
+        ? `Added ${added} ${added === 1 ? 'item' : 'items'}, ${merged} already in your kitchen`
+        : `Added ${added} ${added === 1 ? 'item' : 'items'} to your kitchen`;
+      const undo = a.undo && added ? withUndo(s, text, 'home') : null;
       return { ...s, items, toBuy, kitchen, session, undo };
     }
     case 'toggleRecipeToBuy': {
@@ -299,8 +311,13 @@ export function reducer(s: State, a: Action): State {
       return { ...s, notifications: { ...s.notifications, [a.key]: a.on } };
     case 'setUseSoonTime':
       return { ...s, notifications: { ...s.notifications, useSoonTime: a.time } };
-    case 'signIn':
-      return { ...s, session: { ...s.session, signIn: a.method, contact: a.contact ?? '' } };
+    case 'signIn': {
+      // Someone new is signing in: they start as themselves, not as the sample Alex Rivera.
+      // With a backend, the server's profile replaces this on load.
+      const contact = a.contact ?? '';
+      const user: Person = { id: NEW_PERSON_ID, name: '', note: '', ...(a.method === 'email' && contact ? { email: contact } : {}) };
+      return { ...s, user, session: { ...s.session, signIn: a.method, contact } };
+    }
     case 'setName': {
       const user = { ...s.user, name: a.name.trim() || s.user.name };
       if (a.lastName !== undefined) user.lastName = a.lastName.trim();
@@ -360,7 +377,8 @@ function makeActions(dispatch: (a: Action) => void) {
     /** A new use-by date, `daysLeft` from today. */
     setBestBy: (id: string, daysLeft: number) => dispatch({ type: 'setBestBy', id, daysLeft }),
     /** With `undo: true`, Home shows "Added N items to your kitchen" with Undo. */
-    addScanned: (lines: ScanLine[], opts?: { undo?: boolean }) => dispatch({ type: 'addScanned', lines, undo: opts?.undo }),
+    addScanned: (lines: ScanLine[], opts?: { undo?: boolean }) =>
+      dispatch({ type: 'addScanned', lines, undo: opts?.undo, at: new Date().toISOString() }),
     toggleRecipeToBuy: (id: string) => dispatch({ type: 'toggleRecipeToBuy', id }),
     madeRecipe: (id: string) => dispatch({ type: 'madeRecipe', id }),
     importRecipe: (recipe: Recipe) => dispatch({ type: 'importRecipe', recipe }),
@@ -445,9 +463,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return;
     }
     // shortcut: a failed first load (offline) opens the app on local data, add a retry screen if testers hit it.
+    // A stalled load opens it on local data too after a wait; the load still lands when it answers.
+    const waited = setTimeout(() => setLoadedFor(userId), LOAD_WAIT_MS);
     reload()
       .catch(() => undefined)
-      .finally(() => setLoadedFor(userId));
+      .finally(() => {
+        clearTimeout(waited);
+        setLoadedFor(userId);
+      });
+    return () => clearTimeout(waited);
   }, [authReady, userId, reload]);
 
   // Saved after every change, without the undo. Not signed in (or, with a backend, not this

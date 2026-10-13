@@ -40,9 +40,10 @@ export default function Household() {
   const kitchen = state.kitchen;
   const others = kitchen.people.filter((p) => p.id !== state.user.id);
   const link = `cooked.app/join/${kitchen.inviteCode}`;
-  // Only the person who made the kitchen can remove people (the server checks too).
+  // Only the person who made the kitchen can remove people, and nobody removes the maker (Decision #100; the server checks too).
   // shortcut: reads the creator from the 'Made this kitchen' note, switch to kitchens.created_by once the store exposes it.
-  const canRemove = !hasBackend || kitchen.people.some((p) => p.id === state.user.id && p.note === 'Made this kitchen');
+  const isMaker = (p: Person) => p.note === 'Made this kitchen';
+  const canRemove = kitchen.people.some((p) => p.id === state.user.id && isMaker(p));
   const kitchenId = kitchen.id ?? '';
 
   /** Runs a server call; on success reloads the kitchen, on failure shows "We couldn’t <what>…" under the section. */
@@ -132,7 +133,7 @@ export default function Household() {
               note={p.note}
               paper={PAPERS[i % PAPERS.length]}
               right={
-                you || !canRemove ? undefined : (
+                you || !canRemove || isMaker(p) ? undefined : (
                   <TextLink
                     label="Remove"
                     color="inkMuted"

@@ -54,7 +54,7 @@ describe('hydrate', () => {
   test('no kitchen yet gives an empty kitchen named after the person', () => {
     const s = reducer(initialState(), { type: 'hydrate', data: { ...loaded(), kitchen: null, items: [], toBuy: [] } });
     expect(s.kitchen.id).toBeUndefined();
-    expect(s.kitchen.name).toBe('Alex kitchen');
+    expect(s.kitchen.name).toBe('Alex’s kitchen');
     expect(s.items).toEqual([]);
   });
 
