@@ -17,6 +17,8 @@ const CAN_BLUR = Platform.OS !== 'android';
 function useReduceTransparency() {
   const [on, setOn] = useState(false);
   useEffect(() => {
+    // iOS only; react-native-web doesn't have it and Scan crashed in the browser.
+    if (Platform.OS !== 'ios') return;
     AccessibilityInfo.isReduceTransparencyEnabled().then(setOn);
     const sub = AccessibilityInfo.addEventListener('reduceTransparencyChanged', setOn);
     return () => sub.remove();

@@ -43,8 +43,9 @@ To check screens in a browser, run `npx expo start --web`. The app starts in onb
 
 ### Updates and builds (EAS)
 
+- Development builds (with `expo-dev-client`, for ML Kit and other native code): `npx eas-cli@latest build --profile development` for a phone, or `--profile development-simulator --platform ios` for the iOS Simulator (no Apple Developer account needed; drag the `.app` onto the Simulator or let `eas build:run` install it). The Simulator build leaves ML Kit out (no arm64 Simulator slice, see `scripts/eas-pre-install.mjs`), so Scan shows the sample receipt. On a Mac with Xcode, `npm run ios:sim` builds the same thing locally. Then run `npm start` and open the app.
 - Builds and OTA updates run on EAS: `npx eas-cli@latest build --profile preview` and `npx eas-cli@latest update --channel preview --message "..." --environment preview`.
-- Channels: `preview` (internal testers) and `production` (App Store). Always ship an update to `preview` and check it before `production`.
+- Channels: `development` (development builds), `preview` (internal testers) and `production` (App Store). Always ship an update to `preview` and check it before `production`.
 - `runtimeVersion` uses the `fingerprint` policy, so an update only reaches builds with matching native code. Adding or upgrading a package with native code needs a new build, not just an update.
 - The EAS project isn't linked yet. The owner runs `npx eas-cli@latest login`, `init` and `update:configure` once, with their own Expo account. Agents don't run these.
 

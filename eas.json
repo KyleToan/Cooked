@@ -10,6 +10,12 @@
       "channel": "development",
       "node": "24.21.0"
     },
+    "development-simulator": {
+      "extends": "development",
+      "ios": {
+        "simulator": true
+      }
+    },
     "preview": {
       "distribution": "internal",
       "channel": "preview",

@@ -52,6 +52,7 @@
   },
   "scripts": {
     "postinstall": "node scripts/patch-mlkit.mjs",
+    "eas-build-pre-install": "node scripts/eas-pre-install.mjs",
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
