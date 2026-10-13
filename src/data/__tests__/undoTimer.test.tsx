@@ -3,6 +3,7 @@
 
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
 import { useEffect } from 'react';
+import { AccessibilityInfo } from 'react-native';
 import { act, create } from 'react-test-renderer';
 
 import { StoreProvider, UNDO_MS, useStore } from '@/data/store';
@@ -32,6 +33,7 @@ beforeEach(() => {
 
 afterEach(() => {
   jest.useRealTimers();
+  jest.restoreAllMocks();
 });
 
 test('an undo clears itself after a few seconds', () => {
@@ -56,4 +58,19 @@ test('a newer undo gets its own time', () => {
 test('addScanned with undo shows it on Home', () => {
   act(() => box.store!.actions.addScanned([{ id: 'k', name: 'Kale', price: '', place: 'fridge', qty: 1 }], { undo: true }));
   expect(box.store!.state.undo).toMatchObject({ scope: 'home', text: 'Added 1 item to your kitchen' });
+});
+
+test('with a screen reader on, the undo waits for the next change', async () => {
+  jest.spyOn(AccessibilityInfo, 'isScreenReaderEnabled').mockResolvedValue(true);
+  act(() => {
+    create(
+      <StoreProvider>
+        <Probe />
+      </StoreProvider>,
+    );
+  });
+  await act(async () => {});
+  act(() => box.store!.actions.toggleToBuy('t', 'home'));
+  act(() => jest.advanceTimersByTime(UNDO_MS * 3));
+  expect(box.store!.state.undo?.text).toBe('Tomatoes ticked off');
 });

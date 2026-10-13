@@ -21,7 +21,7 @@ export default function ScanUnreadable() {
   const byHand = () => {
     router.dismissAll();
     if (flow === 'app') {
-      router.push({ pathname: '/kitchen', params: { tab: 'fridge' } });
+      router.navigate({ pathname: '/kitchen', params: { tab: 'fridge' } });
     } else {
       // In onboarding the kitchen isn't open yet: carry on, and add things from Home later.
       actions.skipFirstScan();

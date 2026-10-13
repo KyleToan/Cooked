@@ -39,3 +39,8 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# local tool config and env backups
+.mcp.json
+.xcode.env*
+*.save

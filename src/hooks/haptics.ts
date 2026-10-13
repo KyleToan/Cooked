@@ -11,7 +11,7 @@ const run = (p: () => Promise<void>) => {
 export const haptics = {
   /** Ticking a box, flipping a switch, picking a tab or place, a stepper step. */
   select: () => run(() => Haptics.selectionAsync()),
-  /** The shutter, a sheet snapping closed, a note pressed. */
+  /** The shutter. */
   tap: () => run(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)),
   /** Something worked that the person waited for: items added, recipe saved. */
   success: () => run(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)),

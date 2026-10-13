@@ -39,7 +39,11 @@ export default function SignIn() {
       actions.signIn(method);
       router.push('/name');
     } catch (e) {
-      if (!(e instanceof Canceled)) setFailed(method);
+      if (!(e instanceof Canceled)) {
+        // The error line is deliberately vague; the real reason goes to the dev server's terminal.
+        if (__DEV__) console.warn(`Sign in with ${method} failed:`, e);
+        setFailed(method);
+      }
     } finally {
       setBusy(false);
     }

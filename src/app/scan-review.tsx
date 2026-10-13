@@ -1,10 +1,12 @@
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Platform, StyleSheet, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { ActionPill } from '@/components/ActionPill';
 import { PushedHeader } from '@/components/Header';
 import { Icon } from '@/components/Icon';
+import { ROW_LAYOUT } from '@/components/Controls';
 import { CheckItemRow } from '@/components/ListRows';
 import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
@@ -15,14 +17,12 @@ import { useStore } from '@/data/store';
 import type { ScanLine } from '@/data/types';
 import { haptics } from '@/hooks/haptics';
 import { useGoToTab } from '@/hooks/useGoToTab';
-import { useLayoutMotion } from '@/hooks/useLayoutMotion';
 import { color, radius, size, space } from '@/theme';
 
 /** "We found 7 items": fix names, move things, change amounts, then put it all away. */
 export default function ScanReview() {
   const router = useRouter();
   const goToTab = useGoToTab();
-  const animate = useLayoutMotion();
   const flow = scanFlow(useLocalSearchParams<{ flow?: string }>().flow);
   const { state, actions } = useStore();
   // What the scan read, kept so edits can be told apart from it.
@@ -113,16 +113,14 @@ export default function ScanReview() {
 
       <View>
         {lines.map((line) => (
-          <CheckItemRow
-            key={line.id}
-            line={line}
-            open={open === line.id}
-            onToggleOpen={() => {
-              animate();
-              setOpen(open === line.id ? null : line.id);
-            }}
-            onChange={(next) => setLines((ls) => ls.map((l) => (l.id === next.id ? next : l)))}
-          />
+          <Animated.View key={line.id} layout={ROW_LAYOUT}>
+            <CheckItemRow
+              line={line}
+              open={open === line.id}
+              onToggleOpen={() => setOpen(open === line.id ? null : line.id)}
+              onChange={(next) => setLines((ls) => ls.map((l) => (l.id === next.id ? next : l)))}
+            />
+          </Animated.View>
         ))}
       </View>
     </Screen>

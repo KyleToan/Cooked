@@ -1,12 +1,14 @@
 import { useState, type ReactNode } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { PLACE_LABEL } from '@/data/helpers';
 import type { ToBuyItem } from '@/data/types';
-import { useLayoutMotion } from '@/hooks/useLayoutMotion';
+import { haptics } from '@/hooks/haptics';
 import { color, size, space, type } from '@/theme';
-import { AddBox, Checkbox } from './Controls';
+import { AddBox, Checkbox, ROW_LAYOUT } from './Controls';
 import { SectionHeader } from './Header';
+import { Tap } from './Tap';
 import { Text } from './Text';
 
 type Props = {
@@ -25,7 +27,6 @@ type Props = {
 
 /** The shared To Buy list: progress, flat rows with checkboxes, and an add row. */
 export function TodoList({ items, done, total, onToggle, onAdd, right, helper, addLabel = 'Add an item' }: Props) {
-  const animate = useLayoutMotion();
   return (
     <View style={styles.section}>
       <View style={styles.head}>
@@ -39,23 +40,13 @@ export function TodoList({ items, done, total, onToggle, onAdd, right, helper, a
       <ProgressBar value={total ? done / total : 0} />
       <View>
         {items.map((item) => (
-          <TodoRow
-            key={item.id}
-            item={item}
-            onToggle={() => {
-              animate();
-              onToggle(item.id);
-            }}
-          />
+          <Animated.View key={item.id} layout={ROW_LAYOUT}>
+            <TodoRow item={item} onToggle={() => onToggle(item.id)} />
+          </Animated.View>
         ))}
-        <AddRow
-          placeholder="Add an item…"
-          label={addLabel}
-          onSubmit={(name) => {
-            animate();
-            onAdd(name);
-          }}
-        />
+        <Animated.View layout={ROW_LAYOUT}>
+          <AddRow placeholder="Add an item…" label={addLabel} onSubmit={onAdd} />
+        </Animated.View>
       </View>
     </View>
   );
@@ -75,22 +66,33 @@ export function ProgressBar({ value }: { value: number }) {
   );
 }
 
+/** The whole row is the checkbox: one tap target and one VoiceOver stop. */
 export function TodoRow({ item, onToggle }: { item: ToBuyItem; onToggle: () => void }) {
+  const note = item.done ? 'Got it' : item.note;
   return (
-    <View style={styles.row}>
-      <Checkbox checked={item.done} onPress={onToggle} label={item.name} />
+    <Tap
+      accessibilityRole="checkbox"
+      accessibilityLabel={[item.name, note, PLACE_LABEL[item.place]].filter(Boolean).join(', ')}
+      accessibilityState={{ checked: item.done }}
+      onPress={() => {
+        haptics.select();
+        onToggle();
+      }}
+      style={styles.row}
+    >
+      <Checkbox checked={item.done} />
       <View style={styles.rowText}>
-        <Text color={item.done ? 'inkOff' : 'ink'} strike={item.done}>
+        <Text color={item.done ? 'inkMuted' : 'ink'} strike={item.done}>
           {item.name}
         </Text>
         <Text variant="micro" color="inkMuted" weight="regular">
-          {item.done ? 'Got it' : item.note}
+          {note}
         </Text>
       </View>
       <Text variant="caption" color="inkMuted">
         {PLACE_LABEL[item.place]}
       </Text>
-    </View>
+    </Tap>
   );
 }
 

@@ -63,7 +63,6 @@ function Routes() {
       </Stack.Protected>
       <Stack.Protected guard={onboarded}>
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="kitchen" />
         <Stack.Screen name="recipe/[id]" />
         <Stack.Screen name="account" />
         <Stack.Screen name="household" />

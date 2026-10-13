@@ -1,38 +1,50 @@
-import type { ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
+import type { ReactNode } from "react";
+import { StyleSheet, View } from "react-native";
 
-import { color, radius, size, space, type } from '@/theme';
-import { Icon } from './Icon';
-import { Tap } from './Tap';
-import { Text } from './Text';
+import { color, radius, size, space, type } from "@/theme";
+import { Icon } from "./Icon";
+import { Tap } from "./Tap";
+import { Text } from "./Text";
 
 /** The account button is 22pt inside a 44pt square. */
 const ACCOUNT_ICON = 22;
 
 type GreetingProps = {
-  /** "Good evening, Alex" or a status line ("5 saved · 2 you can make now"). */
-  line: string;
+  /** A status line above the title ("5 saved · 2 you can make now"). */
+  line?: string;
   title: string;
   /** The account button (default) or one secondary pill. */
   right?: ReactNode;
   onAccount?: () => void;
 };
 
-/** The top of a main screen: greeting above a `title-xl` title, the account button on the right. */
-export function GreetingHeader({ line, title, right, onAccount }: GreetingProps) {
+/** The top of the Kitchen and Recipes tabs: a status line above a `title-xl` title, the account button on the right. */
+export function GreetingHeader({
+  line,
+  title,
+  right,
+  onAccount,
+}: GreetingProps) {
   return (
     <View style={styles.greetingRow}>
       <View style={styles.titles}>
-        <Text variant="greeting" color="inkMuted">
-          {line}
-        </Text>
+        {line ? (
+          <Text variant="greeting" color="inkMuted">
+            {line}
+          </Text>
+        ) : null}
         <Text variant="titleXl" accessibilityRole="header">
           {title}
         </Text>
       </View>
       {right ??
         (onAccount ? (
-          <Tap accessibilityRole="button" accessibilityLabel="Account and household" onPress={onAccount} style={styles.account}>
+          <Tap
+            accessibilityRole="button"
+            accessibilityLabel="Account and household"
+            onPress={onAccount}
+            style={styles.account}
+          >
             <Icon name="account" size={ACCOUNT_ICON} />
           </Tap>
         ) : null)}
@@ -40,9 +52,50 @@ export function GreetingHeader({ line, title, right, onAccount }: GreetingProps)
   );
 }
 
+type TopBarProps = {
+  title: string;
+  onScan: () => void;
+  onAccount: () => void;
+};
+
+/** Home's top bar: a round Scan button on the left, the title centred, the account button on the right. */
+export function TopBar({ title, onScan, onAccount }: TopBarProps) {
+  return (
+    <View style={styles.topRow}>
+      <Tap
+        accessibilityRole="button"
+        accessibilityLabel="Scan a receipt"
+        accessibilityHint="Opens the camera"
+        onPress={onScan}
+        style={styles.scan}
+      >
+        <Icon name="scan" size={ACCOUNT_ICON} color="sageInk" />
+      </Tap>
+      <Text
+        variant="titleXl"
+        accessibilityRole="header"
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        style={styles.topTitle}
+      >
+        {title}
+      </Text>
+      <Tap
+        accessibilityRole="button"
+        accessibilityLabel="Account and household"
+        onPress={onAccount}
+        style={styles.account}
+      >
+        <Icon name="account" size={ACCOUNT_ICON} />
+      </Tap>
+    </View>
+  );
+}
+
 type PushedProps = {
   title: string;
-  onBack: () => void;
+  /** Left out on a tab page (Your Kitchen), which has no back arrow. */
+  onBack?: () => void;
   /** "Back to home". */
   backLabel?: string;
   /** A text action at the end of the title line (Rename). */
@@ -52,12 +105,22 @@ type PushedProps = {
 };
 
 /** A pushed screen's header: the back arrow and a `title-lg` title on one line. */
-export function PushedHeader({ title, onBack, backLabel = 'Back', right, below }: PushedProps) {
+export function PushedHeader({
+  title,
+  onBack,
+  backLabel = "Back",
+  right,
+  below,
+}: PushedProps) {
   return (
     <View style={styles.pushed}>
-      <View style={styles.pushedRow}>
-        <BackButton onPress={onBack} label={backLabel} />
-        <Text variant="titleLg" accessibilityRole="header" style={styles.pushedTitle}>
+      <View style={[styles.pushedRow, !onBack && styles.noBack]}>
+        {onBack ? <BackButton onPress={onBack} label={backLabel} /> : null}
+        <Text
+          variant="titleLg"
+          accessibilityRole="header"
+          style={styles.pushedTitle}
+        >
           {title}
         </Text>
         {right ? <View style={styles.pushedRight}>{right}</View> : null}
@@ -67,9 +130,20 @@ export function PushedHeader({ title, onBack, backLabel = 'Back', right, below }
   );
 }
 
-export function BackButton({ onPress, label = 'Back' }: { onPress: () => void; label?: string }) {
+export function BackButton({
+  onPress,
+  label = "Back",
+}: {
+  onPress: () => void;
+  label?: string;
+}) {
   return (
-    <Tap accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={styles.back}>
+    <Tap
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={styles.back}
+    >
       <Icon name="back" />
     </Tap>
   );
@@ -91,7 +165,11 @@ export function SectionHeader({
     <View style={styles.section}>
       <View style={styles.sectionLeft}>
         {icon}
-        <Text variant="sectionTitle" accessibilityRole="header" style={styles.shrink}>
+        <Text
+          variant="sectionTitle"
+          accessibilityRole="header"
+          style={styles.shrink}
+        >
           {title}
         </Text>
         {meta ? (
@@ -106,7 +184,12 @@ export function SectionHeader({
 }
 
 const styles = StyleSheet.create({
-  greetingRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: space.s3 },
+  greetingRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    gap: space.s3,
+  },
   // Takes the room left by the account button, so a long title or large text wraps instead of clipping.
   titles: { gap: space.s1, flex: 1 },
   account: {
@@ -116,17 +199,53 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: color.line,
     backgroundColor: color.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  topRow: { flexDirection: "row", alignItems: "center", gap: space.s3 },
+  // Both side buttons are 44pt wide, so a flex title between them sits in the true centre.
+  topTitle: { flex: 1, textAlign: "center" },
+  scan: {
+    width: size.targetMin,
+    height: size.targetMin,
+    borderRadius: radius.pill,
+    backgroundColor: color.surfaceSunken,
+    alignItems: "center",
+    justifyContent: "center",
   },
   pushed: { gap: space.s1 },
   // Top-aligned so a title that wraps at large text keeps the arrow beside its first line.
-  pushedRow: { flexDirection: 'row', alignItems: 'flex-start', gap: space.s1, marginLeft: -space.s3 },
+  pushedRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: space.s1,
+    marginLeft: -space.s3,
+  },
+  noBack: { marginLeft: 0 },
   // Centers a one-line title on the 44pt back button: (44 - 36) / 2.
-  pushedTitle: { flex: 1, paddingTop: (size.targetMin - type.titleLg.lineHeight) / 2 },
-  back: { width: size.targetMin, height: size.targetMin, alignItems: 'center', justifyContent: 'center' },
-  section: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.s3 },
-  pushedRight: { minHeight: size.targetMin, justifyContent: 'center' },
-  sectionLeft: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', gap: space.s2, flexShrink: 1 },
+  pushedTitle: {
+    flex: 1,
+    paddingTop: (size.targetMin - type.titleLg.lineHeight) / 2,
+  },
+  back: {
+    width: size.targetMin,
+    height: size.targetMin,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  section: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: space.s3,
+  },
+  pushedRight: { minHeight: size.targetMin, justifyContent: "center" },
+  sectionLeft: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    flexWrap: "wrap",
+    gap: space.s2,
+    flexShrink: 1,
+  },
   shrink: { flexShrink: 1 },
 });

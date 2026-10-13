@@ -1,6 +1,6 @@
 # TabIsland
 
-The floating bottom navigation: a white pill with Home, Scan and Recipes.
+The floating bottom navigation: a white pill with Home, Fridge and Recipes. Fridge is the Your Kitchen tab; Scan moved to the round button top left on Home (Decisions #104).
 
 - Size `island-width` × `island-height` (300 × 68px), centered, `space-6` (28px) from the bottom edge, floating over scrolling content.
 - White `surface`, 1px `line` border, `radius-pill`, `shadow-island`, 6px inner padding. Three equal columns.

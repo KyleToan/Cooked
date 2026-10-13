@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import type { BottomTabBarProps } from 'expo-router/tabs';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View, type LayoutRectangle } from 'react-native';
@@ -12,12 +11,12 @@ import { Icon } from './Icon';
 import type { IconName } from './icon-data';
 import { Text } from './Text';
 
-type TabKey = 'home' | 'scan' | 'recipes';
-type Tab = { key: TabKey; label: string; icon: IconName; href: '/' | '/recipes' | null };
+type TabKey = 'home' | 'kitchen' | 'recipes';
+type Tab = { key: TabKey; label: string; icon: IconName; href: '/' | '/kitchen' | '/recipes' };
 
 const TABS: Tab[] = [
   { key: 'home', label: 'Home', icon: 'home', href: '/' },
-  { key: 'scan', label: 'Scan', icon: 'scan', href: null },
+  { key: 'kitchen', label: 'Fridge', icon: 'fridge', href: '/kitchen' },
   { key: 'recipes', label: 'Recipes', icon: 'recipes', href: '/recipes' },
 ];
 
@@ -38,12 +37,11 @@ export function islandEdge(insetBottom: number) {
 }
 
 /**
- * The floating tab island: Home, Scan and Recipes. Scan isn't a tab page; it
- * opens the camera full screen, so it's a button, not a tab. Pushed screens
- * like Kitchen show it too. The grey underscore slides to the picked tab.
+ * The floating tab island: Home, Fridge (Your Kitchen) and Recipes. Scan lives
+ * in Home's top bar.
+ * The grey underscore slides to the picked tab.
  */
 export function TabIsland({ active }: { active: TabKey }) {
-  const router = useRouter();
   const goToTab = useGoToTab();
   const insets = useSafeAreaInsets();
   const [tabs, setTabs] = useState<Partial<Record<TabKey, LayoutRectangle>>>({});
@@ -66,19 +64,16 @@ export function TabIsland({ active }: { active: TabKey }) {
         {TABS.map((tab) => {
           const on = tab.key === active;
           const onPress = () => {
-            if (!tab.href) router.push('/scan');
-            else if (!on) {
-              haptics.select();
-              goToTab(tab.href);
-            }
+            if (on) return;
+            haptics.select();
+            goToTab(tab.href);
           };
           return (
             <Pressable
               key={tab.key}
-              accessibilityRole={tab.href ? 'tab' : 'button'}
+              accessibilityRole="tab"
               accessibilityLabel={tab.label}
-              accessibilityHint={tab.href ? undefined : 'Opens the camera'}
-              accessibilityState={tab.href ? { selected: on } : undefined}
+              accessibilityState={{ selected: on }}
               onPress={onPress}
               onLayout={(e) => {
                 const l = e.nativeEvent.layout;
@@ -120,7 +115,8 @@ export function TabIsland({ active }: { active: TabKey }) {
 
 /** The island as the tab bar of the (tabs) navigator. */
 export function TabBar({ state }: BottomTabBarProps) {
-  return <TabIsland active={state.routes[state.index]?.name === 'recipes' ? 'recipes' : 'home'} />;
+  const name = state.routes[state.index]?.name;
+  return <TabIsland active={name === 'recipes' ? 'recipes' : name === 'kitchen' ? 'kitchen' : 'home'} />;
 }
 
 /** Bottom padding a scrolling tab screen needs so its last row clears the island ("about 130px"). */

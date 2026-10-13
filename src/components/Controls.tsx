@@ -1,5 +1,7 @@
 import { forwardRef, useEffect, useRef, useState } from 'react';
 import {
+  AccessibilityInfo,
+  Platform,
   ScrollView,
   StyleSheet,
   Switch as RNSwitch,
@@ -12,6 +14,7 @@ import {
 import Animated, {
   FadeIn,
   FadeOut,
+  LinearTransition,
   ReduceMotion,
   useAnimatedStyle,
   useReducedMotion,
@@ -30,6 +33,14 @@ import { Text } from './Text';
 
 /** Critically damped: settles in about 300ms with no overshoot. */
 const SPRING = { duration: 300, dampingRatio: 1 } as const;
+
+/**
+ * Put on each list row (`layout={ROW_LAYOUT}`) so rows slide on the same spring when one opens,
+ * moves or is added. Reanimated skips it when Reduce Motion is on.
+ */
+export const ROW_LAYOUT = LinearTransition.springify().duration(SPRING.duration).dampingRatio(SPRING.dampingRatio);
+/** The part of a row that opens in place fades in. */
+export const ROW_OPEN = FadeIn.duration(200);
 
 /* ---------- Segmented switch (Link / Text, Email / Phone) ---------- */
 
@@ -171,8 +182,8 @@ export function FilterPills<T extends string>({
 /* ---------- Stepper ---------- */
 
 /** A minus sign drawn as a bar: the icon set has a plus but no minus. */
-function Minus() {
-  return <View style={styles.minus} />;
+function Minus({ off }: { off?: boolean }) {
+  return <View style={[styles.minus, off && styles.minusOff]} />;
 }
 
 export function Stepper({
@@ -200,7 +211,7 @@ export function Stepper({
         }}
         style={styles.stepBtn}
       >
-        <Minus />
+        <Minus off={value <= min} />
       </Tap>
       <Text
         variant="button"
@@ -269,6 +280,10 @@ export function UndoBar({ text, onUndo, island = true }: { text: string; onUndo:
   const reduced = useReducedMotion();
   const edge = Math.max(space.s6, insets.bottom + space.s2);
   const bottom = island ? edge + size.islandHeight + space.s3 : edge;
+  // iOS ignores live regions, so say it out loud; Android's live region already does.
+  useEffect(() => {
+    if (Platform.OS === 'ios') AccessibilityInfo.announceForAccessibility(`${text}. Undo available.`);
+  }, [text]);
   return (
     <Animated.View
       accessibilityRole="alert"
@@ -343,8 +358,32 @@ const BOX = 24;
 const CHECK_ICON = 13;
 const ADD_ICON = 12;
 
-/** The 24pt To Buy checkbox inside a 44pt hit area. Checked: `sage-ink` fill with a white check. Pass just the item name as `label`. */
-export function Checkbox({ checked, onPress, label }: { checked: boolean; onPress: () => void; label: string }) {
+/** Checks pop in on a quick critically damped spring. */
+const CHECK_SPRING = { duration: 250, dampingRatio: 1 } as const;
+const CHECK_FROM = 0.6;
+
+/**
+ * The 24pt To Buy checkbox inside a 44pt hit area. Checked: `sage-ink` fill with a white check. Pass just the item name as `label`.
+ * Without `onPress` it only draws the box, for a row that is the checkbox itself.
+ */
+export function Checkbox({ checked, onPress, label }: { checked: boolean; onPress?: () => void; label?: string }) {
+  const reduced = useReducedMotion();
+  const on = useSharedValue(checked ? 1 : 0);
+  useEffect(() => {
+    on.set(reduced ? withTiming(checked ? 1 : 0, { duration: UNDO_FADE }) : withSpring(checked ? 1 : 0, CHECK_SPRING));
+  }, [checked, reduced, on]);
+  const mark = useAnimatedStyle(() => ({
+    opacity: on.get(),
+    transform: [{ scale: reduced ? 1 : CHECK_FROM + (1 - CHECK_FROM) * on.get() }],
+  }));
+  const box = (
+    <View style={[styles.box, checked ? styles.boxOn : styles.boxOff]}>
+      <Animated.View style={mark}>
+        <Icon name="check" size={CHECK_ICON} color="onInk" />
+      </Animated.View>
+    </View>
+  );
+  if (!onPress) return <View style={styles.checkHit}>{box}</View>;
   return (
     <Tap
       accessibilityRole="checkbox"
@@ -356,9 +395,7 @@ export function Checkbox({ checked, onPress, label }: { checked: boolean; onPres
       }}
       style={styles.checkHit}
     >
-      <View style={[styles.box, checked ? styles.boxOn : styles.boxOff]}>
-        {checked ? <Icon name="check" size={CHECK_ICON} color="onInk" /> : null}
-      </View>
+      {box}
     </Tap>
   );
 }
@@ -416,6 +453,7 @@ const styles = StyleSheet.create({
   filterOn: { backgroundColor: color.surface, borderColor: color.sageInk },
   filterOff: { backgroundColor: color.surfaceSunken, borderColor: color.surfaceSunken },
   minus: { width: 11, height: 2, borderRadius: 1, backgroundColor: color.sageInk },
+  minusOff: { backgroundColor: color.inkSubtle },
   stepper: {
     minHeight: size.targetMin,
     flexDirection: 'row',

@@ -71,10 +71,15 @@ export default function Recipes() {
       <GreetingHeader
         line={`${recipes.length} saved · ${recipes.filter(canMakeNow).length} you can make now`}
         title="Recipes"
-        right={<ActionPill label="Import" icon="import" height="header" onPress={() => router.push('/import')} />}
+        onAccount={() => router.push('/account')}
       />
 
-      <SearchField placeholder="Search recipes or an ingredient" value={query} onChangeText={setQuery} />
+      <View style={styles.searchRow}>
+        <View style={styles.grow}>
+          <SearchField placeholder="Search recipes or an ingredient" value={query} onChangeText={setQuery} />
+        </View>
+        <ActionPill label="Import" icon="import" height="header" onPress={() => router.push('/import')} />
+      </View>
 
       {tonight && tonightShown ? (
         <View style={styles.tonight}>
@@ -108,9 +113,12 @@ export default function Recipes() {
             <RecipeRow key={r.id} recipe={r} onOpen={() => open(r.id)} onToggleToBuy={() => actions.toggleRecipeToBuy(r.id)} />
           ))}
           {recipes.length === 0 ? (
-            <Text variant="caption" color="inkMuted" style={styles.empty}>
-              Nothing here yet. Import a recipe and we’ll check it against your kitchen.
-            </Text>
+            <View style={styles.empty}>
+              <Text variant="caption" color="inkMuted">
+                Nothing here yet. Import a recipe and we’ll check it against your kitchen.
+              </Text>
+              <ActionPill label="Import a recipe" variant="primary" icon="import" height="header" onPress={() => router.push('/import')} />
+            </View>
           ) : noneMatch ? (
             <View style={styles.empty}>
               <Text color="inkMuted">{filter === 'now' && !q ? 'Nothing you can make right now.' : 'No recipes match.'}</Text>
@@ -125,9 +133,10 @@ export default function Recipes() {
 
 const styles = StyleSheet.create({
   grow: { flex: 1 },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: space.s3 },
   tonight: { gap: space.s2 + 2 },
   soonLine: { flexDirection: 'row', alignItems: 'center', gap: space.s1 + 2 },
   cook: { marginTop: space.s1 },
   list: { gap: space.s1 + 2 },
-  empty: { paddingVertical: space.s4 + 2, minHeight: size.rowHeight, gap: space.s1 },
+  empty: { paddingVertical: space.s4 + 2, minHeight: size.rowHeight, gap: space.s3 },
 });

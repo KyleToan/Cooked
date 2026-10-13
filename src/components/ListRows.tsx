@@ -1,5 +1,6 @@
 import { useRef, useState, type ReactNode } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 import { amountLabel, joinAnd, PLACE_LABEL } from '@/data/helpers';
@@ -7,7 +8,7 @@ import type { Item, Place, Recipe, ScanLine } from '@/data/types';
 import { haptics } from '@/hooks/haptics';
 import { color, radius, size, space, type } from '@/theme';
 import { Chevron } from './Chevron';
-import { Stepper } from './Controls';
+import { ROW_OPEN, Stepper } from './Controls';
 import { Icon } from './Icon';
 import { PAPER } from './StickyNote';
 import { Tap } from './Tap';
@@ -71,7 +72,7 @@ export function KitchenRow({ item, startQty, soon, open, onToggleOpen, actionLab
         <Chevron direction={open ? 'up' : 'down'} animated />
       </Tap>
       {open ? (
-        <View style={styles.openArea}>
+        <Animated.View entering={ROW_OPEN} style={styles.openArea}>
           <View style={styles.open}>
             <Tap accessibilityRole="button" onPress={onAction} style={styles.action}>
               <Text variant="link" color="sageInk">
@@ -81,7 +82,7 @@ export function KitchenRow({ item, startQty, soon, open, onToggleOpen, actionLab
             <Stepper value={item.qty} onChange={onQty} />
           </View>
           {extra}
-        </View>
+        </Animated.View>
       ) : null}
     </View>
   );
@@ -144,7 +145,7 @@ export function CheckItemRow({ line, open, onToggleOpen, onChange }: CheckRowPro
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
             returnKeyType="done"
-            style={[styles.nameInput, { color: skip ? color.inkSubtle : color.ink, borderBottomColor: focused ? color.sageInk : 'transparent' }]}
+            style={[styles.nameInput, { color: skip ? color.inkMuted : color.ink, borderBottomColor: focused ? color.sageInk : 'transparent' }]}
           />
           <Text variant="micro" color="inkMuted" weight="regular">
             {detail}
@@ -166,7 +167,7 @@ export function CheckItemRow({ line, open, onToggleOpen, onChange }: CheckRowPro
         </Tap>
       </View>
       {open ? (
-        <View style={styles.picker}>
+        <Animated.View entering={ROW_OPEN} style={styles.picker}>
           <View accessibilityRole="radiogroup" accessibilityLabel="Where it goes" style={styles.places}>
             {PLACES.map((p) => {
               const on = p === line.place;
@@ -201,7 +202,7 @@ export function CheckItemRow({ line, open, onToggleOpen, onChange }: CheckRowPro
               incLabel="One more"
             />
           </View>
-        </View>
+        </Animated.View>
       ) : null}
     </View>
   );

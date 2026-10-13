@@ -4,6 +4,7 @@
 
 import { useFocusEffect } from 'expo-router';
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
+import { AccessibilityInfo } from 'react-native';
 
 import { useAuth } from './auth';
 import { guessPlace, makeId, shortDate, USE_SOON_DAYS } from './helpers';
@@ -523,15 +524,34 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   // Screens see recipes checked against the kitchen, with Tonight's pick marked.
   const recipes = useMemo(() => checkRecipes(state.recipes, state.items), [state.recipes, state.items]);
   // Undo bars go away by themselves after a few seconds, unless a newer one replaced them.
+  // Not with a screen reader on: finding the bar takes longer than that, so it stays until the next change.
   const undo = state.undo;
+  const reader = useScreenReader();
   useEffect(() => {
-    if (!undo) return;
+    if (!undo || reader) return;
     const timer = setTimeout(() => dispatch({ type: 'expireUndo', undo }), UNDO_MS);
     return () => clearTimeout(timer);
-  }, [undo]);
+  }, [undo, reader]);
   const ready = authReady && (!userId || loadedFor === userId || (cachedFor === userId && state.user.id === userId));
   const value = useMemo(() => ({ state: { ...state, recipes }, actions, reload, ready }), [state, recipes, actions, reload, ready]);
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
+}
+
+/** True while VoiceOver or TalkBack is on. */
+function useScreenReader() {
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    let live = true;
+    AccessibilityInfo.isScreenReaderEnabled()
+      .then((v) => live && setOn(v))
+      .catch(() => undefined);
+    const sub = AccessibilityInfo.addEventListener('screenReaderChanged', setOn);
+    return () => {
+      live = false;
+      sub.remove();
+    };
+  }, []);
+  return on;
 }
 
 export function useStore(): Store {

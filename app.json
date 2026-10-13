@@ -8,7 +8,12 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "com.kylet.cooked",
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -17,7 +22,9 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "package": "com.kylet.cooked",
+      "predictiveBackGestureEnabled": false,
+      "permissions": []
     },
     "web": {
       "bundler": "metro",
@@ -69,6 +76,16 @@
     ],
     "runtimeVersion": {
       "policy": "fingerprint"
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "1c20b8b4-580a-4b98-870c-aa47a2b05063"
+      }
+    },
+    "owner": "kyletoan",
+    "updates": {
+      "url": "https://u.expo.dev/1c20b8b4-580a-4b98-870c-aa47a2b05063"
     }
   }
 }

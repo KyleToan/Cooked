@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
+import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 
 import { ErrorLine } from '@/components/Controls';
 import { OnbScreen } from '@/components/Onboarding';
@@ -12,7 +12,6 @@ import { failText, failureOf, type Failure } from '@/data/errors';
 import { useStore } from '@/data/store';
 import { supabase } from '@/data/supabase';
 import { haptics } from '@/hooks/haptics';
-import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { color, radius, size, space, type } from '@/theme';
 
 /** Without a backend sign-in is faked: this is the only code that works. */
