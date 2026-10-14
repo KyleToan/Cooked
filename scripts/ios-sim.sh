@@ -14,12 +14,16 @@ const fs = require("fs");
 const p = JSON.parse(fs.readFileSync("package.json"));
 p.expo = { ...p.expo, autolinking: { exclude: ["@infinitered/react-native-mlkit-text-recognition", "@infinitered/react-native-mlkit-core"] } };
 fs.writeFileSync("package.json", JSON.stringify(p, null, 2) + "\n");'
-npx expo prebuild --platform ios --no-install
+# --clean: ios/ is generated, and an old one keeps stale settings (the old com.anonymous.cooked ID, an old
+# AppDelegate without the scene lifecycle newer iOS requires, which crashes on launch).
+npx expo prebuild --platform ios --no-install --clean
 (cd ios && pod install)
 mv package.json.sim-bak package.json
 
 xcrun simctl boot "$SIM" 2>/dev/null || true
-open -b com.apple.iphonesimulator 2>/dev/null || echo "Couldn't open the Simulator window; the app still runs on $SIM."
+open -a Simulator 2>/dev/null || echo "Couldn't open the Simulator window; run 'open -a Simulator'. The app still runs on $SIM."
+# A build from before the app ID changed (Decision #103) sits next to the new one and crashes; remove it.
+xcrun simctl uninstall booted com.anonymous.cooked 2>/dev/null || true
 xcodebuild -workspace ios/Cooked.xcworkspace -scheme Cooked -configuration Debug \
   -destination "platform=iOS Simulator,name=$SIM" -derivedDataPath ios/build -quiet
 APP=ios/build/Build/Products/Debug-iphonesimulator/Cooked.app
