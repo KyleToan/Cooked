@@ -72,7 +72,8 @@
       "expo-image",
       "expo-web-browser",
       "expo-sqlite",
-      "expo-asset"
+      "expo-asset",
+      "./plugins/with-scene-lifecycle"
     ],
     "runtimeVersion": {
       "policy": "fingerprint"
