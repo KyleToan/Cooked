@@ -14,7 +14,7 @@ import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
 import { AddRow, TodoList } from '@/components/TodoList';
-import { count, greeting, inStock, isUseSoon, PLACE_LABEL, PLACES, sortToBuy, syncedLabel, toBuyProgress } from '@/data/helpers';
+import { count, inStock, isUseSoon, PLACE_LABEL, PLACES, sortToBuy, syncedLabel, toBuyProgress } from '@/data/helpers';
 import { useStore, useUndo } from '@/data/store';
 import type { ToBuyItem } from '@/data/types';
 import { color, size, space } from '@/theme';
@@ -111,7 +111,6 @@ export default function Home() {
     >
       <TopBar
         title="Cooked"
-        line={greeting(state.user.name)}
         onScan={() => router.push('/scan')}
         onAccount={() => router.push('/account')}
       />

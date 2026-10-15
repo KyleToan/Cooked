@@ -10,13 +10,15 @@ const FETCH_TIMEOUT_MS = 15000;
 
 /** Things every kitchen is assumed to have; left off the ingredient list. */
 const ALWAYS_HAVE = ['water', 'ice', 'salt', 'pepper', 'black pepper', 'salt and pepper', 'kosher salt', 'sea salt'];
+/** "Flaky sea salt and freshly ground black pepper" and the like, which are still just salt and pepper. */
+const SEASONING = /^(?:(?:flaky|kosher|sea|fine|table|cooking)\s+)*salt(?:\s+(?:and|&)\s+(?:(?:freshly|fresh|cracked|ground|black)\s+)*pepper)?$/i;
 
 const UNITS = [
   'cups?', 'c', 'tablespoons?', 'tbsps?', 'tbs', 'tbl', 'teaspoons?', 'tsps?', 'ounces?', 'oz', 'pounds?', 'lbs?',
   'grams?', 'g', 'kilograms?', 'kg', 'millilit(?:er|re)s?', 'ml', 'lit(?:er|re)s?', 'l', 'quarts?', 'qt', 'pints?', 'pt',
   'cloves?', 'cans?', 'tins?', 'jars?', 'packages?', 'pkgs?', 'packets?', 'bags?', 'boxes', 'box', 'pinch(?:es)?',
   'dash(?:es)?', 'handfuls?', 'bunch(?:es)?', 'slices?', 'sticks?', 'sprigs?', 'heads?', 'pieces?', 'stalks?', 'knobs?',
-  'fillets?', 'drops?', 'sheets?',
+  'fillets?', 'drops?', 'sheets?', 'ribs?', 'bulbs?', 'balls?', 'ears?', 'loaf', 'loaves',
 ].join('|');
 
 const DESCRIPTORS = [
@@ -24,13 +26,15 @@ const DESCRIPTORS = [
   'shredded', 'finely', 'roughly', 'thinly', 'coarsely', 'extra[- ]virgin', 'boneless', 'skinless', 'whole', 'ripe',
   'peeled', 'softened', 'melted', 'cold', 'warm', 'room[- ]temperature', 'packed', 'heaped', 'heaping', 'level',
   'about', 'approximately', 'plus', 'more', 'good', 'quality', 'organic', 'raw', 'cooked', 'dried', 'canned',
+  'coarse', 'homemade', 'store[- ]bought', 'low[- ]sodium', 'well[- ]\\w+', '\\w+ly-\\w+', '(?:small|medium|large)[- ]sized',
+  'shaved', 'petite', 'lean',
 ].join('|');
 
-const AMOUNT = String.raw`(?:\d+(?:[.,]\d+)?(?:\s*\/\s*\d+)?|[½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞])`;
+const AMOUNT = String.raw`(?:\d+(?:[.,]\d+)?%?(?:\s*\/\s*\d+)?|[½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞])`;
 
 // ---- Small text helpers ----
 
-const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', frac12: '½', frac14: '¼', frac34: '¾', deg: '°', ndash: '–', mdash: '—', rsquo: '’', lsquo: '‘', rdquo: '”', ldquo: '“', hellip: '…' };
+const ENTITIES: Record<string, string> = { frasl: '⁄', amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', frac12: '½', frac14: '¼', frac34: '¾', deg: '°', ndash: '–', mdash: '—', rsquo: '’', lsquo: '‘', rdquo: '”', ldquo: '“', hellip: '…' };
 
 function decode(s: string): string {
   return s.replace(/&(#x?[0-9a-f]+|[a-z]+\d*);/gi, (m, code: string) => {
@@ -42,50 +46,88 @@ function decode(s: string): string {
   });
 }
 
+const SUPERSCRIPT = '⁰¹²³⁴⁵⁶⁷⁸⁹';
+const SUBSCRIPT = '₀₁₂₃₄₅₆₇₈₉';
+
+/** "1³⁄₄" and "3⁄4" → "1 3/4" and "3/4", so they read as amounts rather than part of the name. */
+function plainFractions(s: string): string {
+  return s
+    .replace(/(\d)(?=[⁰¹²³⁴⁵⁶⁷⁸⁹])/g, '$1 ')
+    .replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹₀₁₂₃₄₅₆₇₈₉]/g, (d) => String(Math.max(SUPERSCRIPT.indexOf(d), SUBSCRIPT.indexOf(d))))
+    .replace(/[⁄∕]/g, '/');
+}
+
 /** Strips tags and entities and collapses whitespace. */
 function clean(s: string): string {
-  return decode(decode(s.replace(/<[^>]*>/g, ' '))).replace(/\s+/g, ' ').trim();
+  return plainFractions(decode(decode(s.replace(/<[^>]*>/g, ' ')))).replace(/\s+/g, ' ').trim();
+}
+
+/** Bullets and checkboxes that pasted lists start with. */
+const LEADING_BULLET = /^\s*[-•*–▢□◦☐]\s*/;
+
+/** Drops "(28 oz)", "15-ounce", "(, finely chopped (Note 1))" and "[optional]", nested or left unclosed. */
+function withoutAsides(s: string): string {
+  let out = s.replace(/\[[^\]]*\]/g, ' ').replace(new RegExp(String.raw`\b\d+(?:[.,]\d+)?-(?:${UNITS})\b`, 'gi'), ' ');
+  while (/\([^()]*\)/.test(out)) out = out.replace(/\([^()]*\)/g, ' ');
+  return out.replace(/\(.*$/, ' ').replace(/\)/g, ' ');
 }
 
 const capitalize = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
 /** "2 large eggs, beaten" → "Eggs". Empty when nothing food-like is left. */
 export function ingredientName(line: string): string {
-  let s = clean(line)
-    .replace(/^\s*[-•*–]\s*/, '')
-    .replace(/\([^)]*\)/g, ' ')
-    .replace(/\[[^\]]*\]/g, ' ');
-  s = s.split(/,|;| - | – | — /)[0];
-  s = s.replace(/\b(to taste|optional|for (?:serving|garnish|frying|the pan)|as needed|divided)\b.*$/i, '');
+  let s = withoutAsides(clean(line).replace(LEADING_BULLET, '')).replace(TRAILING_AMOUNT, '');
   const amount = new RegExp(String.raw`^\s*(?:${AMOUNT}\s*)+(?:(?:-|–|to)\s*(?:${AMOUNT}\s*)+)?`, 'i');
-  const unit = new RegExp(String.raw`^\s*(?:${UNITS})\.?(?=\s|$)\s*(?:of\s+)?`, 'i');
-  const descriptor = new RegExp(String.raw`^\s*(?:${DESCRIPTORS})\b,?\s*`, 'i');
-  for (let i = 0; i < 6; i++) {
+  const unit = new RegExp(String.raw`^\s*(?:${UNITS})\.?(?=\s|$|,)\s*(?:of\s+)?`, 'i');
+  const descriptor = new RegExp(String.raw`^\s*(?:${DESCRIPTORS})(?![\w-]),?\s*`, 'i');
+  // "Diamond Crystal or ¾ tsp. Morton kosher salt": the name comes after the second amount.
+  const otherAmount = new RegExp(String.raw`^[^,]*?\s(?:or|\/)\s+(?=(?:${AMOUNT}\s*)+(?:${UNITS})\.?\s)`, 'i');
+  // The amount and descriptors come off before the comma split, so "boneless, skinless chicken" keeps its chicken.
+  for (let i = 0; i < 10; i++) {
     const before = s;
-    s = s.replace(amount, '').replace(/^\s*(?:a|an|one|two|three|few|couple(?: of)?|some)\s+/i, '').replace(unit, '').replace(descriptor, '');
+    s = s
+      .replace(amount, '')
+      .replace(/^\s*(?:a|an|one|two|three|half(?: an?)?|few|couple(?: of)?|some)\s+/i, '')
+      .replace(unit, '')
+      .replace(descriptor, '')
+      .replace(/^\s*(?:\/|or|and|plus|minus)\s+/i, '')
+      .replace(otherAmount, '');
     if (s === before) break;
   }
-  s = s.replace(/^\s*of\s+/i, '').replace(/[.:]+$/, '').replace(/\s+/g, ' ').trim();
-  return capitalize(s);
+  s = s.split(/,|;| - | – | — /)[0];
+  s = s.replace(
+    /\b(?:to (?:taste|serve|garnish)|optional|for (?:the |a )?(?:\w+ing|garnish|the pan)|as needed|divided|plus|cut (?:into|in)|such as|preferably|at room temperature)\b.*$/i,
+    '',
+  );
+  s = s.replace(/^\s*of\s+/i, '').replace(/\*/g, '').replace(/[.:]+$/, '').replace(/\s+/g, ' ').trim();
+  // A divider line ("——") has nothing to buy.
+  return /\p{L}/u.test(s) ? capitalize(s) : '';
 }
+
+/** An amount at the end of a line, as some books and scans write it: "Small tomatoes 3/4 oz". */
+const TRAILING_AMOUNT = new RegExp(String.raw`\s+((?:${AMOUNT}\s*)+(?:(?:-|–|to)\s*(?:${AMOUNT}\s*)+)?(?:(?:${UNITS})\.?)?)\s*$`, 'i');
+
+const tidyNumber = (n: string) => n.replace(/\s*\/\s*/g, '/').replace(/\s+/g, ' ').trim();
 
 /**
  * The amount at the start of a line, as written: "400g tomatoes" → "400g",
  * "1 1/2 cups flour" → "1 1/2 cups", "2 large eggs" → "2". Empty when there's none.
  */
 export function ingredientAmount(line: string): string {
-  const s = clean(line).replace(/^\s*[-•*–]\s*/, '').replace(/\([^)]*\)/g, ' ');
-  const re = new RegExp(
-    String.raw`^\s*((?:${AMOUNT}\s*)+(?:(?:-|–|to)\s*(?:${AMOUNT}\s*)+)?)((?:${UNITS})\.?(?=\s|$|,))?`,
-    'i',
-  );
+  const s = withoutAsides(clean(line).replace(LEADING_BULLET, ''));
+  const number = String.raw`(?:${AMOUNT}\s*)+(?:(?:-|–|to)\s*(?:${AMOUNT}\s*)+)?`;
+  const unit = String.raw`(?:${UNITS})\.?(?=\s|$|,)`;
+  const re = new RegExp(String.raw`^\s*(${number})(${unit})?(?:\s*(plus|minus)\s+(${number})(${unit}))?`, 'i');
   const m = re.exec(s);
-  if (!m) return '';
-  const number = m[1].replace(/\s*\/\s*/g, '/').replace(/\s+/g, ' ').trim();
-  const unit = (m[2] ?? '').replace(/\.$/, '');
-  if (!unit) return number;
+  if (!m) {
+    const end = TRAILING_AMOUNT.exec(s.trim());
+    return end ? ingredientAmount(end[1]) : '';
+  }
+  const tidyUnit = (u = '') => u.replace(/\.$/, '');
   // "400g" stays tight; "2 cups" keeps its space.
-  return /\s$/.test(m[1]) ? `${number} ${unit}` : `${number}${unit}`;
+  const amount = !m[2] ? tidyNumber(m[1]) : /\s$/.test(m[1]) ? `${tidyNumber(m[1])} ${tidyUnit(m[2])}` : `${tidyNumber(m[1])}${tidyUnit(m[2])}`;
+  // "2 cups minus 2 tablespoons" keeps the whole measure.
+  return m[3] ? `${amount} ${m[3].toLowerCase()} ${tidyNumber(m[4])} ${tidyUnit(m[5])}` : amount;
 }
 
 /**
@@ -119,7 +161,7 @@ function ingredientNames(lines: string[]): { names: string[]; amounts: Record<st
   const amounts: Record<string, string> = {};
   for (const line of lines) {
     const name = ingredientName(line);
-    if (!name || ALWAYS_HAVE.includes(name.toLowerCase())) continue;
+    if (!name || ALWAYS_HAVE.includes(name.toLowerCase()) || SEASONING.test(name)) continue;
     if (names.some((n) => n.toLowerCase() === name.toLowerCase())) continue;
     names.push(name);
     const amount = ingredientAmount(line);
@@ -319,23 +361,81 @@ function metaImage(html: string, page: string): string {
   return '';
 }
 
-/** Reads the schema.org Recipe on a page. Null when the page has none. */
+/** The inner HTML of every match of `re`, whose last group is the inner HTML. */
+function inners(html: string, re: RegExp): string[] {
+  return [...html.matchAll(re)].map((m) => m[m.length - 1]);
+}
+
+const listItems = (html: string) => inners(html, /<li\b[^>]*>([\s\S]*?)<\/li>/gi).map(clean).filter(Boolean);
+
+/**
+ * Ingredients and steps from the page's markup, for pages without them in JSON-LD:
+ * microdata (Jetpack and older plugins), or the lists under an "Ingredients" heading.
+ */
+function readMarkup(html: string): { lines: string[]; steps: string[] } {
+  const page = html.replace(/<(script|style|noscript|svg|template)\b[\s\S]*?<\/\1>/gi, ' ');
+  const lines = inners(page, /<(\w+)\b[^>]*\bitemprop\s*=\s*["']?(?:recipeIngredient|ingredients)\b[^>]*>([\s\S]*?)<\/\1>/gi)
+    .map(clean)
+    .filter(Boolean);
+  if (lines.length) {
+    const steps = inners(page, /<(\w+)\b[^>]*(?:\bitemprop\s*=\s*["']?recipeInstructions\b|\bclass\s*=\s*["'][^"']*\be-instructions\b)[^>]*>([\s\S]*?)<\/\1>/gi);
+    return { lines, steps: steps.flatMap((x) => readSteps(x)) };
+  }
+  const headings = [...page.matchAll(/<(h[1-6]|p|strong|b|span|div|dt|th)\b[^>]*>\s*([^<]{1,40}?)\s*<\/\1>/gi)].map((m) => ({
+    start: m.index,
+    end: m.index + m[0].length,
+    text: clean(m[2]).replace(/:$/, ''),
+  }));
+  // A section runs until the next heading tag after its first list item.
+  const sectionEnd = (from: number) => {
+    const firstItem = page.slice(from).search(/<li\b/i);
+    const next = firstItem < 0 ? -1 : page.slice(from + firstItem).search(/<h[1-6]\b/i);
+    return next < 0 ? page.length : from + firstItem + next;
+  };
+  const ingredientHeadings = headings.filter((h) => /^ingredients?$/i.test(h.text));
+  for (const [i, heading] of ingredientHeadings.entries()) {
+    const method = headings.find((h) => h.start > heading.end && STEP_HEADING.test(h.text));
+    // A menu's "Ingredients" link above the real heading stops at that heading.
+    const end = Math.min(method ? method.start : sectionEnd(heading.end), ingredientHeadings[i + 1]?.start ?? Infinity);
+    const found = listItems(page.slice(heading.end, end));
+    // A menu under a word "Ingredients" has no amounts; an ingredient list mostly does.
+    if (found.length < 2 || found.filter((l) => STARTS_WITH_AMOUNT.test(l)).length < found.length / 2) continue;
+    if (!method) return { lines: found, steps: [] };
+    const body = page.slice(method.end, sectionEnd(method.end));
+    const steps = listItems(body);
+    return { lines: found, steps: steps.length ? steps : inners(body, /<p\b[^>]*>([\s\S]*?)<\/p>/gi).map(clean).filter(Boolean) };
+  }
+  return { lines: [], steps: [] };
+}
+
+/** The page's own title: its first heading, or its <title> without the site name. */
+function pageTitle(html: string): string {
+  const h1 = /<h1\b[^>]*>([\s\S]*?)<\/h1>/i.exec(html)?.[1];
+  if (h1 && clean(h1)) return capitalize(clean(h1));
+  return clean(/<title\b[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1] ?? '').split(/\s[|–—-]\s/)[0];
+}
+
+/** Reads the recipe on a page: schema.org JSON-LD first, then its markup. Null when the page has none. */
 export function parseRecipeFromHtml(html: string, url: string, items: Item[] = []): Recipe | null {
   let node: Json | null = null;
   for (const block of jsonLdBlocks(html)) {
     node = findRecipe(block);
     if (node) break;
   }
-  if (!node) return null;
-  const total = durationMinutes(node.totalTime) || durationMinutes(node.prepTime) + durationMinutes(node.cookTime);
+  let lines = node ? readStrings(node.recipeIngredient ?? node.ingredients) : [];
+  let steps = node ? readSteps(node.recipeInstructions) : [];
+  // Some pages have a Recipe in JSON-LD without its ingredients, or no JSON-LD at all.
+  if (!lines.length) ({ lines, steps } = readMarkup(html));
+  const total = node ? durationMinutes(node.totalTime) || durationMinutes(node.prepTime) + durationMinutes(node.cookTime) : 0;
+  const named = node && typeof node.name === 'string' ? clean(node.name) : node && typeof node.headline === 'string' ? clean(node.headline) : '';
   return build({
-    title: typeof node.name === 'string' ? clean(node.name) : typeof node.headline === 'string' ? clean(node.headline) : '',
+    title: named || pageTitle(html),
     time: minutesText(total),
-    servings: formatYield(node.recipeYield ?? node.yield),
-    photo: readImage(node.image, url) || metaImage(html, url),
+    servings: node ? formatYield(node.recipeYield ?? node.yield) : '',
+    photo: (node ? readImage(node.image, url) : '') || metaImage(html, url),
     url: url.trim() || undefined,
-    lines: readStrings(node.recipeIngredient ?? node.ingredients),
-    steps: readSteps(node.recipeInstructions),
+    lines,
+    steps,
     items,
   });
 }

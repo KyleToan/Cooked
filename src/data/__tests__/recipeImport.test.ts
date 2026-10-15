@@ -48,6 +48,12 @@ describe('ingredientAmount', () => {
     ['- 200 ml milk', '200 ml'],
     ['Salt and pepper', ''],
     ['A handful of basil', ''],
+    ['³⁄₄ oz small tomatoes', '3/4 oz'],
+    ['1³⁄₄ cups flour', '1 3/4 cups'],
+    ['1 15-ounce can black beans', '1 can'],
+    ['1 lb / 500g beef mince', '1 lb'],
+    ['2 cups minus 2 tablespoons cake flour', '2 cups minus 2 tablespoons'],
+    ['Small tomatoes 3/4 oz', '3/4 oz'],
   ])('%s → %s', (line, amount) => expect(ingredientAmount(line)).toBe(amount));
 });
 
@@ -65,6 +71,26 @@ describe('ingredientName', () => {
     ['Salt to taste', 'Salt'],
     ['A handful of fresh basil', 'Basil'],
     ['&frac12; onion', 'Onion'],
+    // Lines from real recipe sites and pasted pages.
+    ['³⁄₄ oz small tomatoes', 'Tomatoes'],
+    ['3&frasl;4 oz small tomatoes', 'Tomatoes'],
+    ['▢ 3/4 oz small tomatoes', 'Tomatoes'],
+    ['Small tomatoes 3/4 oz', 'Tomatoes'],
+    ['1 lb. boneless, skinless chicken breast ($6.25)', 'Chicken breast'],
+    ['1  onion (, finely chopped (brown, yellow or white))', 'Onion'],
+    ['1 lb / 500g   beef mince (ground beef) (OR half pork (Note 1))', 'Beef mince'],
+    ['800g / 28 oz  can crushed tomato ((or tomato passata))', 'Tomato'],
+    ['2 cups minus 2 tablespoons cake flour (8 ½ ounces)', 'Cake flour'],
+    ['1¼ tsp. (4 g) Diamond Crystal or ¾ tsp. (4 g) Morton kosher salt', 'Morton kosher salt'],
+    ['1 15-ounce can whole peeled tomatoes', 'Tomatoes'],
+    ['1 pound 85% or 93% lean ground turkey', 'Turkey'],
+    ['4 carrots cut into 2-inch chunks', 'Carrots'],
+    ['4 ribs celery, finely chopped', 'Celery'],
+    ['lemon wedges to serve (optional)', 'Lemon wedges'],
+    ['3 oz. cream cheese*', 'Cream cheese'],
+    ['1 cup thinly-sliced or shaved red cabbage', 'Red cabbage'],
+    ['Dried or fresh pasta, preferably pappardelle', 'Pasta'],
+    ['——', ''],
   ])('%s → %s', (line, name) => expect(ingredientName(line)).toBe(name));
 });
 
@@ -102,6 +128,7 @@ describe('parseRecipeFromHtml', () => {
             totalTime: 'PT25M',
             recipeYield: ['2', '2 servings'],
             recipeIngredient: [
+              'Flaky sea salt and freshly ground black pepper',
               '2 tbsp olive oil',
               '1 onion, diced',
               '1 red pepper, sliced',
@@ -195,7 +222,33 @@ describe('parseRecipeFromHtml', () => {
     expect(parseRecipeFromHtml(html, 'https://example.com/soup')?.title).toBe('Soup');
   });
 
+  test('reads microdata when the page has no JSON-LD', () => {
+    const html = `<html><head><title>Tacos | Blog</title></head><body><h1>simple chicken tacos</h1><ul>
+<li itemprop="recipeIngredient">8 small flour tortillas</li><li itemprop="recipeIngredient">1 pound chicken thighs</li></ul>
+<div class="jetpack-recipe-directions e-instructions"><p>Warm the tortillas.</p><p>Cook the chicken.</p></div></body></html>`;
+    const r = parseRecipeFromHtml(html, 'https://smittenkitchen.com/tacos')!;
+    expect(r.title).toBe('Simple chicken tacos');
+    expect(foundList(r).map((g) => [g.name, g.amount])).toEqual([['Flour tortillas', '8'], ['Chicken thighs', '1 pound']]);
+    expect(r.steps).toEqual(['Warm the tortillas.', 'Cook the chicken.']);
+  });
+
+  test('reads the lists under the headings when JSON-LD has no ingredients', () => {
+    const html = page('{"@type":"Recipe","name":"Tiramisu","recipeYield":"9"}').replace(
+      '<body>',
+      `<body><nav><span>Ingredients</span><ul><li>Chicken recipes</li><li>Pasta recipes</li></ul></nav>
+<h2 class="heading m">Ingredients</h2><p><strong>Cream:</strong></p><ul><li>1½ cups (360mL) heavy whipping cream</li><li>3 Tbsp (38g) granulated sugar</li></ul>
+<h2>Directions</h2><ol><li>Whisk the cream and sugar.</li><li>Layer and chill.</li></ol><h2>More recipes</h2><ul><li>Cake</li></ul>`,
+    );
+    const r = parseRecipeFromHtml(html, 'https://example.com/tiramisu')!;
+    expect(r.title).toBe('Tiramisu');
+    expect(r.servings).toBe('9 servings');
+    expect(foundList(r).map((g) => [g.name, g.amount])).toEqual([['Heavy whipping cream', '1½ cups'], ['Granulated sugar', '3 Tbsp']]);
+    expect(r.steps).toEqual(['Whisk the cream and sugar.', 'Layer and chill.']);
+  });
+
   test('null when the page has no recipe', () => {
+    // A menu under the word "Ingredients" isn't a recipe.
+    expect(parseRecipeFromHtml('<html><body><span>Ingredients</span><ul><li>Chicken recipes</li><li>Fish recipes</li></ul></body></html>', 'https://x.com')).toBeNull();
     expect(parseRecipeFromHtml('<html><body><h1>Best summer dinners</h1></body></html>', 'https://example-news.com')).toBeNull();
     expect(parseRecipeFromHtml(page('{"@type":"Article","name":"News"}'), 'https://example-news.com')).toBeNull();
     expect(parseRecipeFromHtml(page('{"@type":"Recipe","name":"Empty","recipeIngredient":[]}'), 'https://x.com')).toBeNull();
