@@ -1,12 +1,9 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { View } from 'react-native';
 
 import { ActionPill } from '@/components/ActionPill';
 import { ErrorLine } from '@/components/Controls';
-import { OnbScreen } from '@/components/Onboarding';
-import { Tap } from '@/components/Tap';
-import { Text } from '@/components/Text';
+import { ChoiceCards, OnbScreen, type Choice } from '@/components/Onboarding';
 import { failText, type Failure } from '@/data/errors';
 import { kitchenName } from '@/data/helpers';
 import * as api from '@/data/kitchenApi';
@@ -14,9 +11,8 @@ import { useStore } from '@/data/store';
 import { pendingInvite } from '@/data/pendingInvite';
 import { hasBackend } from '@/data/supabase';
 import type { KitchenPath } from '@/data/types';
-import { makeStyles, radius, space } from '@/theme';
 
-const CHOICES: { id: KitchenPath; title: string; sub: string }[] = [
+const CHOICES: Choice<KitchenPath>[] = [
   { id: 'solo', title: 'Just me', sub: 'One kitchen, one list.' },
   {
     id: 'household',
@@ -26,11 +22,8 @@ const CHOICES: { id: KitchenPath; title: string; sub: string }[] = [
   { id: 'join', title: 'I have an invite', sub: 'Join a kitchen someone already set up.' },
 ];
 
-const RADIO = 22;
-
 /** Just me / Me and my household / I have an invite. */
 export default function Household() {
-  const styles = useStyles();
   const router = useRouter();
   const { state, actions, reload } = useStore();
   // Opened from an invite link: start on I have an invite.
@@ -70,39 +63,7 @@ export default function Household() {
         </>
       }
     >
-      <View accessibilityRole="radiogroup" accessibilityLabel="Who do you cook with" style={styles.choices}>
-        {CHOICES.map((c) => {
-          const on = c.id === picked;
-          return (
-            <Tap
-              key={c.id}
-              accessibilityRole="radio"
-              accessibilityState={{ checked: on }}
-              onPress={() => setPicked(c.id)}
-              style={[styles.choice, on ? styles.on : styles.off]}
-            >
-              <View style={styles.text}>
-                <Text weight="semibold">{c.title}</Text>
-                <Text variant="caption" color="inkMuted">
-                  {c.sub}
-                </Text>
-              </View>
-              <View style={[styles.radio, on ? styles.radioOn : styles.radioOff]} />
-            </Tap>
-          );
-        })}
-      </View>
+      <ChoiceCards label="Who do you cook with" choices={CHOICES} value={picked} onChange={setPicked} />
     </OnbScreen>
   );
 }
-
-const useStyles = makeStyles((color) => ({
-  choices: { gap: space.s3 },
-  choice: { flexDirection: 'row', alignItems: 'center', gap: space.roomy, padding: space.s4, borderRadius: radius.field },
-  on: { backgroundColor: color.beige, borderWidth: 1.5, borderColor: color.sageInk },
-  off: { backgroundColor: color.surface, borderWidth: 1, borderColor: color.line },
-  text: { flex: 1, gap: 3 },
-  radio: { width: RADIO, height: RADIO, flexShrink: 0, borderRadius: radius.pill },
-  radioOn: { borderWidth: 7, borderColor: color.sageInk },
-  radioOff: { borderWidth: 1.5, borderColor: color.controlLine },
-}));
