@@ -1,7 +1,6 @@
-import * as AppleAuthentication from 'expo-apple-authentication';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState, type ReactNode } from 'react';
-import { Linking, Platform, useColorScheme, View } from 'react-native';
+import { useState, type ReactNode } from 'react';
+import { Linking, useColorScheme, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { ErrorLine } from '@/components/Controls';
@@ -15,8 +14,6 @@ import { makeStyles, brand, radius, size, space, type } from '@/theme';
 
 const BUTTON_H = size.controlHeight + space.s1;
 const LOGO = 20;
-/** Apple's own button can't show a spinner, so it dims while Apple is busy. */
-const DIMMED = 0.5;
 
 /**
  * Apple, Google, or email or phone with a code. Without a backend sign-in is
@@ -24,18 +21,12 @@ const DIMMED = 0.5;
  */
 export default function SignIn() {
   const styles = useStyles();
-  const dark = useColorScheme() === 'dark';
   const router = useRouter();
   const { actions } = useStore();
   const loggingIn = useLocalSearchParams<{ intent?: string }>().intent === 'login';
-  const [appleButton, setAppleButton] = useState(false);
   // The provider being signed in with, which shows a spinner in place of its logo.
   const [busy, setBusy] = useState<'apple' | 'google' | null>(null);
   const [failed, setFailed] = useState<'apple' | 'google' | null>(null);
-
-  useEffect(() => {
-    if (Platform.OS === 'ios') AppleAuthentication.isAvailableAsync().then(setAppleButton);
-  }, []);
 
   const provider = async (method: 'apple' | 'google') => {
     if (busy) return;
@@ -92,20 +83,9 @@ export default function SignIn() {
       }
     >
       <View style={styles.buttons}>
-        {appleButton ? (
-          // Apple's own button, so it always matches Apple's rules.
-          <AppleAuthentication.AppleAuthenticationButton
-            buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
-            buttonStyle={
-              dark ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE : AppleAuthentication.AppleAuthenticationButtonStyle.WHITE_OUTLINE
-            }
-            cornerRadius={BUTTON_H / 2}
-            style={[styles.apple, busy === 'apple' && styles.dimmed]}
-            onPress={() => provider('apple')}
-          />
-        ) : (
-          <Outline label="Continue with Apple" logo={<AppleLogo />} busy={busy === 'apple'} onPress={() => provider('apple')} />
-        )}
+        {/* Drawn like the other buttons rather than Apple's native one, whose label size can't be set
+            and came out larger than Google's. Apple allows custom buttons with its logo and wording. */}
+        <Outline label="Continue with Apple" logo={<AppleLogo />} busy={busy === 'apple'} onPress={() => provider('apple')} />
         <Outline label="Continue with Google" logo={<GoogleLogo />} busy={busy === 'google'} onPress={() => provider('google')} />
         {failed ? (
           <ErrorLine text={`We couldn’t sign you in with ${failed === 'apple' ? 'Apple' : 'Google'}. Try again, or use email or phone.`} />
@@ -159,7 +139,6 @@ function GoogleLogo() {
 const useStyles = makeStyles((color) => ({
   buttons: { gap: space.s3 },
   legal: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' },
-  apple: { height: BUTTON_H, width: '100%' },
   outline: {
     minHeight: BUTTON_H,
     paddingVertical: space.s2,
@@ -172,7 +151,6 @@ const useStyles = makeStyles((color) => ({
     borderWidth: 1,
     borderColor: color.controlLine,
   },
-  dimmed: { opacity: DIMMED },
   outlineLabel: { flexShrink: 1, textAlign: 'center' },
   or: { flexDirection: 'row', alignItems: 'center', gap: space.s3, paddingVertical: space.s1 },
   rule: { flex: 1, height: 1, backgroundColor: color.line },
