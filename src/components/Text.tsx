@@ -7,7 +7,7 @@ type Props = TextProps & {
   variant?: TypeName;
   /** A color token. Defaults to `ink`. */
   color?: ColorName;
-  /** Another Albert Sans weight for the same style (the specs use 500 and 600 on body and caption text). */
+  /** Another Lexend weight for the same style (the specs use 500 and 600 on body and caption text). */
   weight?: WeightName;
   /** Draw a line through the text (done To Buy items). */
   strike?: boolean;

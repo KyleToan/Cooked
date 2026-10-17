@@ -3,9 +3,8 @@
   "version": "1.0.0",
   "main": "expo-router/entry",
   "dependencies": {
-    "@expo-google-fonts/albert-sans": "0.4.2",
-    "@expo-google-fonts/alumni-sans": "0.4.2",
     "@expo-google-fonts/caveat": "0.4.2",
+    "@expo-google-fonts/lexend": "0.4.1",
     "@infinitered/react-native-mlkit-text-recognition": "5.0.1",
     "@react-native-community/datetimepicker": "9.1.0",
     "@supabase/supabase-js": "2.117.3",

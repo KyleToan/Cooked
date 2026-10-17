@@ -82,7 +82,7 @@ export function SwitchRow({
 
 const AVATAR = 40;
 
-/** Initials in a paper-colored circle. Albert Sans, never Caveat. */
+/** Initials in a paper-colored circle. Lexend, never Caveat. */
 export function Avatar({ name, paper = 'papaya', diameter = AVATAR }: { name: string; paper?: ColorName; diameter?: number }) {
   return (
     <View

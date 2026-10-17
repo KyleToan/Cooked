@@ -6,14 +6,13 @@ const ios = Platform.OS === 'ios';
 
 /** Font face names: the PostScript name on iOS, the file name on Android and web. */
 export const font = {
-  AlumniSans_600SemiBold: ios ? 'AlumniSans-SemiBold' : 'AlumniSans_600SemiBold',
-  AlumniSans_700Bold: ios ? 'AlumniSans-Bold' : 'AlumniSans_700Bold',
-  AlbertSans_400Regular: ios ? 'AlbertSans-Regular' : 'AlbertSans_400Regular',
-  AlbertSans_500Medium: ios ? 'AlbertSans-Medium' : 'AlbertSans_500Medium',
-  AlbertSans_600SemiBold: ios ? 'AlbertSans-SemiBold' : 'AlbertSans_600SemiBold',
-  AlbertSans_700Bold: ios ? 'AlbertSans-Bold' : 'AlbertSans_700Bold',
+  Lexend_400Regular: ios ? 'Lexend-Regular' : 'Lexend_400Regular',
+  Lexend_500Medium: ios ? 'Lexend-Medium' : 'Lexend_500Medium',
+  Lexend_600SemiBold: ios ? 'Lexend-SemiBold' : 'Lexend_600SemiBold',
+  Lexend_700Bold: ios ? 'Lexend-Bold' : 'Lexend_700Bold',
   Caveat_400Regular: ios ? 'Caveat-Regular' : 'Caveat_400Regular',
   Caveat_500Medium: ios ? 'Caveat-Medium' : 'Caveat_500Medium',
+  Caveat_600SemiBold: ios ? 'Caveat-SemiBold' : 'Caveat_600SemiBold',
   Caveat_700Bold: ios ? 'Caveat-Bold' : 'Caveat_700Bold',
 } as const;
 
@@ -71,24 +70,24 @@ export const color = {
 } as const;
 
 export const type = {
-  /** Screen title, top left. One per screen. Bold, tall and condensed. */
-  titleXl: { fontFamily: font.AlumniSans_700Bold, fontSize: 48, lineHeight: 46, letterSpacing: -0.24 },
-  /** Onboarding questions and detail-screen titles. */
-  titleLg: { fontFamily: font.AlumniSans_700Bold, fontSize: 36, lineHeight: 36, letterSpacing: -0.18 },
-  /** Section headings, left-aligned, sentence case. Semibold (600), a step below the bold (700) screen title. No underline. */
-  sectionTitle: { fontFamily: font.AlumniSans_600SemiBold, fontSize: 28, lineHeight: 29 },
+  /** Screen title, top left. One per screen. Caveat SemiBold, the sticky notes’ handwriting, a step lighter than bold. */
+  titleXl: { fontFamily: font.Caveat_600SemiBold, fontSize: 48, lineHeight: 53 },
+  /** Onboarding questions and detail-screen titles. Caveat Bold. */
+  titleLg: { fontFamily: font.Caveat_700Bold, fontSize: 36, lineHeight: 40 },
+  /** Section headings, left-aligned, sentence case. Caveat Bold. No underline. */
+  sectionTitle: { fontFamily: font.Caveat_700Bold, fontSize: 30, lineHeight: 33 },
   /** Time-of-day greeting above the title. */
-  greeting: { fontFamily: font.AlbertSans_500Medium, fontSize: 15, lineHeight: 20 },
+  greeting: { fontFamily: font.Lexend_500Medium, fontSize: 15, lineHeight: 20 },
   /** List rows, inputs, search text, helper paragraphs. */
-  body: { fontFamily: font.AlbertSans_400Regular, fontSize: 16, lineHeight: 22 },
+  body: { fontFamily: font.Lexend_400Regular, fontSize: 16, lineHeight: 22 },
   /** Pill buttons. */
-  button: { fontFamily: font.AlbertSans_500Medium, fontSize: 15, lineHeight: 20 },
+  button: { fontFamily: font.Lexend_500Medium, fontSize: 15, lineHeight: 20 },
   /** Section links on the right. */
-  link: { fontFamily: font.AlbertSans_600SemiBold, fontSize: 14, lineHeight: 20 },
+  link: { fontFamily: font.Lexend_600SemiBold, fontSize: 14, lineHeight: 20 },
   /** Meta lines under a section title; progress counts. */
-  caption: { fontFamily: font.AlbertSans_400Regular, fontSize: 13, lineHeight: 18, letterSpacing: 0.05 },
+  caption: { fontFamily: font.Lexend_400Regular, fontSize: 13, lineHeight: 18, letterSpacing: 0.05 },
   /** Tags and row notes. */
-  micro: { fontFamily: font.AlbertSans_500Medium, fontSize: 12, lineHeight: 16, letterSpacing: 0.1 },
+  micro: { fontFamily: font.Lexend_500Medium, fontSize: 12, lineHeight: 16, letterSpacing: 0.1 },
   /** Sticky note name. Only on sticky notes. */
   noteTitle: { fontFamily: font.Caveat_700Bold, fontSize: 28, lineHeight: 28 },
   /** Sticky note count or short status. */

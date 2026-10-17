@@ -46,10 +46,10 @@ Rules:
 
 Two families, used the way the Impeccable website uses them: a tall, light, condensed face for titles and a plain, friendly sans for everything you read or tap.
 
-- **Alumni Sans** (`display`) for screen titles and section headings only, always **large**. Titles are **bold** (700): `title-xl` 48px for the screen title and `title-lg` 36px for onboarding questions and detail screens. Section headings are **semibold** (600), never underlined: `section-title` 28px. Never go below 24px, and never use it for buttons, labels or body text.
-- **Albert Sans** (`sans`) for everything else: the greeting, body text (16px), buttons (15px, medium), links (14px, semibold), captions (13px) and tags (12px).
+- **Caveat** (`hand`, the sticky notes’ handwriting) for every heading, always **large** and sentence case: `title-xl` 48px SemiBold (600) for the screen title, `title-lg` 36px Bold for onboarding questions and detail screens, `section-title` 30px Bold for section headings, never underlined. Never go below 24px for a heading, and never use it for buttons, labels or body text (sticky notes are the exception).
+- **Lexend** (`sans`) for everything else: the greeting, body text (16px), buttons (15px, medium), links (14px, semibold), captions (13px) and tags (12px).
 - **Caveat** (`hand`) only on sticky notes: `note-title` for the name and `note-body` for the count. Never use the handwritten face for buttons, lists or headings.
-- Each screen has one display title. Pair a big bold Alumni title with Albert text close beneath it, like the Impeccable hero.
+- Each screen has one display title. Pair a big Caveat title with Lexend text close beneath it, like the Impeccable hero.
 - Write in sentence case. Keep it short and friendly: "To Buy", "Your Kitchen", "Add an item…".
 
 ## Shape and depth

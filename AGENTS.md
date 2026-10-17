@@ -121,7 +121,7 @@ If those files disagree, `README.md` and `tokens.json` win. A few older lines ar
 - **Bronze for food only.** `bronze` and `bronze-ink` mark food to use soon and nothing else.
 - **Red only for errors and destructive text.** `error-ink` (#A33A2B), never as a filled button.
 - **Grey secondary pills.** `surface-sunken` (#F4F4F1). No black buttons, cards or island.
-- **Type.** Alumni Sans for screen titles (`title-xl` 48px and `title-lg` 36px, bold) and section headings (`section-title` 28px, semibold, no underline). Albert Sans for everything else. Caveat only on sticky notes.
+- **Type.** Caveat for every heading: screen titles (`title-xl` 48px, SemiBold), onboarding and detail titles (`title-lg` 36px, Bold) and section headings (`section-title` 30px, Bold, no underline), as well as sticky notes. Lexend for everything else.
 - **Flat lists.** Rows with `line-soft` dividers, not cards.
 - **Tab island.** Floating white pill (300 × 68) with Home, Fridge and Recipes (Scan is the round button top left on Home); a grey underscore marks the active tab.
 - **Undo, not confirm.** Ticking off or using up an item shows an undo bar. Deleting an account, leaving a kitchen or removing someone asks first; the safe choice is never the red one.

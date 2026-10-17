@@ -35,7 +35,7 @@ The full design system is in `design/system/` and at https://claude.ai/artifact/
 - White background, ink text.
 - **Sage** (`#CCD5AE`) is the action color: one sage button per screen, `sage-ink` links and icons. Grey pills for everything else.
 - **Bronze** only marks food to use soon. **Red** (`error-ink`) only for errors and destructive text.
-- **Alumni Sans** for titles (bold) and section headings (semibold), **Albert Sans** for everything else, **Caveat** handwriting only on sticky notes.
+- **Caveat** handwriting for every heading and on sticky notes, **Lexend** for everything else (Decisions #142).
 - Sticky notes in Cornsilk (Fridge), Papaya (Pantry) and Beige (Freezer).
 - Floating tab island: Home, Kitchen (fridge icon), Recipes. Kitchen is the Your Kitchen tab. Home's top bar has Scan (round, top left), Cooked centred with the greeting under it, and Account (round, top right).
 - 22 custom icons on a 24px grid.

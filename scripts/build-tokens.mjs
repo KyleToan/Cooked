@@ -23,8 +23,7 @@ const list = (group) => (Array.isArray(group) ? group : group.tokens);
 // Each weight of each family is its own font face in React Native.
 
 const FAMILIES = {
-  display: { pkg: '@expo-google-fonts/alumni-sans', prefix: 'AlumniSans' },
-  sans: { pkg: '@expo-google-fonts/albert-sans', prefix: 'AlbertSans' },
+  sans: { pkg: '@expo-google-fonts/lexend', prefix: 'Lexend' },
   hand: { pkg: '@expo-google-fonts/caveat', prefix: 'Caveat' },
 };
 const WEIGHT_NAMES = { 400: 'Regular', 500: 'Medium', 600: 'SemiBold', 700: 'Bold' };
@@ -36,7 +35,7 @@ const fontPath = (family, weight) => `./node_modules/${FAMILIES[family].pkg}/${w
 
 // Weights the type styles use, plus the ones the screens use outside them
 // (600 labels on sage buttons, 400 counts on sticky notes).
-const faces = { display: new Set([600, 700]), sans: new Set([400, 500, 600, 700]), hand: new Set([400, 500, 700]) };
+const faces = { sans: new Set([400, 500, 600, 700]), hand: new Set([400, 500, 700]) };
 
 // ---- Type ----------------------------------------------------------------
 
