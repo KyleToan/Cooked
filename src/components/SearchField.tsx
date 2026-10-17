@@ -19,7 +19,7 @@ export function SearchField({ placeholder, value, onChangeText }: Props) {
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={color.inkSubtle}
+        placeholderTextColor={color.inkMuted}
         accessibilityLabel={placeholder}
         returnKeyType="search"
         clearButtonMode="while-editing"

@@ -145,7 +145,7 @@ export default function Import() {
                   setHint('');
                 }}
                 placeholder="Touch and hold to paste a link"
-                placeholderTextColor={color.inkSubtle}
+                placeholderTextColor={color.inkMuted}
                 accessibilityLabel="Recipe link"
                 keyboardType="url"
                 textContentType="URL"
@@ -173,7 +173,7 @@ export default function Import() {
                     setHint('');
                   }}
                   placeholder="Touch and hold to paste the recipe. Messy is fine."
-                  placeholderTextColor={color.inkSubtle}
+                  placeholderTextColor={color.inkMuted}
                   accessibilityLabel="Recipe text"
                   multiline
                   textAlignVertical="top"

@@ -396,7 +396,7 @@ export const Field = forwardRef<TextInput, FieldProps>(function Field({ label, e
           ref={ref}
           {...rest}
           accessibilityLabel={label}
-          placeholderTextColor={color.inkSubtle}
+          placeholderTextColor={color.inkMuted}
           onFocus={(e) => {
             setFocused(true);
             onFocus?.(e);

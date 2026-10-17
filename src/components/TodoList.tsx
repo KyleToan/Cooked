@@ -116,7 +116,7 @@ export function AddRow({ placeholder, label, onSubmit }: { placeholder: string; 
         value={text}
         onChangeText={setText}
         placeholder={placeholder}
-        placeholderTextColor={color.inkSubtle}
+        placeholderTextColor={color.inkMuted}
         accessibilityLabel={label}
         returnKeyType="done"
         submitBehavior="submit"

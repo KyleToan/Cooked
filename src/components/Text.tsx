@@ -1,6 +1,7 @@
-import { Text as RNText, type TextProps } from 'react-native';
+import { Text as RNText, StyleSheet, type TextProps } from 'react-native';
 
-import { color, type, weight as weights, type ColorName, type TypeName, type WeightName } from '@/theme';
+import { useBoldText } from '@/hooks/useBoldText';
+import { bolder, color, type, weight as weights, type ColorName, type TypeName, type WeightName } from '@/theme';
 
 type Props = TextProps & {
   /** A type style from the design system. Defaults to `body`. */
@@ -15,16 +16,15 @@ type Props = TextProps & {
 
 /** Text in one of the Cooked type styles. Use this instead of React Native's Text. */
 export function Text({ variant = 'body', color: tint = 'ink', weight, strike, style, ...rest }: Props) {
-  return (
-    <RNText
-      {...rest}
-      style={[
-        type[variant],
-        { color: color[tint] },
-        weight && { fontFamily: weights[weight] },
-        strike && { textDecorationLine: 'line-through' },
-        style,
-      ]}
-    />
-  );
+  const bold = useBoldText();
+  const styles = [
+    type[variant],
+    { color: color[tint] },
+    weight && { fontFamily: weights[weight] },
+    strike && { textDecorationLine: 'line-through' as const },
+    style,
+  ];
+  // Custom fonts don't follow Bold Text on their own, so step each face up one weight.
+  const family = bold ? StyleSheet.flatten(styles).fontFamily : undefined;
+  return <RNText {...rest} style={family && bolder[family] ? [styles, { fontFamily: bolder[family] }] : styles} />;
 }
