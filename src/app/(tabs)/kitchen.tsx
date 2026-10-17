@@ -1,6 +1,6 @@
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, ScrollView, Share, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, {
   FadeIn,
@@ -26,7 +26,7 @@ import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
 import { AddRow, TodoList } from '@/components/TodoList';
-import { count, dateIn, daysUntil, isDueSoon, joinAnd, shortDate, sortToBuy, syncedLabel, toBuyProgress } from '@/data/helpers';
+import { count, dateIn, daysUntil, isDueSoon, doneAtOpen, joinAnd, shortDate, sinceOpen, sortToBuy, syncedLabel, toBuyProgress } from '@/data/helpers';
 import { useStore, useUndo } from '@/data/store';
 import type { Item, Place } from '@/data/types';
 import { haptics } from '@/hooks/haptics';
@@ -475,8 +475,15 @@ function ToBuyTab({
   clearQuery: () => void;
 }) {
   const { state, actions } = useStore();
-  const progress = toBuyProgress(state.toBuy);
-  const list = sortToBuy(state.toBuy.filter((t) => matches(t.name)));
+  // Leaving To Buy (another tab or screen) clears what you ticked off; while you're here it stays, crossed out.
+  const latest = useRef(state.toBuy);
+  useEffect(() => {
+    latest.current = state.toBuy;
+  });
+  const [hidden, setHidden] = useState(() => doneAtOpen(state.toBuy));
+  useFocusEffect(useCallback(() => setHidden(doneAtOpen(latest.current)), []));
+  const progress = toBuyProgress(state.toBuy, hidden);
+  const list = sortToBuy(sinceOpen(state.toBuy, hidden).filter((t) => matches(t.name)));
   const scanLine = 'Scan your receipt after shopping and we’ll tick things off for you.';
   const helper = others.length ? `${joinAnd(others)} sees this list too. ${scanLine}` : scanLine;
 

@@ -14,7 +14,7 @@ import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
 import { AddRow, TodoList } from '@/components/TodoList';
-import { count, inStock, isUseSoon, PLACE_LABEL, PLACES, sortToBuy, syncedLabel, toBuyProgress } from '@/data/helpers';
+import { count, doneAtOpen, inStock, isUseSoon, PLACE_LABEL, PLACES, sortToBuy, syncedLabel, toBuyProgress } from '@/data/helpers';
 import { useStore, useUndo } from '@/data/store';
 import type { ToBuyItem } from '@/data/types';
 import { color, size, space } from '@/theme';
@@ -26,6 +26,7 @@ function snapshot(list: ToBuyItem[]) {
   return {
     all: new Set(list.map((t) => t.id)),
     shown: new Set(list.filter((t) => !t.done).slice(0, HOME_TO_BUY).map((t) => t.id)),
+    done: doneAtOpen(list),
   };
 }
 
@@ -47,7 +48,7 @@ export default function Home() {
   });
   useFocusEffect(useCallback(() => setOpened(snapshot(latest.current)), []));
   const shown = sortToBuy(state.toBuy.filter((t) => opened.shown.has(t.id) || !opened.all.has(t.id)));
-  const progress = toBuyProgress(state.toBuy);
+  const progress = toBuyProgress(state.toBuy, opened.done);
   const synced = syncedLabel(state.kitchen);
   const shared = state.kitchen.people.length > 1;
 

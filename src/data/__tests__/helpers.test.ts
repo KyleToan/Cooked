@@ -22,6 +22,7 @@ import {
   sortToBuy,
   timeOfDay,
   toBuyProgress,
+  doneAtOpen,
   nudgeText,
   weeklyText,
 } from '@/data/helpers';
@@ -145,6 +146,12 @@ describe('To Buy', () => {
   test('progress counts done items', () => {
     expect(toBuyProgress(SEED_TO_BUY)).toEqual({ done: 2, total: 6 });
     expect(toBuyProgress([])).toEqual({ done: 0, total: 0 });
+    // Ticked off before the list opened: out of the count, so a new trip starts at 0 of 4.
+    const hidden = doneAtOpen(SEED_TO_BUY);
+    expect(toBuyProgress(SEED_TO_BUY, hidden)).toEqual({ done: 0, total: 4 });
+    // Ticking now counts; undoing an old tick brings that item back.
+    const now = SEED_TO_BUY.map((x) => (!x.done ? { ...x, done: true } : { ...x, done: false }));
+    expect(toBuyProgress(now, hidden)).toEqual({ done: 4, total: 6 });
   });
 
   test('done items drop to the bottom, order otherwise kept', () => {

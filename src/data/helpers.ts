@@ -83,8 +83,15 @@ export function plural(unit: string, n: number): string {
   return IRREGULAR[unit] ?? (/(ch|sh|x)$/.test(unit) ? `${unit}es` : `${unit}s`);
 }
 
-export function toBuyProgress(list: ToBuyItem[]): { done: number; total: number } {
-  return { done: list.filter((t) => t.done).length, total: list.length };
+/** Items already ticked off when the list opened. They drop out of the list and its count, so each trip counts from 0. */
+export const doneAtOpen = (list: ToBuyItem[]) => new Set(list.filter((t) => t.done).map((t) => t.id));
+
+/** The list without what was ticked off before it opened; one unticked since (an undo) comes back. */
+export const sinceOpen = (list: ToBuyItem[], hidden: Set<string>) => list.filter((t) => !(t.done && hidden.has(t.id)));
+
+export function toBuyProgress(list: ToBuyItem[], hidden?: Set<string>): { done: number; total: number } {
+  const shown = hidden ? sinceOpen(list, hidden) : list;
+  return { done: shown.filter((t) => t.done).length, total: shown.length };
 }
 
 /** Not-done items first, done ones drop to the bottom; otherwise keep list order. */
