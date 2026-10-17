@@ -64,8 +64,17 @@ for (const [family, weights] of Object.entries(faces)) {
   for (const w of [...weights].sort()) out.push(`  ${face(family, w)}: ios ? '${postScript(family, w)}' : '${face(family, w)}',`);
 }
 out.push('} as const;\n');
-out.push('export const color = {');
-for (const t of list(tokens.color)) out.push(`${doc(t.usage)}  ${camel(t.name)}: '${t.value.toUpperCase()}',`);
+// Two palettes with the same names; components read the current one with useColors() from @/theme.
+out.push('/** Light and dark values for every color role. Read the current one with useColors(). */');
+out.push('export const palette = {');
+for (const [scheme, key] of [['light', 'value'], ['dark', 'dark']]) {
+  out.push(`  ${scheme}: {`);
+  for (const t of list(tokens.color)) {
+    if (!t[key]) throw new Error(`color ${t.name} has no ${scheme} value ("${key}") in tokens.json`);
+    out.push(`${scheme === 'light' ? doc(t.usage).replace(/^/, '  ') : ''}    ${camel(t.name)}: '${t[key].toUpperCase()}',`);
+  }
+  out.push('  },');
+}
 out.push('} as const;\n');
 
 out.push('export const type = {');
@@ -88,7 +97,8 @@ for (const t of list(tokens.shadow)) {
 }
 out.push('} as const;\n');
 
-out.push('export type ColorName = keyof typeof color;');
+out.push('export type ColorName = keyof typeof palette.light;');
+out.push('export type Palette = { [K in ColorName]: string };');
 out.push('export type TypeName = keyof typeof type;');
 writeFileSync(join(root, 'src/theme/tokens.ts'), out.join('\n') + '\n');
 

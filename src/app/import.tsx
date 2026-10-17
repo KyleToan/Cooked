@@ -1,7 +1,7 @@
 import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { TextInput, View } from 'react-native';
 
 import { ActionPill } from '@/components/ActionPill';
 import { Checkbox, ErrorLine, Segmented } from '@/components/Controls';
@@ -16,7 +16,7 @@ import { lastScan } from '@/data/ocr';
 import { countIngredients, foundList, importFromLink, parseRecipeFromText } from '@/data/recipeImport';
 import { useStore } from '@/data/store';
 import type { Recipe } from '@/data/types';
-import { color, radius, size, space, type } from '@/theme';
+import { makeStyles, useColors, radius, size, space, type } from '@/theme';
 
 type Mode = 'link' | 'text';
 type Step = 'edit' | 'loading' | 'done' | 'error';
@@ -29,6 +29,8 @@ const FOCUS_BORDER = 1.5;
 const PASTE_ROOM = size.targetMin + space.s5;
 
 export default function Import() {
+  const color = useColors();
+  const styles = useStyles();
   const router = useRouter();
   const goToTab = useGoToTab();
   const params = useLocalSearchParams<{ step?: string; from?: string }>();
@@ -275,7 +277,7 @@ export default function Import() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((color) => ({
   body: { gap: space.roomy },
   input: {
     ...type.body,
@@ -324,4 +326,4 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: color.lineSoft,
   },
-});
+}));

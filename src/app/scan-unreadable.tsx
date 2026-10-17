@@ -9,7 +9,10 @@ import { Sheet } from '@/components/Sheet';
 import { TextLink } from '@/components/TextLink';
 import { scanFlow } from '@/data/helpers';
 import { useStore } from '@/data/store';
-import { color, space } from '@/theme';
+import { palette, space } from '@/theme';
+
+// Camera chrome sits on the feed, so it keeps the same dark-glass and white colors in both appearances.
+const color = palette.light;
 
 /** The error sheet over the last photo when the receipt can't be read. */
 export default function ScanUnreadable() {

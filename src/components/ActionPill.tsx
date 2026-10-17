@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { ReduceMotion, useAnimatedStyle, useReducedMotion, useSharedValue, withSpring } from 'react-native-reanimated';
 
-import { color, radius, size, space } from '@/theme';
+import { useColors, radius, size, space } from '@/theme';
 import { Icon } from './Icon';
 import type { IconName } from './icon-data';
 import { Spinner } from './Loader';
@@ -43,6 +43,7 @@ export function ActionPill({
   busy,
   accessibilityLabel,
 }: Props) {
+  const color = useColors();
   const primary = variant === 'primary';
   const bottom = height === 'bottom';
   const reduced = useReducedMotion();

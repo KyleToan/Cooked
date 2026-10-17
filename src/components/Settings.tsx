@@ -1,10 +1,10 @@
 import * as Clipboard from 'expo-clipboard';
 import { useEffect, useState, type ReactNode } from 'react';
-import { AccessibilityInfo, StyleSheet, View } from 'react-native';
+import { AccessibilityInfo, View } from 'react-native';
 
 import { haptics } from '@/hooks/haptics';
 
-import { color, radius, size, space, type ColorName } from '@/theme';
+import { makeStyles, useColors, radius, size, space, type ColorName } from '@/theme';
 import { ActionPill } from './ActionPill';
 import { Chevron } from './Chevron';
 import { Switch } from './Controls';
@@ -24,6 +24,7 @@ export function SettingsRow({
   value?: string;
   onPress?: () => void;
 }) {
+  const styles = useStyles();
   return (
     <Tap
       accessibilityRole={onPress ? 'button' : undefined}
@@ -64,6 +65,7 @@ export function SwitchRow({
   onChange: (on: boolean) => void;
   children?: ReactNode;
 }) {
+  const styles = useStyles();
   return (
     <View style={styles.divider}>
       <View style={styles.switchRow}>
@@ -84,6 +86,8 @@ const AVATAR = 40;
 
 /** Initials in a paper-colored circle. Albert Sans, never Caveat. */
 export function Avatar({ name, paper = 'papaya', diameter = AVATAR }: { name: string; paper?: ColorName; diameter?: number }) {
+  const color = useColors();
+  const styles = useStyles();
   return (
     <View
       accessibilityElementsHidden
@@ -99,6 +103,7 @@ export function Avatar({ name, paper = 'papaya', diameter = AVATAR }: { name: st
 
 /** A person in the kitchen: initials, name, what they did, and an optional quiet action. */
 export function PersonRow({ name, note, paper, right }: { name: string; note: string; paper: ColorName; right?: ReactNode }) {
+  const styles = useStyles();
   return (
     <View style={styles.person}>
       <Avatar name={name} paper={paper} />
@@ -118,6 +123,7 @@ const COPIED_MS = 2000;
 
 /** The invite link in a quiet box. Tapping it copies the link and says "Copied" for a moment. */
 export function InviteLink({ link }: { link: string }) {
+  const styles = useStyles();
   const [copied, setCopied] = useState(false);
   useEffect(() => {
     if (!copied) return;
@@ -151,6 +157,7 @@ export function InviteLink({ link }: { link: string }) {
 
 /** The end of Account: a grey Log out pill, Delete account in `error-ink`, and the app version. */
 export function AccountEnding({ onLogOut, onDelete, version }: { onLogOut: () => void; onDelete: () => void; version: string }) {
+  const styles = useStyles();
   return (
     <View style={styles.ending}>
       <ActionPill label="Log out" height="bottom" onPress={onLogOut} />
@@ -162,7 +169,7 @@ export function AccountEnding({ onLogOut, onDelete, version }: { onLogOut: () =>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((color) => ({
   divider: { borderBottomWidth: 1, borderBottomColor: color.lineSoft },
   grow: { flex: 1, minWidth: 0, gap: 2 },
   row: {
@@ -198,4 +205,4 @@ const styles = StyleSheet.create({
   },
   ending: { gap: space.tight, paddingTop: space.s2 },
   center: { textAlign: 'center' },
-});
+}));

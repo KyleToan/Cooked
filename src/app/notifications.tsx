@@ -2,7 +2,7 @@ import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/d
 import * as Notifications from 'expo-notifications';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, Linking, Platform, StyleSheet, View } from 'react-native';
+import { AppState, Linking, Platform, View } from 'react-native';
 
 import { ErrorLine } from '@/components/Controls';
 import { PushedHeader, SectionHeader } from '@/components/Header';
@@ -17,7 +17,7 @@ import { failure, saveNotifications } from '@/data/kitchenApi';
 import { useStore } from '@/data/store';
 import { hasBackend } from '@/data/supabase';
 import type { NotificationKey } from '@/data/types';
-import { color, radius, shadow, size, space } from '@/theme';
+import { makeStyles, useColors, radius, shadow, size, space } from '@/theme';
 
 const ROWS: { key: NotificationKey; title: string; sub: string; time?: boolean }[] = [
   { key: 'toBuy', title: 'To Buy changes', sub: 'When someone adds to To Buy while you’re out. Grouped, so you get one buzz, not five.' },
@@ -56,6 +56,8 @@ function formatTime(d: Date): string {
 
 /** Four switches, the nudge's send time, and a preview. Switching one on asks the system for permission. */
 export default function NotificationsScreen() {
+  const color = useColors();
+  const styles = useStyles();
   const router = useRouter();
   const { state, actions } = useStore();
   const n = state.notifications;
@@ -158,8 +160,7 @@ export default function NotificationsScreen() {
                     value={parseTime(n.useSoonTime)}
                     mode="time"
                     display="compact"
-                    themeVariant="light"
-                    accentColor={color.sageInk}
+                                        accentColor={color.sageInk}
                     onValueChange={(_e, d) => actions.setUseSoonTime(formatTime(d))}
                   />
                 ) : (
@@ -218,7 +219,7 @@ export default function NotificationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((color) => ({
   grow: { flex: 1, gap: 2 },
   time: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   timePill: {
@@ -245,4 +246,4 @@ const styles = StyleSheet.create({
   },
   mark: { width: APP_MARK, height: APP_MARK, borderRadius: radius.check + 2, backgroundColor: color.cornsilk, alignItems: 'center', justifyContent: 'center' },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between' },
-});
+}));

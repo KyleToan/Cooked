@@ -1,7 +1,7 @@
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, ScrollView, Share, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Platform, ScrollView, Share, useWindowDimensions, View } from 'react-native';
 import Animated, {
   FadeIn,
   interpolate,
@@ -30,7 +30,7 @@ import { count, dateIn, daysUntil, isDueSoon, joinAnd, shortDate, sortToBuy, toB
 import { useStore, useUndo } from '@/data/store';
 import type { Item, Place } from '@/data/types';
 import { haptics } from '@/hooks/haptics';
-import { color, radius, size, space, type ColorName } from '@/theme';
+import { makeStyles, useColors, radius, size, space, type ColorName } from '@/theme';
 
 type Tab = Place | 'tobuy';
 
@@ -64,6 +64,7 @@ const LIST_FADE = FadeIn.duration(150);
 const isTab = (t: unknown): t is Tab => t === 'fridge' || t === 'pantry' || t === 'freezer' || t === 'tobuy';
 
 export default function Kitchen() {
+  const styles = useStyles();
   const params = useLocalSearchParams<{ tab?: string }>();
   const router = useRouter();
   const { state, actions } = useStore();
@@ -144,6 +145,8 @@ type TabLayout = { x: number; width: number };
  * At large text the row scrolls sideways and keeps the picked tab in view.
  */
 function KitchenTabs({ tab, onPick }: { tab: Tab; onPick: (t: Tab) => void }) {
+  const color = useColors();
+  const styles = useStyles();
   const { fontScale, width: screenW } = useWindowDimensions();
   const scrollTabs = fontScale > TABS_SCROLL_SCALE;
   const reduced = useReducedMotion();
@@ -277,6 +280,8 @@ function StockTab({
   toggleSort: () => void;
   startQty: Record<string, number>;
 }) {
+  const color = useColors();
+  const styles = useStyles();
   const router = useRouter();
   const { state, actions } = useStore();
   const copy = PLACE_COPY[place];
@@ -438,8 +443,7 @@ function StockTab({
             mode="date"
             display="inline"
             accentColor={color.sageInk}
-            themeVariant="light"
-            textColor={color.ink}
+                        textColor={color.ink}
             onValueChange={(_e, d) => setDraft(d)}
             style={styles.picker}
           />
@@ -470,6 +474,7 @@ function ToBuyTab({
   query: string;
   clearQuery: () => void;
 }) {
+  const styles = useStyles();
   const { state, actions } = useStore();
   const progress = toBuyProgress(state.toBuy);
   const list = sortToBuy(state.toBuy.filter((t) => matches(t.name)));
@@ -514,7 +519,7 @@ function ToBuyTab({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((color) => ({
   root: { flex: 1 },
   tabs: { flexDirection: 'row', gap: space.s2 },
   // Full-bleed so the scrolling tabs slide under the screen edge, not the gutter.
@@ -555,4 +560,4 @@ const styles = StyleSheet.create({
     backgroundColor: color.surfaceSunken,
   },
   picker: { alignSelf: 'stretch' },
-});
+}));

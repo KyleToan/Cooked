@@ -3,7 +3,6 @@ import {
   AccessibilityInfo,
   Platform,
   ScrollView,
-  StyleSheet,
   Switch as RNSwitch,
   TextInput,
   View,
@@ -29,7 +28,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { haptics } from '@/hooks/haptics';
-import { color, radius, shadow, size, space, type } from '@/theme';
+import { makeStyles, useColors, radius, shadow, size, space, type } from '@/theme';
 import { Icon } from './Icon';
 import { Tap } from './Tap';
 import { Text } from './Text';
@@ -64,6 +63,7 @@ export function Segmented<T extends string>({
   onChange: (value: T) => void;
   accessibilityLabel: string;
 }) {
+  const styles = useStyles();
   const reduced = useReducedMotion();
   const [width, setWidth] = useState(0);
   const count = options.length;
@@ -121,6 +121,8 @@ export function Segmented<T extends string>({
 
 /** The system switch inside a 44pt tap area, so it gets the platform's motion and haptics. On: `sage-ink`. */
 export function Switch({ value, onChange, label }: { value: boolean; onChange: (on: boolean) => void; label: string }) {
+  const color = useColors();
+  const styles = useStyles();
   return (
     <Tap
       accessible={false}
@@ -154,6 +156,7 @@ export function FilterPills<T extends string>({
   value: T;
   onChange: (value: T) => void;
 }) {
+  const styles = useStyles();
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.bleed} contentContainerStyle={styles.filters}>
       {options.map((o) => {
@@ -186,6 +189,7 @@ export function FilterPills<T extends string>({
 
 /** A minus sign drawn as a bar: the icon set has a plus but no minus. */
 function Minus({ off }: { off?: boolean }) {
+  const styles = useStyles();
   return <View style={[styles.minus, off && styles.minusOff]} />;
 }
 
@@ -202,6 +206,7 @@ export function Stepper({
   decLabel?: string;
   incLabel?: string;
 }) {
+  const styles = useStyles();
   return (
     <View style={styles.stepper}>
       <Tap
@@ -296,6 +301,7 @@ export function UndoBar({
   onDismiss?: () => void;
   island?: boolean;
 }) {
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   const reduced = useReducedMotion();
   const edge = Math.max(space.s6, insets.bottom + space.s2);
@@ -370,6 +376,8 @@ type FieldProps = Omit<TextInputProps, 'style'> & {
 
 /** A 58pt outlined field with a small label above the value. Focus: `sage-ink`. Error: `error-ink`. */
 export const Field = forwardRef<TextInput, FieldProps>(function Field({ label, error, style, onFocus, onBlur, ...rest }, ref) {
+  const color = useColors();
+  const styles = useStyles();
   const [focused, setFocused] = useState(false);
   const borderColor = error ? color.errorInk : focused ? color.sageInk : color.controlLine;
   return (
@@ -423,6 +431,7 @@ const CHECK_FROM = 0.6;
  * Without `onPress` it only draws the box, for a row that is the checkbox itself.
  */
 export function Checkbox({ checked, onPress, label }: { checked: boolean; onPress?: () => void; label?: string }) {
+  const styles = useStyles();
   const reduced = useReducedMotion();
   const on = useSharedValue(checked ? 1 : 0);
   useEffect(() => {
@@ -461,6 +470,7 @@ export function Checkbox({ checked, onPress, label }: { checked: boolean; onPres
 
 /** The dashed box with a plus that starts an add row. */
 export function AddBox() {
+  const styles = useStyles();
   return (
     <View style={styles.addBox}>
       <Icon name="add" size={ADD_ICON} color="sageInk" />
@@ -468,7 +478,7 @@ export function AddBox() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((color) => ({
   track: {
     minHeight: size.controlHeight,
     padding: TRACK_PAD,
@@ -569,4 +579,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-});
+}));

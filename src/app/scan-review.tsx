@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import { ActionPill } from '@/components/ActionPill';
@@ -18,7 +18,7 @@ import { useStore } from '@/data/store';
 import type { ScanLine } from '@/data/types';
 import { haptics } from '@/hooks/haptics';
 import { useGoToTab } from '@/hooks/useGoToTab';
-import { color, radius, size, space, type } from '@/theme';
+import { makeStyles, radius, size, space, type } from '@/theme';
 
 /** "6:42 pm", as Notifications writes times. */
 function formatTime(d: Date): string {
@@ -29,6 +29,7 @@ function formatTime(d: Date): string {
 
 /** "7 items to put away": fix names, move things, change amounts, then put it all away. */
 export default function ScanReview() {
+  const styles = useStyles();
   const router = useRouter();
   const goToTab = useGoToTab();
   const flow = scanFlow(useLocalSearchParams<{ flow?: string }>().flow);
@@ -159,7 +160,7 @@ export default function ScanReview() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((color) => ({
   grow: { flex: 1 },
   // The pushed header's title line, with a close cross in the back arrow's place.
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: space.s1, marginLeft: -space.s3 },
@@ -175,4 +176,4 @@ const styles = StyleSheet.create({
     borderRadius: radius.control,
     backgroundColor: color.surfaceSunken,
   },
-});
+}));

@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Linking, StyleSheet, View } from 'react-native';
+import { Linking, View } from 'react-native';
 
 import { ActionPill } from '@/components/ActionPill';
 import { UndoBar } from '@/components/Controls';
@@ -14,11 +14,12 @@ import { isUseSoon, PLACE_LABEL, recipeMeta } from '@/data/helpers';
 import { matches, usedWhenMade } from '@/data/match';
 import { STAPLES } from '@/data/seed';
 import { useStore, useUndo } from '@/data/store';
-import { color, radius, shadow, size, space } from '@/theme';
+import { makeStyles, radius, shadow, size, space } from '@/theme';
 
 const PHOTO_HEIGHT = 260;
 
 export default function RecipeScreen() {
+  const styles = useStyles();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { state, actions } = useStore();
@@ -174,6 +175,7 @@ export default function RecipeScreen() {
 
 /** How much the recipe uses, on the right of an ingredient row. */
 function Amount({ value }: { value?: string }) {
+  const styles = useStyles();
   return value ? (
     <Text color="inkMuted" style={styles.amount}>
       {value}
@@ -181,7 +183,7 @@ function Amount({ value }: { value?: string }) {
   ) : null;
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((color) => ({
   grow: { flex: 1, minWidth: 0, gap: 1 },
   center: { textAlign: 'center' },
   // Full bleed: out past the 20pt gutter on both sides, square at the screen edges.
@@ -209,4 +211,4 @@ const styles = StyleSheet.create({
   steps: { gap: space.s3 },
   step: { flexDirection: 'row', gap: space.s2 },
   stepNo: { minWidth: space.s5 },
-});
+}));

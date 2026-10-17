@@ -6,7 +6,10 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { AccessibilityInfo, Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
-import { color } from '@/theme';
+import { palette } from '@/theme';
+
+// Camera chrome sits on the feed, so it keeps the same dark-glass and white colors in both appearances.
+const color = palette.light;
 
 const GLASS = 0.4;
 const BLUR = 30;

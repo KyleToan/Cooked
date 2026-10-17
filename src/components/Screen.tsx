@@ -1,10 +1,10 @@
 import { useScrollToTop } from 'expo-router';
 import { useId, useImperativeHandle, useRef, type ReactNode, type Ref } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
-import { color, size, space } from '@/theme';
+import { makeStyles, useColors, size, space } from '@/theme';
 import { ISLAND_CLEARANCE, islandEdge } from './TabIsland';
 
 type Props = {
@@ -35,6 +35,7 @@ const UNDO_ROOM = size.controlHeight + space.s1 + space.s3;
  * above the island, the undo bar and the footer, so rows never look cut in half.
  */
 export function Screen({ children, island, raised, footer, overlay, gap = space.section, top = 'pushed', scrollRef }: Props) {
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   const ref = useRef<ScrollView>(null);
   useImperativeHandle(scrollRef, () => ref.current as ScrollView);
@@ -75,6 +76,8 @@ export function Screen({ children, island, raised, footer, overlay, gap = space.
 
 /** White fading to clear upwards over `FADE` points, above `solid` points of plain white at the bottom. */
 function EdgeFade({ solid }: { solid: number }) {
+  const color = useColors();
+  const styles = useStyles();
   const id = `edge${useId().replace(/:/g, '')}`;
   const height = solid + FADE;
   return (
@@ -93,7 +96,7 @@ function EdgeFade({ solid }: { solid: number }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((color) => ({
   root: { flex: 1, backgroundColor: color.surface },
   fade: { position: 'absolute', left: 0, right: 0, bottom: 0 },
   footer: {
@@ -102,4 +105,4 @@ const styles = StyleSheet.create({
     backgroundColor: color.surface,
     gap: space.s1,
   },
-});
+}));
