@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
 
 import { ActionPill } from '@/components/ActionPill';
-import { ErrorLine, Field } from '@/components/Controls';
+import { ErrorLine, Field, Segmented, type Option } from '@/components/Controls';
 import { PushedHeader, SectionHeader } from '@/components/Header';
 import { Screen } from '@/components/Screen';
 import { AccountEnding, Avatar, SettingsRow } from '@/components/Settings';
@@ -16,11 +16,16 @@ import { failText, type Failure } from '@/data/errors';
 import * as api from '@/data/kitchenApi';
 import { useStore } from '@/data/store';
 import { hasBackend, supabase } from '@/data/supabase';
-import { size, space } from '@/theme';
+import { setAppearance, size, space, useAppearance, type AppearancePref } from '@/theme';
 
 const SIGN_IN = { email: 'Email code', phone: 'Text code', apple: 'Apple', google: 'Google' } as const;
 const SIGNED_IN_WITH = { email: 'email', phone: 'phone', apple: 'Apple', google: 'Google' } as const;
 const PROFILE = size.controlHeight + space.s2;
+const LOOKS: Option<AppearancePref>[] = [
+  { value: 'system', label: 'Auto' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+];
 
 /** Profile, Kitchen, Your details, Help and privacy, Log out, Delete account. */
 export default function Account() {
@@ -32,6 +37,7 @@ export default function Account() {
   const [name, setName] = useState(state.user.name);
   const [lastName, setLastName] = useState(state.user.lastName ?? '');
   const [busy, setBusy] = useState(false);
+  const look = useAppearance();
   // Which sheet's server call failed, so its error line shows.
   const [failed, setFailed] = useState<{ at: 'delete' | 'name'; why: Failure } | null>(null);
 
@@ -99,6 +105,11 @@ export default function Account() {
           description="A daily use-soon nudge and a weekly summary"
           onPress={() => router.push('/notifications')}
         />
+      </View>
+
+      <View style={styles.look}>
+        <SectionHeader title="Appearance" />
+        <Segmented options={LOOKS} value={look} onChange={setAppearance} accessibilityLabel="Appearance" />
       </View>
 
       <View>
@@ -171,5 +182,6 @@ export default function Account() {
 
 const styles = StyleSheet.create({
   grow: { flex: 1, minWidth: 0, gap: 2 },
+  look: { gap: space.s3 },
   profile: { flexDirection: 'row', alignItems: 'center', gap: space.roomy },
 });

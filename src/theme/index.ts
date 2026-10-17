@@ -5,6 +5,7 @@
 import { createContext, useContext } from 'react';
 import { useColorScheme, StyleSheet } from 'react-native';
 
+import { useAppearance } from './appearance';
 import { font, palette, type as typeStyles, type Palette } from './tokens';
 
 export { palette, type, space, radius, size, shadow } from './tokens';
@@ -17,20 +18,24 @@ export type { ColorName, Palette, TypeName } from './tokens';
  */
 export const FixedScheme = createContext<'light' | 'dark' | null>(null);
 
-function useScheme(): 'light' | 'dark' {
+/** 'light' or 'dark': what the app is showing now. */
+export function useScheme(): 'light' | 'dark' {
   const fixed = useContext(FixedScheme);
+  const chosen = useAppearance();
   const system = useColorScheme();
-  return fixed ?? (system === 'dark' ? 'dark' : 'light');
+  if (fixed) return fixed;
+  if (chosen !== 'system') return chosen;
+  return system === 'dark' ? 'dark' : 'light';
 }
 
-/** The palette for the system appearance (Settings > Display & Brightness). There is no in-app toggle. */
+/** The palette for the appearance picked in Account or onboarding; by default the phone's own. */
 export function useColors(): Palette {
   return palette[useScheme()];
 }
 
 /**
  * A StyleSheet that uses colors: built once per palette, and the returned hook
- * picks the one for the system appearance. Use it in place of StyleSheet.create
+ * picks the one for the current appearance. Use it in place of StyleSheet.create
  * whenever a style names a color.
  */
 export function makeStyles<T extends StyleSheet.NamedStyles<T>>(build: (color: Palette) => T): () => T {
@@ -40,6 +45,7 @@ export function makeStyles<T extends StyleSheet.NamedStyles<T>>(build: (color: P
   };
 }
 export { fontFaces } from './fonts';
+export { setAppearance, useAppearance, type AppearancePref } from './appearance';
 export { brand } from './brand';
 
 /**

@@ -34,7 +34,7 @@ export default function Name() {
       if (r !== 'ok') return;
     }
     actions.setName(name);
-    router.push('/household');
+    router.push('/appearance');
   };
 
   return (
