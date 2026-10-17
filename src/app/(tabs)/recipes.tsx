@@ -18,25 +18,23 @@ import { useStore } from '@/data/store';
 import type { Recipe } from '@/data/types';
 import { size, space } from '@/theme';
 
-type Filter = 'all' | 'now' | 'almost' | 'imported' | 'ranked';
+type Filter = 'now' | 'almost';
 
 const FILTERS: { value: Filter; label: string }[] = [
-  { value: 'all', label: 'All' },
   { value: 'now', label: 'Can make now' },
   { value: 'almost', label: 'Missing 1 or 2' },
-  { value: 'imported', label: 'Imported' },
-  { value: 'ranked', label: 'Ranked' },
 ];
 
-const passes = (r: Recipe, f: Filter, isRanked: boolean) => {
+/** No filter picked shows every recipe. */
+const passes = (r: Recipe, f: Filter | null) => {
   const miss = r.need - r.have;
-  return f === 'all' || (f === 'ranked' && isRanked) || (f === 'now' && miss === 0) || (f === 'almost' && miss > 0 && miss <= 2) || (f === 'imported' && r.imported);
+  return !f || (f === 'now' && miss === 0) || (f === 'almost' && miss > 0 && miss <= 2);
 };
 
 export default function Recipes() {
   const router = useRouter();
   const { state, actions } = useStore();
-  const [filter, setFilter] = useState<Filter>('all');
+  const [filter, setFilter] = useState<Filter | null>(null);
   const [query, setQuery] = useState('');
   // `/recipes?q=spinach` (Find a recipe that uses it) fills the search, and shows every recipe it's in.
   const { q: param } = useLocalSearchParams<{ q?: string }>();
@@ -45,7 +43,7 @@ export default function Recipes() {
     setSeenParam(param);
     if (param !== undefined) {
       setQuery(param);
-      setFilter('all');
+      setFilter(null);
     }
   }
 
@@ -60,15 +58,13 @@ export default function Recipes() {
   const ids = recipes.map((r) => r.id);
   const score = scores(state.ranks, ids);
   const order = ranked(state.ranks, ids);
-  // Ranked is your list best first, Tonight's pick included, so the note steps aside.
-  const byRank = filter === 'ranked';
-  const shown = recipes
-    .filter((r) => (byRank || r !== tonight) && passes(r, filter, score.has(r.id)) && matches(r))
-    .sort((a, b) => (byRank ? order.indexOf(a.id) - order.indexOf(b.id) : 0));
-  const tonightShown = Boolean(tonight && matches(tonight) && !byRank);
-  const noneMatch = recipes.length > 0 && shown.length === 0 && !(tonightShown && passes(tonight!, filter, score.has(tonight!.id)));
+  // Every list goes by your ranking, best first; unranked recipes follow in the order they were saved.
+  const rank = (id: string) => (order.includes(id) ? order.indexOf(id) : order.length);
+  const shown = recipes.filter((r) => r !== tonight && passes(r, filter) && matches(r)).sort((a, b) => rank(a.id) - rank(b.id));
+  const tonightShown = Boolean(tonight && matches(tonight));
+  const noneMatch = recipes.length > 0 && shown.length === 0 && !(tonightShown && passes(tonight!, filter));
   const clear = () => {
-    setFilter('all');
+    setFilter(null);
     setQuery('');
     if (param) router.setParams({ q: undefined });
   };
@@ -85,12 +81,7 @@ export default function Recipes() {
         onAccount={() => router.push('/account')}
       />
 
-      <View style={styles.searchRow}>
-        <View style={styles.grow}>
-          <SearchField placeholder="Search recipes or an ingredient" value={query} onChangeText={setQuery} />
-        </View>
-        <ActionPill label="Import" icon="import" height="header" onPress={() => router.push('/import')} />
-      </View>
+      <SearchField placeholder="Search recipes or an ingredient" value={query} onChangeText={setQuery} />
 
       {tonight && tonightShown ? (
         <View style={styles.tonight}>
@@ -122,7 +113,7 @@ export default function Recipes() {
       ) : null}
 
       <View style={styles.list}>
-        <FilterPills options={FILTERS} value={filter} onChange={setFilter} />
+        <FilterPills options={FILTERS} value={filter} onChange={setFilter} action={{ label: 'Import', icon: 'import', onPress: () => router.push('/import') }} />
         <View>
           {shown.map((r) => (
             <RecipeRow key={r.id} recipe={r} score={score.get(r.id)} onOpen={() => open(r.id)} onToggleToBuy={() => actions.toggleRecipeToBuy(r.id)} />
@@ -139,9 +130,7 @@ export default function Recipes() {
               <Text color="inkMuted">
                 {filter === 'now' && !q
                   ? 'Nothing you can make right now.'
-                  : byRank && !q && !order.length
-                    ? 'Nothing ranked yet. Open a recipe you’ve made and rate it to start your list.'
-                    : 'No recipes match.'}
+                  : 'No recipes match.'}
               </Text>
               <TextLink label="Clear filters" onPress={clear} />
             </View>
@@ -154,7 +143,6 @@ export default function Recipes() {
 
 const styles = StyleSheet.create({
   grow: { flex: 1 },
-  searchRow: { flexDirection: 'row', alignItems: 'center', gap: space.s3 },
   tonight: { gap: space.cozy },
   soonLine: { flexDirection: 'row', alignItems: 'center', gap: space.tight },
   cook: { marginTop: space.s1 },

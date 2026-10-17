@@ -31,6 +31,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { haptics } from '@/hooks/haptics';
 import { color, radius, shadow, size, space, type } from '@/theme';
 import { Icon } from './Icon';
+import type { IconName } from './icon-data';
 import { Tap } from './Tap';
 import { Text } from './Text';
 
@@ -149,13 +150,27 @@ export function FilterPills<T extends string>({
   options,
   value,
   onChange,
+  action,
 }: {
   options: Option<T>[];
-  value: T;
-  onChange: (value: T) => void;
+  /** null: none picked. Tapping the picked pill again turns it off. */
+  value: T | null;
+  onChange: (value: T | null) => void;
+  /** A button at the start of the row (Recipes' Import), the same size as the pills. */
+  action?: { label: string; icon: IconName; onPress: () => void };
 }) {
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.bleed} contentContainerStyle={styles.filters}>
+      {action ? (
+        <Tap accessibilityRole="button" onPress={action.onPress} style={styles.filterHit}>
+          <View style={[styles.filter, styles.filterOff, styles.filterAction]}>
+            <Icon name={action.icon} size={16} color="sageInk" />
+            <Text variant="link" weight="medium" color="ink">
+              {action.label}
+            </Text>
+          </View>
+        </Tap>
+      ) : null}
       {options.map((o) => {
         const on = o.value === value;
         return (
@@ -164,9 +179,8 @@ export function FilterPills<T extends string>({
             accessibilityRole="button"
             accessibilityState={{ selected: on }}
             onPress={() => {
-              if (on) return;
               haptics.select();
-              onChange(o.value);
+              onChange(on ? null : o.value);
             }}
             style={styles.filterHit}
           >
@@ -511,6 +525,7 @@ const styles = StyleSheet.create({
   },
   filterOn: { backgroundColor: color.surface, borderColor: color.sageInk },
   filterOff: { backgroundColor: color.surfaceSunken, borderColor: color.surfaceSunken },
+  filterAction: { flexDirection: 'row', gap: space.s1 },
   minus: { width: 11, height: 2, borderRadius: 1, backgroundColor: color.sageInk },
   minusOff: { backgroundColor: color.inkSubtle },
   stepper: {

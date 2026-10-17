@@ -1,4 +1,4 @@
-// The rating flow on the real recipe screen and the Ranked filter on Recipes.
+// The rating flow on the real recipe screen and rank order on Recipes.
 // The Sheet is swapped for a plain view and Reduce Motion is on: the motion is checked by hand, the steps here.
 
 import { beforeEach, expect, jest, test } from '@jest/globals';
@@ -182,26 +182,25 @@ test('leaving a rating midway saves nothing, and opening it again starts over', 
   expect(box.store!.state.ranks.disliked).toEqual(['pasta']);
 });
 
-test('Recipes: ranked rows show a score ring, Ranked lists best first with Tonight included, and says when nothing is ranked', () => {
+test('Recipes: every list goes by rank, best first, unranked after; tapping a picked filter turns it off', () => {
   mockParams.id = undefined;
   render(<RecipesTab />);
-  press('Ranked');
-  expect(texts()).toContain('Nothing ranked yet. Open a recipe you’ve made and rate it to start your list.');
-  const tonight = box.store!.state.recipes.find((r) => r.tonight)!;
+  expect(texts()).not.toContain('All');
+  expect(texts()).not.toContain('Ranked');
   act(() => {
     box.store!.actions.rankRecipe('pesto', 'fine', 0);
-    box.store!.actions.rankRecipe(tonight.id, 'loved', 0);
-    box.store!.actions.rankRecipe('oats', 'disliked', 0);
+    box.store!.actions.rankRecipe('oats', 'loved', 0);
   });
-  const all = texts();
-  const at = ['Pesto pasta', tonight.title, 'Berry overnight oats'].map((t) => all.indexOf(t));
-  expect(at.every((i) => i >= 0)).toBe(true);
-  expect(at[1]).toBeLessThan(at[0]);
-  expect(at[0]).toBeLessThan(at[2]);
-  expect(all).toEqual(expect.arrayContaining(['10.0', '6.6', '3.3']));
-  expect(all).not.toContain('Tonight');
-  expect(all).not.toContain('Chickpea curry');
-  press('All');
+  const at = (all: string[]) => ['Berry overnight oats', 'Pesto pasta', 'Chickpea curry'].map((t) => all.indexOf(t));
+  const [oats, pesto, curry] = at(texts());
+  expect(oats).toBeGreaterThanOrEqual(0);
+  expect(oats).toBeLessThan(pesto);
+  expect(pesto).toBeLessThan(curry);
+  expect(texts()).toEqual(expect.arrayContaining(['10.0', '6.6']));
   expect(texts()).toContain('Tonight');
+  const now = box.store!.state.recipes.filter((r) => !r.tonight && r.missing.length === 0).map((r) => r.title);
+  press('Can make now');
+  for (const title of box.store!.state.recipes.filter((r) => !r.tonight && !now.includes(r.title)).map((r) => r.title)) expect(texts()).not.toContain(title);
+  press('Can make now');
   expect(texts()).toContain('Chickpea curry');
 });
