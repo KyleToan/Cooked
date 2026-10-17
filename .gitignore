@@ -44,3 +44,9 @@ yarn-error.*
 .mcp.json
 .xcode.env*
 *.save
+
+# recipe import check: fetched pages
+scripts/recipe-check/cache/
+scripts/recipe-check/report*.txt
+scripts/recipe-check/misses.txt
+scripts/recipe-check/browse.txt

@@ -54,6 +54,16 @@ describe('ingredientAmount', () => {
     ['1 lb / 500g beef mince', '1 lb'],
     ['2 cups minus 2 tablespoons cake flour', '2 cups minus 2 tablespoons'],
     ['Small tomatoes 3/4 oz', '3/4 oz'],
+    // Lines from the 100-page check (scripts/recipe-check).
+    ['2 and 1/4 cups (281g) all-purpose flour', '2 1/4 cups'],
+    ['0.333 cup ketchup', '1/3 cup'],
+    ['1.5 pounds ground beef', '1 1/2 pounds'],
+    ['.5tsp ground turmeric', '1/2tsp'],
+    ['4 medium cloves garlic', '4 cloves'],
+    ['1 heaped tsp hot chilli powder', '1 tsp'],
+    ['2 x 400g tins plum tomatoes', '2 x 400g'],
+    ['1 Tbsp + 1 tsp kosher salt', '1 Tbsp + 1 tsp'],
+    ['1 & 1/2 -2 tablespoons instant coffee', '1 1/2-2 tablespoons'],
   ])('%s → %s', (line, amount) => expect(ingredientAmount(line)).toBe(amount));
 });
 
@@ -91,6 +101,33 @@ describe('ingredientName', () => {
     ['1 cup thinly-sliced or shaved red cabbage', 'Red cabbage'],
     ['Dried or fresh pasta, preferably pappardelle', 'Pasta'],
     ['——', ''],
+    // Lines from the 100-page check (scripts/recipe-check).
+    ['1kg/2¼lb lean minced beef', 'Beef'],
+    ['800g-1kg/1¾-2¼lb dried spaghetti', 'Spaghetti'],
+    ['400ml/14fl oz vegetable stock, made with ½ stock cube', 'Vegetable stock'],
+    ['2x400g cans chopped tomatoes', 'Tomatoes'],
+    ['4 rashers smoked streaky bacon finely chopped', 'Smoked streaky bacon'],
+    ['1 red chilli deseeded and finely chopped (optional)', 'Red chilli'],
+    ['1  15 ounce can chick peas rinsed and husked**', 'Chick peas'],
+    ['400ml brewed hojicha tea following pack instructions', 'Brewed hojicha tea'],
+    ['1 large egg + 1 egg yolk, at room temperature', 'Egg'],
+    ['4x5 inch dried kelp', 'Kelp'],
+    ['Juice of 2 large lemons, (about ½ cup)', 'Lemons'],
+    ['⅔ cup half and half', 'Half and half'],
+    ['4 Strips thick-sliced center-cut bacon', 'Bacon'],
+    ['20 cl de crème fraîche', 'Crème fraîche'],
+    ['Mutti chopped tomatoes', 'Mutti chopped tomatoes'],
+    ['1  14.5 oz can Basil, Garlic &amp; Oregano diced tomatoes', 'Tomatoes'],
+    ['1 can (14 oz) diced tomatoes, drained', 'Tomatoes'],
+    ['1 large carrot, finely diced or grated', 'Carrot'],
+    ['1 onion, chopped and diced finely', 'Onion'],
+    ['2 cloves garlic, minced', 'Garlic'],
+    ['1 & 1/2 -2 tablespoons instant coffee', 'Instant coffee'],
+    ['2 pounds chicken breasts {boneless skinless chicken thighs}', 'Chicken breasts'],
+    ['{McCormick Paprika}', ''],
+    ['2 tbps extra virgin olive oil', 'Olive oil'],
+    ['For the Sauce:', ''],
+    ['For serving', ''],
   ])('%s → %s', (line, name) => expect(ingredientName(line)).toBe(name));
 });
 
@@ -110,6 +147,7 @@ describe('formatDuration and formatYield', () => {
     expect(formatYield(['4', '4 servings'])).toBe('4 servings');
     expect(formatYield('Serves 4-6')).toBe('4–6 servings');
     expect(formatYield('Makes 12 cookies')).toBe('12 cookies');
+    expect(formatYield('Makes 16')).toBe('16 servings');
     expect(formatYield(undefined)).toBe('');
   });
 });
@@ -330,6 +368,21 @@ before serving.`;
     ]);
   });
 
+  test('leaves out every way of writing salt, pepper and water', () => {
+    const recipe = parseRecipeFromText(
+      ['Soup', '1 onion', 'Cooking salt / kosher salt', '¼ tsp Diamond Crystal kosher salt', 'freshly cracked pepper ($0.03)', '2 teaspoons hot water', '1 standard ice cube', '1 pinch each salt and pepper', 'Sel'].join('\n'),
+    );
+    expect(recipe?.missing).toEqual(['Onion']);
+  });
+
+  test('splits steps numbered inside one block', () => {
+    const recipe = parseRecipeFromHtml(
+      page(JSON.stringify({ '@type': 'Recipe', name: 'Pasta bake', recipeIngredient: ['1 onion'], recipeInstructions: [{ '@type': 'HowToStep', text: '1. Preheat the oven to 400 degrees F. 2. Melt the butter for 5 minutes. 3. Bake for 25 minutes.' }] })),
+      'https://example.com/r',
+    );
+    expect(recipe?.steps).toEqual(['Preheat the oven to 400 degrees F.', 'Melt the butter for 5 minutes.', 'Bake for 25 minutes.']);
+  });
+
   test('null without an ingredient list', () => {
     expect(parseRecipeFromText('Just some words about dinner.')).toBeNull();
     expect(parseRecipeFromText('')).toBeNull();
@@ -357,6 +410,92 @@ describe('links', () => {
 
     global.fetch = jest.fn().mockRejectedValue(new TypeError('Network request failed')) as unknown as typeof fetch;
     expect(await importFromLink('https://example.com/cors')).toBeNull();
+  });
+
+  const answer = (html: string, status = 200) =>
+    jest.fn().mockResolvedValue({ ok: status < 300, status, url: '', text: () => Promise.resolve(html) }) as unknown as typeof fetch;
+
+  test('readLink reads a recipe set as plain lines with no list or heading', async () => {
+    global.fetch = answer(`<html><h1>Recipe: Salted Goat Caramel</h1><p>Some story about the sauce, the farm and the goats.</p>
+      <p>Salted Goat Caramel<br>makes 1/2 cup<br>1 quart goat milk<br>1/2 cup sugar<br>1/4 teaspoon baking soda, dissolved in warm water<br>
+      1 tablespoon fish sauce<br>salt and pepper, to taste</p><p>In a thick-bottomed sauce pot, combine milk and sugar and bring to a boil.</p>
+      <p>Whisk in the baking soda and simmer, stirring often, for about an hour.</p><p>Share this</p></html>`);
+    const { recipe } = await readLink('https://example.com/caramel');
+    expect(recipe?.title).toBe('Recipe: Salted Goat Caramel');
+    expect(recipe?.missing).toEqual(['Goat milk', 'Sugar', 'Baking soda', 'Fish sauce']);
+    expect(recipe?.steps).toHaveLength(2);
+  });
+
+  test('readLink reads a YouTube description, or follows its link to the written recipe', async () => {
+    const video = (description: string) =>
+      `<html><head><meta property="og:image" content="https://i.ytimg.com/vi/x/hq.jpg"></head>
+      <script>var ytInitialPlayerResponse = {"videoDetails":{"title":"Pasta Aglio e Olio","shortDescription":${JSON.stringify(description)}}};</script></html>`;
+    global.fetch = answer(video('Recipe below!\n\n*Ingredients*\n\n1/2 head garlic\n1 bunch parsley\n1/2 cup olive oil\n\n*Method*\n\nCook pasta to al dente.\n\nInstagram: http://bit.ly/x'));
+    const { recipe } = await readLink('https://www.youtube.com/watch?v=x');
+    expect(recipe?.title).toBe('Pasta Aglio e Olio');
+    expect(recipe?.missing).toEqual(['Garlic', 'Parsley', 'Olive oil']);
+    expect(recipe?.steps).toEqual(['Cook pasta to al dente.']);
+    expect(recipe?.photo).toBe('https://i.ytimg.com/vi/x/hq.jpg');
+
+    const written = page('{"@type":"Recipe","name":"51 Hour Focaccia","recipeIngredient":["900g bread flour","5g instant yeast"]}');
+    global.fetch = jest.fn(async (url: string) =>
+      url.includes('youtube')
+        ? { ok: true, status: 200, url, text: async () => video('Get the recipe: https://www.joshuaweissman.com/recipes/focaccia\nPatreon: https://patreon.com/x') }
+        : { ok: true, status: 200, url, text: async () => written },
+    ) as unknown as typeof fetch;
+    const linked = await readLink('https://www.youtube.com/watch?v=y');
+    expect(linked.recipe?.title).toBe('51 Hour Focaccia');
+    expect(jest.mocked(global.fetch).mock.calls.map((c) => c[0])).toEqual(['https://www.youtube.com/watch?v=y', 'https://www.joshuaweissman.com/recipes/focaccia']);
+  });
+
+  test('readLink reads a TikTok caption, bulleted on one line or run on', async () => {
+    const tiktok = (desc: string) =>
+      `<html><script id="__UNIVERSAL_DATA_FOR_REHYDRATION__">{"itemStruct":{"desc":${JSON.stringify(desc)},"video":{"cover":"https://p16.tiktokcdn.com/c.jpg"}}}</script></html>`;
+    global.fetch = answer(
+      tiktok('30-Min Marry Me Chicken 🔥 Early access to the CLUB👌🏻 Ingredients: - 4 chicken breasts @MagnessFarms - 1 tsp smoked paprika - salt & pepper - 250ml double cream 1. Season and sear your chicken for a few mins each side 2. Add the cream and simmer #marrymechicken'),
+    );
+    const { recipe } = await readLink('https://www.tiktok.com/@tylerbutt_eats/video/1');
+    expect(recipe?.title).toBe('30-Min Marry Me Chicken');
+    expect(recipe?.missing).toEqual(['Chicken breasts', 'Smoked paprika', 'Double cream']);
+    expect(recipe?.steps).toEqual(['Season and sear your chicken for a few mins each side', 'Add the cream and simmer']);
+    expect(recipe?.photo).toBe('https://p16.tiktokcdn.com/c.jpg');
+
+    global.fetch = answer(tiktok("Homemade chicken nuggets. $2 for 4 pieces! here's the recipe 1lb chicken breast 1 egg 2Tbsp hot sauce 1C cornstarch 1tsp paprika deep fry at 390F for 3-4 minutes until golden brown!"));
+    const runOn = await readLink('https://www.tiktok.com/@jose.elcook/video/2');
+    expect(runOn.recipe?.missing).toEqual(['Chicken breast', 'Egg', 'Hot sauce', 'Cornstarch', 'Paprika']);
+    expect(runOn.recipe?.steps).toEqual(['deep fry at 390F for 3-4 minutes until golden brown!']);
+  });
+
+  test('readLink reads an Instagram caption from the page description', async () => {
+    const caption = 'Lemon Orzo ✨ Ingredients: - 1 cup orzo - 2 cups chicken stock - 1 lemon - 30g parmesan 1. Toast the orzo in butter 2. Add the stock and simmer';
+    global.fetch = answer(
+      `<html><head><meta property="og:image" content="https://scontent.cdninstagram.com/o.jpg"><meta property="og:description" content="1,234 likes, 56 comments - recipeincaption on March 1, 2025: &quot;${caption}&quot;. "></head></html>`,
+    );
+    const { recipe } = await readLink('https://www.instagram.com/reel/abc123/');
+    expect(recipe?.title).toBe('Lemon Orzo');
+    expect(recipe?.missing).toEqual(['Orzo', 'Chicken stock', 'Lemon', 'Parmesan']);
+    expect(recipe?.steps).toHaveLength(2);
+    expect(recipe?.photo).toBe('https://scontent.cdninstagram.com/o.jpg');
+  });
+
+  test('readLink hands blocked, unanswered and recipe-less pages to the browser, but not missing ones', async () => {
+    const recipe = page('{"@type":"Recipe","name":"Egg Fried Rice","recipeIngredient":["5 cups cooked rice","5 eggs"]}');
+    const browse = jest.fn().mockResolvedValue(recipe);
+    global.fetch = answer('<title>Security Verification</title>', 403);
+    expect((await readLink('https://thewoksoflife.com/egg-fried-rice/', [], undefined, browse)).recipe?.title).toBe('Egg Fried Rice');
+    global.fetch = answer('<div id="root"></div>');
+    expect((await readLink('https://realfood.tesco.com/recipes/simple-lasagne.html', [], undefined, browse)).recipe?.title).toBe('Egg Fried Rice');
+    global.fetch = jest.fn().mockRejectedValue(new TypeError('The request timed out.')) as unknown as typeof fetch;
+    expect(await readLink('https://slow.example.com/r', [], undefined, browse)).toMatchObject({ reached: true });
+    expect(browse).toHaveBeenCalledTimes(3);
+
+    global.fetch = answer('', 404);
+    expect(await readLink('https://example.com/gone', [], undefined, browse)).toEqual({ recipe: null, reached: true });
+    expect(browse).toHaveBeenCalledTimes(3);
+
+    // Offline: the browser can't load it either, so it still reads as never reached.
+    global.fetch = jest.fn().mockRejectedValue(new TypeError('Network request failed')) as unknown as typeof fetch;
+    expect(await readLink('https://example.com/offline', [], undefined, jest.fn().mockResolvedValue(null))).toEqual({ recipe: null, reached: false });
   });
 
   test('readLink tells a page with no recipe apart from a page it never reached', async () => {

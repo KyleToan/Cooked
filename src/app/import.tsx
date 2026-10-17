@@ -6,6 +6,7 @@ import { StyleSheet, TextInput, View } from 'react-native';
 import { ActionPill } from '@/components/ActionPill';
 import { Checkbox, ErrorLine, Segmented } from '@/components/Controls';
 import { CookingLoader } from '@/components/Loader';
+import { usePageReader } from '@/components/PageReader';
 import { Sheet } from '@/components/Sheet';
 import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
@@ -36,6 +37,8 @@ export default function Import() {
   // Scan's Recipe mode opens Import with the page's text, read straight away.
   const scanned = params.from === 'scan';
   const { state, actions } = useStore();
+  // Pages that refuse a plain request load in a hidden browser instead.
+  const reader = usePageReader();
 
   const [mode, setMode] = useState<Mode>(scanned ? 'text' : 'link');
   const [step, setStep] = useState<Step>(params.step === 'error' ? 'error' : scanned ? 'loading' : 'edit');
@@ -58,7 +61,7 @@ export default function Import() {
     const read =
       mode === 'text'
         ? Promise.resolve({ recipe: parseRecipeFromText(text, state.items), reached: true })
-        : readLink(link, state.items, controller.signal);
+        : readLink(link, state.items, controller.signal, reader.browse);
     // Pasted text is read at once, so it skips the minimum and goes straight to the result.
     const wait = mode === 'text' ? null : new Promise((done) => setTimeout(done, MIN_READ_MS));
     let live = true;
@@ -282,6 +285,7 @@ export default function Import() {
           />
         </View>
       ) : null}
+      {reader.view}
     </Sheet>
   );
 }
