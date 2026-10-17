@@ -5,19 +5,18 @@ import Animated, { ReduceMotion, useAnimatedStyle, useReducedMotion, useSharedVa
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { haptics } from '@/hooks/haptics';
-import { useGoToTab } from '@/hooks/useGoToTab';
 import { makeStyles, radius, shadow, size, space } from '@/theme';
 import { Icon } from './Icon';
 import type { IconName } from './icon-data';
 import { Text } from './Text';
 
 type TabKey = 'home' | 'kitchen' | 'recipes';
-type Tab = { key: TabKey; label: string; icon: IconName; href: '/' | '/kitchen' | '/recipes' };
+type Tab = { key: TabKey; label: string; icon: IconName };
 
 const TABS: Tab[] = [
-  { key: 'home', label: 'Home', icon: 'home', href: '/' },
-  { key: 'kitchen', label: 'Kitchen', icon: 'fridge', href: '/kitchen' },
-  { key: 'recipes', label: 'Recipes', icon: 'recipes', href: '/recipes' },
+  { key: 'home', label: 'Home', icon: 'home' },
+  { key: 'kitchen', label: 'Kitchen', icon: 'fridge' },
+  { key: 'recipes', label: 'Recipes', icon: 'recipes' },
 ];
 
 /** Island icons are 22px in the spec, between the two icon sizes. */
@@ -43,12 +42,19 @@ export function islandEdge(insetBottom: number) {
 /**
  * The floating tab island: Home, Kitchen (Your Kitchen) and Recipes. Scan lives
  * in Home's top bar.
- * The grey underscore slides to the picked tab. Tapping the picked tab again calls `onReselect`
- * (the tab bar uses it to scroll that screen to the top).
+ * The grey underscore slides to the picked tab. Tapping another tab calls `onSelect`; tapping the
+ * picked tab again calls `onReselect` (the tab bar uses it to scroll that screen to the top).
  */
-export function TabIsland({ active, onReselect }: { active: TabKey; onReselect?: () => void }) {
+export function TabIsland({
+  active,
+  onSelect,
+  onReselect,
+}: {
+  active: TabKey;
+  onSelect: (key: TabKey) => void;
+  onReselect?: () => void;
+}) {
   const styles = useStyles();
-  const goToTab = useGoToTab();
   const insets = useSafeAreaInsets();
   const [tabs, setTabs] = useState<Partial<Record<TabKey, LayoutRectangle>>>({});
   const [markTop, setMarkTop] = useState<number | null>(null);
@@ -75,7 +81,7 @@ export function TabIsland({ active, onReselect }: { active: TabKey; onReselect?:
             onPress={() => {
               haptics.select();
               if (tab.key === active) onReselect?.();
-              else goToTab(tab.href);
+              else onSelect(tab.key);
             }}
             onLayout={(e) => {
               const l = e.nativeEvent.layout;
@@ -151,6 +157,9 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
   return (
     <TabIsland
       active={name === 'recipes' ? 'recipes' : name === 'kitchen' ? 'kitchen' : 'home'}
+      // Switch with the tab navigator itself: the island only shows when the tabs are on top, and going
+      // through the root router (dismissTo) did nothing on iOS after a new sign-up.
+      onSelect={(key) => navigation.navigate(key === 'home' ? 'index' : key)}
       // React Navigation's re-tap event: `useScrollToTop` in Screen listens for it.
       onReselect={() => route && navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true })}
     />
