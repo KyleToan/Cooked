@@ -4,7 +4,6 @@ import { useEffect } from 'react';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import * as SystemUI from 'expo-system-ui';
 import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -20,7 +19,6 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const styles = useStyles();
-  const color = useColors();
   // Native builds bundle the fonts (expo-font plugin in app.json), so this is already loaded there;
   // it only loads them in Expo Go and on web.
   const [loaded, error] = useFonts(fontFaces);
@@ -28,11 +26,6 @@ export default function RootLayout() {
   useEffect(() => {
     if (loaded || error) SplashScreen.hideAsync();
   }, [loaded, error]);
-
-  // The window behind every screen (seen under modals and the keyboard) follows the appearance too.
-  useEffect(() => {
-    SystemUI.setBackgroundColorAsync(color.surface);
-  }, [color.surface]);
 
   // Keep the splash screen up until the fonts are ready, so nothing flashes
   // in the system font. If loading fails, carry on with the system font.
