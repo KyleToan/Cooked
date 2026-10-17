@@ -1,12 +1,12 @@
 import type { BottomTabBarProps } from 'expo-router/tabs';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View, type LayoutChangeEvent, type LayoutRectangle } from 'react-native';
+import { Pressable, View, type LayoutChangeEvent, type LayoutRectangle } from 'react-native';
 import Animated, { ReduceMotion, useAnimatedStyle, useReducedMotion, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { haptics } from '@/hooks/haptics';
 import { useGoToTab } from '@/hooks/useGoToTab';
-import { color, radius, shadow, size, space } from '@/theme';
+import { makeStyles, radius, shadow, size, space } from '@/theme';
 import { Icon } from './Icon';
 import type { IconName } from './icon-data';
 import { Text } from './Text';
@@ -47,6 +47,7 @@ export function islandEdge(insetBottom: number) {
  * (the tab bar uses it to scroll that screen to the top).
  */
 export function TabIsland({ active, onReselect }: { active: TabKey; onReselect?: () => void }) {
+  const styles = useStyles();
   const goToTab = useGoToTab();
   const insets = useSafeAreaInsets();
   const [tabs, setTabs] = useState<Partial<Record<TabKey, LayoutRectangle>>>({});
@@ -110,6 +111,7 @@ function IslandTab({
   onLayout: (e: LayoutChangeEvent) => void;
   onMarkLayout?: (e: LayoutChangeEvent) => void;
 }) {
+  const styles = useStyles();
   const reduced = useReducedMotion();
   const scale = useSharedValue(1);
   const press = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
@@ -158,7 +160,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
 /** Bottom padding a scrolling tab screen needs so its last row clears the island ("about 130px"). */
 export const ISLAND_CLEARANCE = 130;
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((color) => ({
   wrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
   island: {
     width: size.islandWidth,
@@ -175,4 +177,4 @@ const styles = StyleSheet.create({
   tab: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2, borderRadius: radius.pill },
   mark: { width: MARK_WIDTH, height: MARK_HEIGHT, borderRadius: 2, marginTop: 1, backgroundColor: 'transparent' },
   markOn: { position: 'absolute', left: 0, marginTop: 0, backgroundColor: color.tabMark },
-});
+}));

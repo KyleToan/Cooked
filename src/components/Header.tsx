@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import { StyleSheet, View } from "react-native";
+import { View } from "react-native";
 
-import { color, radius, size, space, type } from "@/theme";
+import { makeStyles, radius, size, space, type } from "@/theme";
 import { Icon } from "./Icon";
 import { Tap } from "./Tap";
 import { Text } from "./Text";
@@ -25,6 +25,7 @@ export function GreetingHeader({
   right,
   onAccount,
 }: GreetingProps) {
+  const styles = useStyles();
   return (
     <View style={styles.greetingRow}>
       <View style={styles.titles}>
@@ -62,6 +63,7 @@ type TopBarProps = {
 
 /** Home's top bar: a round Scan button on the left, the title and greeting centred, the account button on the right. */
 export function TopBar({ title, line, onScan, onAccount }: TopBarProps) {
+  const styles = useStyles();
   return (
     <View style={styles.topRow}>
       <Tap
@@ -127,6 +129,7 @@ export function PushedHeader({
   right,
   below,
 }: PushedProps) {
+  const styles = useStyles();
   return (
     <View style={styles.pushed}>
       <View style={[styles.pushedRow, !onBack && styles.noBack]}>
@@ -152,6 +155,7 @@ export function BackButton({
   onPress: () => void;
   label?: string;
 }) {
+  const styles = useStyles();
   return (
     <Tap
       accessibilityRole="button"
@@ -176,6 +180,7 @@ export function SectionHeader({
   icon?: ReactNode;
   right?: ReactNode;
 }) {
+  const styles = useStyles();
   return (
     <View style={styles.section}>
       <View style={styles.sectionLeft}>
@@ -198,7 +203,7 @@ export function SectionHeader({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((color) => ({
   greetingRow: {
     flexDirection: "row",
     alignItems: "flex-end",
@@ -265,4 +270,4 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   shrink: { flexShrink: 1 },
-});
+}));

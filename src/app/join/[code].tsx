@@ -4,7 +4,7 @@ import { View } from 'react-native';
 
 import { rememberInvite } from '@/data/pendingInvite';
 import { useStore } from '@/data/store';
-import { color } from '@/theme';
+import { useColors } from '@/theme';
 
 /**
  * An invite link opened on the phone. Before onboarding, the code waits for Who do you cook with,
@@ -13,6 +13,7 @@ import { color } from '@/theme';
  */
 export default function InviteLink() {
   const router = useRouter();
+  const color = useColors();
   const { code } = useLocalSearchParams<{ code?: string }>();
   const { state } = useStore();
   const onboarded = state.session.onboarded;

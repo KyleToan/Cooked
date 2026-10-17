@@ -26,7 +26,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { color, size, space } from '@/theme';
+import { makeStyles, palette, size, space } from '@/theme';
 import { Icon } from './Icon';
 import { Tap } from './Tap';
 import { Text } from './Text';
@@ -79,6 +79,7 @@ type Props = {
  * scrim, use the close button or Android back to close it: it slides away first, then `onClose` runs.
  */
 export function Sheet({ children, onClose, title, subtitle, showClose = true, visible = true, inline, accessibilityLabel }: Props) {
+  const styles = useStyles();
   // A modal sheet stays mounted after `visible` turns false until it has slid away.
   const [shown, setShown] = useState(visible);
   if (visible && !shown) setShown(true);
@@ -118,6 +119,7 @@ type BodyProps = Omit<Props, 'visible'> & {
 };
 
 function SheetBody({ children, onClose, title, subtitle, showClose, inline, open, onExited, closeRef, accessibilityLabel }: BodyProps) {
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   const reduced = useReducedMotion();
   const navigation = useNavigation();
@@ -355,6 +357,7 @@ function SheetBody({ children, onClose, title, subtitle, showClose, inline, open
 
 /** The cross in a 44pt hit area, as the Import prototype draws it. */
 export function CloseButton({ onPress, label = 'Close' }: { onPress: () => void; label?: string }) {
+  const styles = useStyles();
   return (
     <Tap accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={styles.closeHit}>
       <Icon name="close" size={size.iconSm + 2} />
@@ -362,9 +365,10 @@ export function CloseButton({ onPress, label = 'Close' }: { onPress: () => void;
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((color) => ({
   fill: { flex: 1 },
-  scrim: { backgroundColor: color.ink },
+  // A scrim darkens in both appearances, so it keeps the light palette's near-black ink.
+  scrim: { backgroundColor: palette.light.ink },
   bottom: { flex: 1, justifyContent: 'flex-end' },
   panel: {
     marginBottom: -OVERDRAG,
@@ -372,7 +376,7 @@ const styles = StyleSheet.create({
     gap: space.s4,
     borderTopLeftRadius: SHEET_RADIUS,
     borderTopRightRadius: SHEET_RADIUS,
-    backgroundColor: color.surface,
+    backgroundColor: color.surfaceRaised,
   },
   handle: { paddingTop: space.cozy, gap: space.s4 },
   grabber: {
@@ -392,4 +396,4 @@ const styles = StyleSheet.create({
     marginRight: -space.s1,
     marginTop: -space.s1,
   },
-});
+}));

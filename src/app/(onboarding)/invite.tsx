@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Share, StyleSheet, View } from 'react-native';
+import { Share, View } from 'react-native';
 
 import { ActionPill } from '@/components/ActionPill';
 import { OnbScreen } from '@/components/Onboarding';
@@ -8,12 +8,13 @@ import { Avatar, InviteLink } from '@/components/Settings';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
 import { useStore } from '@/data/store';
-import { color, radius, space } from '@/theme';
+import { makeStyles, radius, space } from '@/theme';
 
 const PERSON = 36;
 
 /** The invite link, Share invite link, Skip for now. */
 export default function Invite() {
+  const styles = useStyles();
   const router = useRouter();
   const { state } = useStore();
   const [shared, setShared] = useState(false);
@@ -77,9 +78,9 @@ export default function Invite() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((color) => ({
   grow: { flex: 1 },
   people: { gap: space.s3 },
   person: { flexDirection: 'row', alignItems: 'center', gap: space.s3 },
   empty: { width: PERSON, height: PERSON, borderRadius: radius.pill, borderWidth: 1.5, borderStyle: 'dashed', borderColor: color.checkBorder },
-});
+}));

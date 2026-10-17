@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
-import { Share, StyleSheet, View } from 'react-native';
+import { Share, View } from 'react-native';
 import Animated, {
   FadeIn,
   FadeInLeft,
@@ -17,7 +17,7 @@ import { finalIndex, pick, pruned, ranked, rival, scores, scoreText, skip, start
 import { useStore } from '@/data/store';
 import type { Recipe } from '@/data/types';
 import { haptics } from '@/hooks/haptics';
-import { color, radius, shadow, size, space, type ColorName } from '@/theme';
+import { makeStyles, useColors, radius, shadow, size, space, type ColorName } from '@/theme';
 import { ActionPill } from './ActionPill';
 import { Icon } from './Icon';
 import { Sheet } from './Sheet';
@@ -60,6 +60,7 @@ type Props = { recipe: Recipe; visible: boolean; onClose: () => void };
  * until the place is found, so closing early changes nothing.
  */
 export function RateSheet({ recipe, visible, onClose }: Props) {
+  const styles = useStyles();
   const { state, actions } = useStore();
   const reduced = useReducedMotion();
   const [band, setBand] = useState<Band | null>(null);
@@ -192,6 +193,8 @@ export function RateSheet({ recipe, visible, onClose }: Props) {
 
 /** A round paper magnet with its label underneath. Picked: a check pops in and the others step back. */
 function Magnet({ label, paper, picked, dimmed, onPress }: { label: string; paper: ColorName; picked: boolean; dimmed: boolean; onPress: () => void }) {
+  const color = useColors();
+  const styles = useStyles();
   const reduced = useReducedMotion();
   const scale = useSharedValue(1);
   const fade = useSharedValue(1);
@@ -231,6 +234,8 @@ function Magnet({ label, paper, picked, dimmed, onPress }: { label: string; pape
 
 /** One side of This or that?: the photo (or handwritten initials), the title, and its time and score. */
 function ChoiceCard({ recipe, paper, score, onPress }: { recipe: Recipe; paper: ColorName; score?: number; onPress: () => void }) {
+  const color = useColors();
+  const styles = useStyles();
   const reduced = useReducedMotion();
   const scale = useSharedValue(1);
   const [down, setDown] = useState(false);
@@ -297,7 +302,7 @@ const initialsOf = (title: string) =>
     .map((w) => w[0].toUpperCase())
     .join('');
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((color) => ({
   grow: { flex: 1 },
   center: { textAlign: 'center' },
   step: { gap: space.s4 },
@@ -360,4 +365,4 @@ const styles = StyleSheet.create({
   result: { paddingHorizontal: space.s5, paddingTop: space.s2 },
   noteRow: { flexDirection: 'row', alignItems: 'center', gap: space.s4 },
   resultActions: { gap: space.s1 },
-});
+}));

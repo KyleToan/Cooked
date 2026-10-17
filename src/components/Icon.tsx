@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import Svg, { Circle, Ellipse, Line, Path, Polyline, Rect } from 'react-native-svg';
 
-import { color, size as sizes, type ColorName } from '@/theme';
+import { useColors, size as sizes, type ColorName } from '@/theme';
 import { iconData, type IconName } from './icon-data';
 
 /** Name an icon-only button's icon; hide decorative icons from screen readers. */
@@ -29,6 +29,7 @@ type Props = {
 
 /** One of the 22 Cooked icons from design/system/icons. */
 export function Icon({ name, size = sizes.iconMd, color: tint = 'ink', filled = false, label, parts }: Props) {
+  const color = useColors();
   const stroke = color[tint];
   const strokeWidth = size <= sizes.iconSm ? 2 : sizes.iconStroke;
   return (

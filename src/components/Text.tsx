@@ -1,7 +1,7 @@
 import { Text as RNText, StyleSheet, type TextProps } from 'react-native';
 
 import { useBoldText } from '@/hooks/useBoldText';
-import { bolder, color, type, weight as weights, type ColorName, type TypeName, type WeightName } from '@/theme';
+import { bolder, useColors, type, weight as weights, type ColorName, type TypeName, type WeightName } from '@/theme';
 
 type Props = TextProps & {
   /** A type style from the design system. Defaults to `body`. */
@@ -16,6 +16,7 @@ type Props = TextProps & {
 
 /** Text in one of the Cooked type styles. Use this instead of React Native's Text. */
 export function Text({ variant = 'body', color: tint = 'ink', weight, strike, style, ...rest }: Props) {
+  const color = useColors();
   const bold = useBoldText();
   const styles = [
     type[variant],

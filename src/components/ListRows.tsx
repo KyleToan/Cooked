@@ -8,7 +8,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { amountLabel, joinAnd, PLACE_LABEL } from '@/data/helpers';
 import type { Item, Place, Recipe, ScanLine } from '@/data/types';
 import { haptics } from '@/hooks/haptics';
-import { color, radius, size, space, type } from '@/theme';
+import { makeStyles, useColors, radius, size, space, type } from '@/theme';
 import { Chevron } from './Chevron';
 import { ROW_OPEN, Stepper } from './Controls';
 import { Icon } from './Icon';
@@ -42,6 +42,7 @@ type KitchenRowProps = {
 
 /** Name, meta line, amount and a chevron. Opens in place to a stepper; swipes left to use up. */
 export function KitchenRow({ item, startQty, soon, open, onToggleOpen, actionLabel, onAction, onQty, onUseUp, extra }: KitchenRowProps) {
+  const styles = useStyles();
   const amount = amountLabel(item, startQty);
   const swipe = useRef<SwipeableMethods>(null);
   const canUseUp = !!onUseUp && item.qty > 0;
@@ -178,6 +179,8 @@ type CheckRowProps = {
 
 /** A scanned line: an editable name, price, a place tag that opens the place picker and a stepper. */
 export function CheckItemRow({ line, open, onToggleOpen, onChange }: CheckRowProps) {
+  const color = useColors();
+  const styles = useStyles();
   const [focused, setFocused] = useState(false);
   const skip = line.place === 'skip';
   const where = placeLabel(line.place);
@@ -271,6 +274,7 @@ const MAX_MISSING_PILL = 2;
 
 /** Name and time, what you have, the source, and "Add N to To Buy" when one or two things are missing. */
 export function RecipeRow({ recipe, onOpen, onToggleToBuy, score }: RecipeRowProps) {
+  const styles = useStyles();
   const n = recipe.missing.length;
   const have =
     n === 0
@@ -342,6 +346,7 @@ export function ToBuyToggle({
    */
   accessibilityLabel?: string;
 }) {
+  const styles = useStyles();
   return (
     <Tap
       accessibilityRole="checkbox"
@@ -366,7 +371,7 @@ export function ToBuyToggle({
 const TOGGLE_ICON = 14;
 const THUMB = 56;
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((color) => ({
   useAll: { minHeight: size.targetMin, justifyContent: 'center', alignSelf: 'flex-start' },
   divider: { borderBottomWidth: 1, borderBottomColor: color.lineSoft },
   grow: { flex: 1, minWidth: 0, gap: 2 },
@@ -440,4 +445,4 @@ const styles = StyleSheet.create({
   },
   toggleOff: { backgroundColor: color.surfaceSunken },
   toggleOn: { backgroundColor: color.surface, borderWidth: 1, borderColor: color.line },
-});
+}));

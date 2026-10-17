@@ -1,6 +1,6 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 
 import { ActionPill, PillRow } from '@/components/ActionPill';
 import { Chevron } from '@/components/Chevron';
@@ -17,7 +17,7 @@ import { AddRow, TodoList } from '@/components/TodoList';
 import { count, doneAtOpen, inStock, isUseSoon, PLACE_LABEL, PLACES, sortToBuy, syncedLabel, toBuyProgress } from '@/data/helpers';
 import { useStore, useUndo } from '@/data/store';
 import type { ToBuyItem } from '@/data/types';
-import { color, size, space } from '@/theme';
+import { makeStyles, size, space } from '@/theme';
 
 /** Home shows the first three things still to get; the full list is the To Buy tab. */
 const HOME_TO_BUY = 3;
@@ -31,6 +31,7 @@ function snapshot(list: ToBuyItem[]) {
 }
 
 export default function Home() {
+  const styles = useStyles();
   const router = useRouter();
   const { state, actions } = useStore();
   const undo = useUndo('home');
@@ -205,7 +206,7 @@ export default function Home() {
 
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((color) => ({
   grow: { flex: 1 },
   result: { minHeight: size.rowHeight, flexDirection: 'row', alignItems: 'center', gap: space.s3, borderBottomWidth: 1, borderBottomColor: color.lineSoft },
   noMatch: { gap: space.s1, paddingTop: space.s4 },
@@ -215,4 +216,4 @@ const styles = StyleSheet.create({
   notes: { flexDirection: 'row', gap: space.s3, paddingTop: space.cozy, paddingHorizontal: 2, paddingBottom: space.s1 },
   emptyNote: { marginHorizontal: space.s1, gap: space.cozy, paddingTop: space.s5 + 2, paddingHorizontal: space.s5 },
   emptyToBuy: { gap: space.s3 },
-});
+}));

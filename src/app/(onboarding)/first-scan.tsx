@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import Animated, { ReduceMotion, useAnimatedStyle, useReducedMotion, useSharedValue, withSpring } from 'react-native-reanimated';
 
 import { ActionPill } from '@/components/ActionPill';
@@ -8,7 +8,7 @@ import { OnbScreen } from '@/components/Onboarding';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
 import { useStore } from '@/data/store';
-import { color, radius, shadow, space } from '@/theme';
+import { makeStyles, radius, shadow, space } from '@/theme';
 
 const RECEIPT: [string, string][] = [
   ['Milk 2%', '3.49'],
@@ -29,6 +29,7 @@ const GUIDE_FROM = 0.9;
 
 /** Scan your first receipt, or skip it. */
 export default function FirstScan() {
+  const styles = useStyles();
   const router = useRouter();
   const { actions } = useStore();
   const solo = useLocalSearchParams<{ flow?: string }>().flow === 'solo';
@@ -98,7 +99,7 @@ export default function FirstScan() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((color) => ({
   art: { height: ART_H, alignSelf: 'center', width: RECEIPT_W + 2 * (space.s5 + 1) + 2 },
   receipt: {
     position: 'absolute',
@@ -122,4 +123,4 @@ const styles = StyleSheet.create({
   tr: { right: 0, top: space.s2, borderTopWidth: 3, borderRightWidth: 3, borderTopRightRadius: radius.check + 3 },
   bl: { left: 0, bottom: space.s5, borderBottomWidth: 3, borderLeftWidth: 3, borderBottomLeftRadius: radius.check + 3 },
   br: { right: 0, bottom: space.s5, borderBottomWidth: 3, borderRightWidth: 3, borderBottomRightRadius: radius.check + 3 },
-});
+}));

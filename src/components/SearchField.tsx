@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { TextInput, View } from 'react-native';
 
-import { color, radius, size, space, type } from '@/theme';
+import { makeStyles, useColors, radius, size, space, type } from '@/theme';
 import { Icon } from './Icon';
 
 type Props = {
@@ -12,6 +12,8 @@ type Props = {
 
 /** One white, outlined field with the magnifier on the right. No shadow. Focus: `sage-ink`, like Field. */
 export function SearchField({ placeholder, value, onChangeText }: Props) {
+  const color = useColors();
+  const styles = useStyles();
   const [focused, setFocused] = useState(false);
   return (
     <View style={[styles.field, focused ? styles.focused : styles.idle]}>
@@ -33,7 +35,7 @@ export function SearchField({ placeholder, value, onChangeText }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((color) => ({
   field: {
     minHeight: size.fieldHeight,
     flexDirection: 'row',
@@ -47,4 +49,4 @@ const styles = StyleSheet.create({
   idle: { borderWidth: 1, borderColor: color.controlLine },
   focused: { borderWidth: 1.5, borderColor: color.sageInk },
   input: { ...type.body, flex: 1, minWidth: 0, color: color.ink, paddingVertical: 0, outlineWidth: 0 },
-});
+}));

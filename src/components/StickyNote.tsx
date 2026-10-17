@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { ReduceMotion, interpolate, useAnimatedStyle, useReducedMotion, useSharedValue, withSpring } from 'react-native-reanimated';
 
-import { color, radius, shadow, size, space, type, type ColorName } from '@/theme';
+import { makeStyles, useColors, radius, shadow, size, space, type, type ColorName } from '@/theme';
 import { Tap } from './Tap';
 import { Text } from './Text';
 
@@ -24,6 +24,7 @@ const TAPE_OPACITY = 0.65;
 const TAPE_TILT = '-3deg';
 
 function Tape({ width }: { width: number }) {
+  const styles = useStyles();
   return (
     <View
       pointerEvents="none"
@@ -50,6 +51,7 @@ type KitchenNoteProps = {
  * they stay the same height when text grows.
  */
 export function KitchenNote({ label, count, flag, paper, tilt, onPress, accessibilityLabel }: KitchenNoteProps) {
+  const styles = useStyles();
   return (
     <LiftingNote
       noteStyle={styles.small}
@@ -89,6 +91,8 @@ type LiftingNoteProps = {
 
 /** A note you can press: while pressed it straightens and lifts a little; with Reduce Motion on it just dims. */
 function LiftingNote({ children, noteStyle, areaStyle, corner, paper, tilt, onPress, accessibilityRole, accessibilityLabel }: LiftingNoteProps) {
+  const color = useColors();
+  const styles = useStyles();
   const reduced = useReducedMotion();
   const press = useSharedValue(0);
   const lifted = useAnimatedStyle(() => ({
@@ -148,6 +152,8 @@ export function PaperNote({
   tilt: number;
   style?: StyleProp<ViewStyle>;
 }) {
+  const color = useColors();
+  const styles = useStyles();
   return (
     <View style={[styles.small, { backgroundColor: color[paper], transform: [{ rotate: `${tilt}deg` }] }, style]}>
       <Tape width={40} />
@@ -166,6 +172,7 @@ export function PaperNote({
 
 /** "2 use soon" in bronze handwriting with a bronze underline. */
 export function UseSoonFlag({ text }: { text: string }) {
+  const styles = useStyles();
   return (
     <View style={styles.flag}>
       <Text variant="noteBody" color="bronzeInk" style={styles.flagText}>
@@ -188,6 +195,8 @@ type BigNoteProps = {
 
 /** The full-width note: the empty kitchen, Tonight's recipe, the kitchen you're joining. */
 export function BigNote({ children, paper = 'cornsilk', tilt = -1, style, onPress, accessibilityLabel, accessibilityRole = 'link' }: BigNoteProps) {
+  const color = useColors();
+  const styles = useStyles();
   if (onPress) {
     return (
       <LiftingNote
@@ -212,7 +221,7 @@ export function BigNote({ children, paper = 'cornsilk', tilt = -1, style, onPres
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((color) => ({
   tape: {
     position: 'absolute',
     left: '50%',
@@ -260,4 +269,4 @@ const styles = StyleSheet.create({
     borderBottomColor: color.bronze,
   },
   flagText: { fontFamily: type.noteTitle.fontFamily },
-});
+}));

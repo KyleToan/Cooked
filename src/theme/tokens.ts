@@ -16,57 +16,90 @@ export const font = {
   Caveat_700Bold: ios ? 'Caveat-Bold' : 'Caveat_700Bold',
 } as const;
 
-export const color = {
-  /** Page background on every screen. Cooked is white-first; color lives in the sticky notes, not the ground. */
-  surface: '#FFFFFF',
-  /** Secondary pills, the segmented switch track, steppers and unpicked filter pills. No border, no shadow. */
-  surfaceSunken: '#F4F4F1',
-  /** Rare small counters. Location names on rows are plain ink-muted text, not tags. */
-  surfaceTag: '#F3F3F0',
-  /** 1px outline on the search field, fields, the account button, the tab island and the undo bar. */
-  line: '#ECECE8',
-  /** Dividers between list rows; empty track of the progress bar. */
-  lineSoft: '#F1F1EE',
-  /** Unchecked checkbox outline and dashed add-item box. */
-  checkBorder: '#CFCFC9',
-  /** Outline of things you fill in or tick: unchecked checkbox, radio, dashed add box, text fields and the search field. 3.4:1 on surface, the 3:1 non-text minimum. Use line for dividers and the island. */
-  controlLine: '#8C8C86',
-  /** Primary text, headings and default icon color. 17.6:1 on surface. */
-  ink: '#1A1A18',
-  /** Secondary text: row notes, tag text, helper copy. 5.2:1 on surface — safe for small text. */
-  inkMuted: '#6E6E68',
-  /** Placeholders and non-essential hints only. 3.4:1 on surface: FLAGGED. Use ink-muted for small text that matters. */
-  inkSubtle: '#8C8C86',
-  /** Crossed-out done items only. 2.6:1 on surface: FLAGGED. */
-  inkOff: '#A3A39D',
-  /** The short underscore under the active tab icon in the island. Same as ink-muted (5.2:1), so the mark reads at a glance. */
-  tabMark: '#6E6E68',
-  /** Checkmark inside a checked box (on sage-ink). */
-  onInk: '#FFFFFF',
-  /** Links, icons inside pills, the checked checkbox, an on switch, focused field borders and Undo. 6.4:1 on surface. */
-  sageInk: '#56663A',
-  /** Hover and pressed state for sage-ink links. */
-  sageInkHover: '#3F4B2A',
-  /** To Buy progress bar fill on a line-soft track. */
-  progress: '#6F7D45',
-  /** Errors (a wrong code, an unusable field) and destructive text buttons (Delete account, Leave this kitchen). Never a fill. 6.1:1 on surface. */
-  errorInk: '#A33A2B',
-  /** Underline on the handwritten 'use soon' flag on a sticky note. Nothing else. */
-  bronze: '#D4A373',
-  /** Food that needs using soon: the use-soon icon, 'Best by tomorrow' lines and the note flag. 6.0:1 on surface. Never for links or buttons. */
-  bronzeInk: '#8A5A2B',
-  /** Sticky note paper: Fridge. Also the picked Fridge tab in Kitchen and the Tonight note. */
-  cornsilk: '#FEFAE0',
-  /** Sticky note paper: Pantry. Also the picked Pantry tab. */
-  papaya: '#FAEDCD',
-  /** Sticky note paper: Freezer. Also the picked Freezer tab and a picked choice card in onboarding. */
-  beige: '#E9EDC9',
-  /** The primary button fill (one per screen, with ink text), a picked filter pill and the picked To Buy tab. 12:1 with ink text. */
-  sage: '#CCD5AE',
-  /** Handwritten text on every sticky note. 12:1 or better on all four papers. */
-  noteInk: '#2A2A26',
-  /** Second line on a sticky note (counts like '12 items'). 7:1 or better on all four papers. */
-  noteInkSoft: '#4A4A42',
+/** Light and dark values for every color role. Read the current one with useColors(). */
+export const palette = {
+  light: {
+    /** Page background on every screen. Cooked is white-first; color lives in the sticky notes, not the ground. */
+    surface: '#FFFFFF',
+    /** Sheets that slide up over a screen. The same white as surface in light; one step lighter than surface in dark, the way iOS lifts sheets, so the sheet stands off the page under the scrim. */
+    surfaceRaised: '#FFFFFF',
+    /** Secondary pills, the segmented switch track, steppers and unpicked filter pills. No border, no shadow. */
+    surfaceSunken: '#F4F4F1',
+    /** Rare small counters. Location names on rows are plain ink-muted text, not tags. */
+    surfaceTag: '#F3F3F0',
+    /** 1px outline on the search field, fields, the account button, the tab island and the undo bar. */
+    line: '#ECECE8',
+    /** Dividers between list rows; empty track of the progress bar. */
+    lineSoft: '#F1F1EE',
+    /** Unchecked checkbox outline and dashed add-item box. */
+    checkBorder: '#CFCFC9',
+    /** Outline of things you fill in or tick: unchecked checkbox, radio, dashed add box, text fields and the search field. 3.4:1 on surface, the 3:1 non-text minimum. Use line for dividers and the island. */
+    controlLine: '#8C8C86',
+    /** Primary text, headings and default icon color. 17.6:1 on surface. */
+    ink: '#1A1A18',
+    /** Secondary text: row notes, tag text, helper copy. 5.2:1 on surface — safe for small text. */
+    inkMuted: '#6E6E68',
+    /** Placeholders and non-essential hints only. 3.4:1 on surface: FLAGGED. Use ink-muted for small text that matters. */
+    inkSubtle: '#8C8C86',
+    /** Crossed-out done items only. 2.6:1 on surface: FLAGGED. */
+    inkOff: '#A3A39D',
+    /** The short underscore under the active tab icon in the island. Same as ink-muted (5.2:1), so the mark reads at a glance. */
+    tabMark: '#6E6E68',
+    /** Checkmark inside a checked box (on sage-ink). */
+    onInk: '#FFFFFF',
+    /** Links, icons inside pills, the checked checkbox, an on switch, focused field borders and Undo. 6.4:1 on surface. */
+    sageInk: '#56663A',
+    /** Hover and pressed state for sage-ink links. */
+    sageInkHover: '#3F4B2A',
+    /** To Buy progress bar fill on a line-soft track. */
+    progress: '#6F7D45',
+    /** Errors (a wrong code, an unusable field) and destructive text buttons (Delete account, Leave this kitchen). Never a fill. 6.1:1 on surface. */
+    errorInk: '#A33A2B',
+    /** Underline on the handwritten 'use soon' flag on a sticky note. Nothing else. */
+    bronze: '#D4A373',
+    /** Food that needs using soon: the use-soon icon, 'Best by tomorrow' lines and the note flag. 6.0:1 on surface. Never for links or buttons. */
+    bronzeInk: '#8A5A2B',
+    /** Sticky note paper: Fridge. Also the picked Fridge tab in Kitchen and the Tonight note. */
+    cornsilk: '#FEFAE0',
+    /** Sticky note paper: Pantry. Also the picked Pantry tab. */
+    papaya: '#FAEDCD',
+    /** Sticky note paper: Freezer. Also the picked Freezer tab and a picked choice card in onboarding. */
+    beige: '#E9EDC9',
+    /** The primary button fill (one per screen, with ink text), a picked filter pill and the picked To Buy tab. 12:1 with ink text. */
+    sage: '#CCD5AE',
+    /** Handwritten text on every sticky note. 12:1 or better on all four papers. */
+    noteInk: '#2A2A26',
+    /** Second line on a sticky note (counts like '12 items'). 7:1 or better on all four papers. */
+    noteInkSoft: '#4A4A42',
+  },
+  dark: {
+    surface: '#141413',
+    surfaceRaised: '#21211F',
+    surfaceSunken: '#252522',
+    surfaceTag: '#262623',
+    line: '#34342F',
+    lineSoft: '#262623',
+    checkBorder: '#55554F',
+    controlLine: '#85857E',
+    ink: '#EDEDE7',
+    inkMuted: '#A6A69F',
+    inkSubtle: '#7C7C75',
+    inkOff: '#5C5C57',
+    tabMark: '#A6A69F',
+    onInk: '#141413',
+    sageInk: '#B3C38A',
+    sageInkHover: '#C9D6A4',
+    progress: '#97A866',
+    errorInk: '#F2907F',
+    bronze: '#A87D52',
+    bronzeInk: '#DDAA72',
+    cornsilk: '#48442D',
+    papaya: '#4D4130',
+    beige: '#40462F',
+    sage: '#3D4829',
+    noteInk: '#F3EEDA',
+    noteInkSoft: '#CFC9B4',
+  },
 } as const;
 
 export const type = {
@@ -166,5 +199,6 @@ export const shadow = {
   note: { boxShadow: '0 1px 1px rgba(26,26,24,0.06), 0 8px 16px -6px rgba(26,26,24,0.18)' },
 } as const;
 
-export type ColorName = keyof typeof color;
+export type ColorName = keyof typeof palette.light;
+export type Palette = { [K in ColorName]: string };
 export type TypeName = keyof typeof type;

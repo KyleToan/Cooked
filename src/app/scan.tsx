@@ -26,7 +26,10 @@ import { parseReceipt } from '@/data/receipt';
 import { SAMPLE_RECIPE_PAGE, SAMPLE_SCAN } from '@/data/seed';
 import type { ScanLine } from '@/data/types';
 import { haptics } from '@/hooks/haptics';
-import { color, radius, size, space } from '@/theme';
+import { FixedScheme, palette, radius, size, space } from '@/theme';
+
+// Camera chrome sits on the feed, so it keeps the same dark-glass and white colors in both appearances.
+const color = palette.light;
 
 /*
  * Receipt and Recipe ship. Fridge, Pantry and Freezer (point at a shelf) need
@@ -214,147 +217,149 @@ export default function Scan() {
   };
 
   return (
-    <View style={styles.root}>
-      <StatusBar style="light" />
-      {granted ? (
-        <CameraView ref={camera} style={StyleSheet.absoluteFill} facing="back" flash={flash ? 'on' : 'off'} />
-      ) : null}
-      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.flash, flashStyle]} />
+    <FixedScheme value="light">
+      <View style={styles.root}>
+        <StatusBar style="light" />
+        {granted ? (
+          <CameraView ref={camera} style={StyleSheet.absoluteFill} facing="back" flash={flash ? 'on' : 'off'} />
+        ) : null}
+        <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.flash, flashStyle]} />
 
-      <View>
-        <Scrim edge="top" style={styles.scrimTop} />
-        <View style={[styles.top, { paddingTop: insets.top + space.s2 }]}>
-          <Tap accessibilityRole="button" accessibilityLabel="Close" onPress={() => router.back()}>
-            <Glass style={styles.round}>
-              <Icon name="close" size={20} color="onInk" />
-            </Glass>
-          </Tap>
-          <Text variant="body" weight="semibold" color="onInk" maxFontSizeMultiplier={CHROME_MAX_SCALE}>
-            Scan
-          </Text>
-          {__DEV__ ? (
-            // Dev only: reach "Couldn't read this receipt" without a bad photo.
-            <Tap
-              accessibilityRole="button"
-              accessibilityLabel="Developer: show the couldn't read this receipt screen"
-              onPress={() => router.push({ pathname: '/scan-unreadable', params: { flow } })}
-              style={styles.round}
-            >
-              <Text variant="micro" color="onInk" style={styles.dev} maxFontSizeMultiplier={1}>
-                DEV{'\n'}error
+        <View>
+          <Scrim edge="top" style={styles.scrimTop} />
+          <View style={[styles.top, { paddingTop: insets.top + space.s2 }]}>
+            <Tap accessibilityRole="button" accessibilityLabel="Close" onPress={() => router.back()}>
+              <Glass style={styles.round}>
+                <Icon name="close" size={20} color="onInk" />
+              </Glass>
+            </Tap>
+            <Text variant="body" weight="semibold" color="onInk" maxFontSizeMultiplier={CHROME_MAX_SCALE}>
+              Scan
+            </Text>
+            {__DEV__ ? (
+              // Dev only: reach "Couldn't read this receipt" without a bad photo.
+              <Tap
+                accessibilityRole="button"
+                accessibilityLabel="Developer: show the couldn't read this receipt screen"
+                onPress={() => router.push({ pathname: '/scan-unreadable', params: { flow } })}
+                style={styles.round}
+              >
+                <Text variant="micro" color="onInk" style={styles.dev} maxFontSizeMultiplier={1}>
+                  DEV{'\n'}error
+                </Text>
+              </Tap>
+            ) : (
+              <View style={styles.round} />
+            )}
+          </View>
+
+          <View style={styles.hint}>
+            {busy ? (
+              <View style={styles.reading}>
+                <CookingLoader color="onInk" />
+                <Text variant="body" weight="medium" color="onInk" style={styles.center} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
+                  {mode === 'recipe' ? 'Reading the recipe…' : 'Reading your receipt…'}
+                </Text>
+              </View>
+            ) : granted || !permission ? (
+              <>
+                <Text variant="body" weight="medium" color="onInk" style={styles.center} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
+                  {current.hint}
+                </Text>
+                <Text variant="caption" color="onInk" style={[styles.center, styles.soft]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
+                  {current.tip}
+                </Text>
+              </>
+            ) : (
+              <PermissionAsk canAsk={permission.canAskAgain} onAsk={requestPermission} />
+            )}
+          </View>
+        </View>
+
+        <CornerGuides style={styles.guides} />
+
+        <View style={{ paddingBottom: Math.max(insets.bottom, space.s4) + space.s5 }}>
+          <Scrim edge="bottom" style={styles.scrimBottom} />
+          <View style={styles.controls}>
+            <Tap accessibilityRole="button" accessibilityLabel="Choose a photo or screenshot" onPress={pickPhoto} style={styles.side}>
+              <Glass style={styles.square}>
+                <Icon name="photos" size={GLYPH} color="onInk" />
+              </Glass>
+              <Text variant="micro" color="onInk" maxFontSizeMultiplier={CHROME_MAX_SCALE}>
+                Photos
               </Text>
             </Tap>
-          ) : (
-            <View style={styles.round} />
-          )}
-        </View>
-
-        <View style={styles.hint}>
-          {busy ? (
-            <View style={styles.reading}>
-              <CookingLoader color="onInk" />
-              <Text variant="body" weight="medium" color="onInk" style={styles.center} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
-                {mode === 'recipe' ? 'Reading the recipe…' : 'Reading your receipt…'}
-              </Text>
-            </View>
-          ) : granted || !permission ? (
-            <>
-              <Text variant="body" weight="medium" color="onInk" style={styles.center} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
-                {current.hint}
-              </Text>
-              <Text variant="caption" color="onInk" style={[styles.center, styles.soft]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
-                {current.tip}
-              </Text>
-            </>
-          ) : (
-            <PermissionAsk canAsk={permission.canAskAgain} onAsk={requestPermission} />
-          )}
-        </View>
-      </View>
-
-      <CornerGuides style={styles.guides} />
-
-      <View style={{ paddingBottom: Math.max(insets.bottom, space.s4) + space.s5 }}>
-        <Scrim edge="bottom" style={styles.scrimBottom} />
-        <View style={styles.controls}>
-          <Tap accessibilityRole="button" accessibilityLabel="Choose a photo or screenshot" onPress={pickPhoto} style={styles.side}>
-            <Glass style={styles.square}>
-              <Icon name="photos" size={GLYPH} color="onInk" />
-            </Glass>
-            <Text variant="micro" color="onInk" maxFontSizeMultiplier={CHROME_MAX_SCALE}>
-              Photos
-            </Text>
-          </Tap>
-          {/* A plain Pressable: the shutter scales on press instead of Tap's dim, and dims only while busy. */}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Take photo"
-            accessibilityState={{ busy }}
-            disabled={busy}
-            onPressIn={() => {
-              press.set(withSpring(0.92, PRESS_SPRING));
-            }}
-            onPressOut={() => {
-              press.set(withSpring(1, PRESS_SPRING));
-            }}
-            onPress={capture}
-          >
-            <Animated.View style={[styles.shutter, busy && styles.busy, shutterStyle]}>
-              <View style={styles.shutterDot} />
-            </Animated.View>
-          </Pressable>
-          <Tap
-            accessibilityRole="button"
-            accessibilityLabel="Flash"
-            accessibilityState={{ selected: flash }}
-            onPress={() => {
-              haptics.select();
-              setFlash(!flash);
-            }}
-            style={styles.side}
-          >
-            <Glass style={styles.square} on={flash}>
-              <Icon name="flash" size={GLYPH} color={flash ? 'ink' : 'onInk'} />
-            </Glass>
-            <Text variant="micro" color="onInk" maxFontSizeMultiplier={CHROME_MAX_SCALE}>
-              {flash ? 'Flash on' : 'Flash'}
-            </Text>
-          </Tap>
-        </View>
-        {modes.length ? (
-          <Glass style={styles.strip}>
-            <View
-              accessibilityRole="tablist"
-              accessibilityLabel="Scan mode"
-              style={styles.modes}
-              onLayout={(e) => setStripW(e.nativeEvent.layout.width)}
+            {/* A plain Pressable: the shutter scales on press instead of Tap's dim, and dims only while busy. */}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Take photo"
+              accessibilityState={{ busy }}
+              disabled={busy}
+              onPressIn={() => {
+                press.set(withSpring(0.92, PRESS_SPRING));
+              }}
+              onPressOut={() => {
+                press.set(withSpring(1, PRESS_SPRING));
+              }}
+              onPress={capture}
             >
-              {modeW > 0 ? <Animated.View pointerEvents="none" style={[styles.modePill, { width: modeW }, modePill]} /> : null}
-              {modes.map((m) => {
-                const on = m.id === mode;
-                return (
-                  <Tap
-                    key={m.id}
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: on }}
-                    onPress={() => {
-                      if (on) return;
-                      haptics.select();
-                      setMode(m.id);
-                    }}
-                    style={styles.mode}
-                  >
-                    <Text variant="caption" weight="medium" color={on ? 'ink' : 'onInk'} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
-                      {m.label}
-                    </Text>
-                  </Tap>
-                );
-              })}
-            </View>
-          </Glass>
-        ) : null}
+              <Animated.View style={[styles.shutter, busy && styles.busy, shutterStyle]}>
+                <View style={styles.shutterDot} />
+              </Animated.View>
+            </Pressable>
+            <Tap
+              accessibilityRole="button"
+              accessibilityLabel="Flash"
+              accessibilityState={{ selected: flash }}
+              onPress={() => {
+                haptics.select();
+                setFlash(!flash);
+              }}
+              style={styles.side}
+            >
+              <Glass style={styles.square} on={flash}>
+                <Icon name="flash" size={GLYPH} color={flash ? 'ink' : 'onInk'} />
+              </Glass>
+              <Text variant="micro" color="onInk" maxFontSizeMultiplier={CHROME_MAX_SCALE}>
+                {flash ? 'Flash on' : 'Flash'}
+              </Text>
+            </Tap>
+          </View>
+          {modes.length ? (
+            <Glass style={styles.strip}>
+              <View
+                accessibilityRole="tablist"
+                accessibilityLabel="Scan mode"
+                style={styles.modes}
+                onLayout={(e) => setStripW(e.nativeEvent.layout.width)}
+              >
+                {modeW > 0 ? <Animated.View pointerEvents="none" style={[styles.modePill, { width: modeW }, modePill]} /> : null}
+                {modes.map((m) => {
+                  const on = m.id === mode;
+                  return (
+                    <Tap
+                      key={m.id}
+                      accessibilityRole="tab"
+                      accessibilityState={{ selected: on }}
+                      onPress={() => {
+                        if (on) return;
+                        haptics.select();
+                        setMode(m.id);
+                      }}
+                      style={styles.mode}
+                    >
+                      <Text variant="caption" weight="medium" color={on ? 'ink' : 'onInk'} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
+                        {m.label}
+                      </Text>
+                    </Tap>
+                  );
+                })}
+              </View>
+            </Glass>
+          ) : null}
+        </View>
       </View>
-    </View>
+    </FixedScheme>
   );
 }
 

@@ -4,8 +4,9 @@ import { useEffect } from 'react';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import * as SystemUI from 'expo-system-ui';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -13,11 +14,13 @@ import { CookingLoader } from '@/components/Loader';
 import { Text } from '@/components/Text';
 import { StoreProvider, useStore } from '@/data/store';
 import { useLocalNotifications } from '@/hooks/useLocalNotifications';
-import { color, fontFaces, space } from '@/theme';
+import { makeStyles, useColors, fontFaces, space } from '@/theme';
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  const styles = useStyles();
+  const color = useColors();
   // Native builds bundle the fonts (expo-font plugin in app.json), so this is already loaded there;
   // it only loads them in Expo Go and on web.
   const [loaded, error] = useFonts(fontFaces);
@@ -25,6 +28,11 @@ export default function RootLayout() {
   useEffect(() => {
     if (loaded || error) SplashScreen.hideAsync();
   }, [loaded, error]);
+
+  // The window behind every screen (seen under modals and the keyboard) follows the appearance too.
+  useEffect(() => {
+    SystemUI.setBackgroundColorAsync(color.surface);
+  }, [color.surface]);
 
   // Keep the splash screen up until the fonts are ready, so nothing flashes
   // in the system font. If loading fails, carry on with the system font.
@@ -34,7 +42,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
         <StoreProvider>
-          <StatusBar style="dark" />
+          <StatusBar style="auto" />
           <Routes />
         </StoreProvider>
       </SafeAreaProvider>
@@ -44,6 +52,8 @@ export default function RootLayout() {
 
 /** Onboarding until it has been finished once, then the app. Scan is shared by both. */
 function Routes() {
+  const color = useColors();
+  const styles = useStyles();
   const { state, ready } = useStore();
   const onboarded = state.session.onboarded;
   useLocalNotifications(state);
@@ -90,7 +100,7 @@ function Routes() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((color) => ({
   root: { flex: 1 },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.s4, backgroundColor: color.surface },
-});
+}));

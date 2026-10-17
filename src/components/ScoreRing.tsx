@@ -1,13 +1,14 @@
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 
 import { scoreText } from '@/data/ranking';
-import { color } from '@/theme';
+import { makeStyles } from '@/theme';
 import { Text } from './Text';
 
 const RING = { sm: 36, md: 44, lg: 60 } as const;
 
 /** A score out of 10 in a sage-ink ring, the way Beli shows it. */
 export function ScoreRing({ score, size: s = 'md' }: { score: number; size?: keyof typeof RING }) {
+  const styles = useStyles();
   const d = RING[s];
   return (
     <View
@@ -27,6 +28,6 @@ export function ScoreRing({ score, size: s = 'md' }: { score: number; size?: key
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((color) => ({
   ring: { alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: color.sageInk },
-});
+}));

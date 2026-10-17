@@ -3,6 +3,8 @@
 
 export const brand = {
   apple: '#000000',
+  /** Apple's white logo, for the dark appearance. */
+  appleOnDark: '#FFFFFF',
   googleBlue: '#4285F4',
   googleGreen: '#34A853',
   googleYellow: '#FBBC05',

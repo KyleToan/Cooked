@@ -1,7 +1,7 @@
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState, type ReactNode } from 'react';
-import { Linking, Platform, StyleSheet, View } from 'react-native';
+import { Linking, Platform, useColorScheme, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { ErrorLine } from '@/components/Controls';
@@ -11,7 +11,7 @@ import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
 import { Canceled, signInWithApple, signInWithGoogle } from '@/data/auth';
 import { useStore } from '@/data/store';
-import { brand, color, radius, size, space, type } from '@/theme';
+import { makeStyles, brand, radius, size, space, type } from '@/theme';
 
 const BUTTON_H = size.controlHeight + space.s1;
 const LOGO = 20;
@@ -23,6 +23,8 @@ const DIMMED = 0.5;
  * faked: Apple and Google skip straight to Your name.
  */
 export default function SignIn() {
+  const styles = useStyles();
+  const dark = useColorScheme() === 'dark';
   const router = useRouter();
   const { actions } = useStore();
   const loggingIn = useLocalSearchParams<{ intent?: string }>().intent === 'login';
@@ -94,7 +96,9 @@ export default function SignIn() {
           // Apple's own button, so it always matches Apple's rules.
           <AppleAuthentication.AppleAuthenticationButton
             buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
-            buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE_OUTLINE}
+            buttonStyle={
+              dark ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE : AppleAuthentication.AppleAuthenticationButtonStyle.WHITE_OUTLINE
+            }
             cornerRadius={BUTTON_H / 2}
             style={[styles.apple, busy === 'apple' && styles.dimmed]}
             onPress={() => provider('apple')}
@@ -120,6 +124,7 @@ export default function SignIn() {
 }
 
 function Outline({ label, logo, busy, onPress }: { label: string; logo?: ReactNode; busy?: boolean; onPress: () => void }) {
+  const styles = useStyles();
   return (
     <Tap accessibilityRole="button" accessibilityState={{ busy }} onPress={onPress} style={styles.outline}>
       {busy ? <Spinner size={LOGO} /> : logo}
@@ -131,8 +136,9 @@ function Outline({ label, logo, busy, onPress }: { label: string; logo?: ReactNo
 }
 
 function AppleLogo() {
+  const dark = useColorScheme() === 'dark';
   return (
-    <Svg width={LOGO} height={LOGO} viewBox="0 0 24 24" fill={brand.apple}>
+    <Svg width={LOGO} height={LOGO} viewBox="0 0 24 24" fill={dark ? brand.appleOnDark : brand.apple}>
       <Path d="M16.4 12.6c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.9-3.5.9-.7 0-1.8-.9-3-.8-1.5 0-3 .9-3.8 2.3-1.6 2.8-.4 7 1.2 9.3.8 1.1 1.7 2.4 2.9 2.3 1.2 0 1.6-.7 3-.7s1.8.7 3 .7c1.3 0 2-1.1 2.8-2.3.9-1.3 1.2-2.5 1.3-2.6-.1 0-2.5-1-2.5-3.8zM14.2 5.9c.6-.8 1.1-1.8 1-2.9-.9 0-2.1.6-2.7 1.4-.6.7-1.1 1.8-1 2.8 1 .1 2.1-.5 2.7-1.3z" />
     </Svg>
   );
@@ -150,7 +156,7 @@ function GoogleLogo() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((color) => ({
   buttons: { gap: space.s3 },
   legal: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' },
   apple: { height: BUTTON_H, width: '100%' },
@@ -170,4 +176,4 @@ const styles = StyleSheet.create({
   outlineLabel: { flexShrink: 1, textAlign: 'center' },
   or: { flexDirection: 'row', alignItems: 'center', gap: space.s3, paddingVertical: space.s1 },
   rule: { flex: 1, height: 1, backgroundColor: color.line },
-});
+}));

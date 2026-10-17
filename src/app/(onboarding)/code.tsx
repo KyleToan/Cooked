@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, TextInput, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 
 import { ErrorLine } from '@/components/Controls';
@@ -12,7 +12,7 @@ import { failText, failureOf, type Failure } from '@/data/errors';
 import { useStore } from '@/data/store';
 import { supabase } from '@/data/supabase';
 import { haptics } from '@/hooks/haptics';
-import { color, radius, size, space, type } from '@/theme';
+import { makeStyles, radius, size, space, type } from '@/theme';
 
 /** Without a backend sign-in is faked: this is the only code that works. */
 const CODE = '481726';
@@ -30,6 +30,7 @@ const SHAKE_STEP = 45;
 
 /** Six boxes, "Sent to … · Change", the resend timer, and the wrong-code state. */
 export default function Code() {
+  const styles = useStyles();
   const router = useRouter();
   const { state } = useStore();
   const input = useRef<TextInput>(null);
@@ -180,7 +181,7 @@ export default function Code() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((color) => ({
   group: { gap: space.cozy },
   boxes: { flexDirection: 'row', gap: space.cozy },
   box: {
@@ -201,4 +202,4 @@ const styles = StyleSheet.create({
   sent: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
   change: { minHeight: size.targetMin, justifyContent: 'center' },
   timer: { minHeight: size.targetMin, alignItems: 'center', justifyContent: 'center' },
-});
+}));

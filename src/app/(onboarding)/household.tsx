@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 
 import { ActionPill } from '@/components/ActionPill';
 import { ErrorLine } from '@/components/Controls';
@@ -14,7 +14,7 @@ import { useStore } from '@/data/store';
 import { pendingInvite } from '@/data/pendingInvite';
 import { hasBackend } from '@/data/supabase';
 import type { KitchenPath } from '@/data/types';
-import { color, radius, space } from '@/theme';
+import { makeStyles, radius, space } from '@/theme';
 
 const CHOICES: { id: KitchenPath; title: string; sub: string }[] = [
   { id: 'solo', title: 'Just me', sub: 'One kitchen, one list.' },
@@ -30,6 +30,7 @@ const RADIO = 22;
 
 /** Just me / Me and my household / I have an invite. */
 export default function Household() {
+  const styles = useStyles();
   const router = useRouter();
   const { state, actions, reload } = useStore();
   // Opened from an invite link: start on I have an invite.
@@ -95,7 +96,7 @@ export default function Household() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((color) => ({
   choices: { gap: space.s3 },
   choice: { flexDirection: 'row', alignItems: 'center', gap: space.roomy, padding: space.s4, borderRadius: radius.field },
   on: { backgroundColor: color.beige, borderWidth: 1.5, borderColor: color.sageInk },
@@ -104,4 +105,4 @@ const styles = StyleSheet.create({
   radio: { width: RADIO, height: RADIO, flexShrink: 0, borderRadius: radius.pill },
   radioOn: { borderWidth: 7, borderColor: color.sageInk },
   radioOff: { borderWidth: 1.5, borderColor: color.controlLine },
-});
+}));

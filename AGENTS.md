@@ -68,6 +68,7 @@ Without both, the app runs in its local fake mode (sign-in code `481726`, nothin
 ### UI code rules
 
 - Import colors, type, space, radius, size and shadow from `@/theme`. Never write a hex value, font name or font size in a component.
+- Colors follow the system appearance (Decisions #143). Read them with `useColors()`, or write a color-using StyleSheet as `const useStyles = makeStyles((color) => ({ … }))` and call `useStyles()` in the component. Never read `palette.light` or `palette.dark` directly except for things that look the same in both (the camera, scrims).
 - Use `Text` from `@/components/Text` (with a `variant` and `color` token) instead of React Native's `Text`, and `Icon` from `@/components/Icon` for icons.
 - Never edit the generated files (`src/theme/tokens.ts`, `src/theme/fonts.ts`, `src/components/icon-data.ts`). Change `design/system/` and run `npm run tokens`.
 - Use the system keyboard, share sheet, camera and Sign in with Apple. The prototypes only fake these.

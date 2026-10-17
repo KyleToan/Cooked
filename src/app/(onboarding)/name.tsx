@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 
 import { ActionPill } from '@/components/ActionPill';
 import { ErrorLine, Field } from '@/components/Controls';
@@ -10,12 +10,13 @@ import { failText, type Failure } from '@/data/errors';
 import * as api from '@/data/kitchenApi';
 import { useStore } from '@/data/store';
 import { hasBackend } from '@/data/supabase';
-import { color, radius, space } from '@/theme';
+import { makeStyles, radius, space } from '@/theme';
 
 const PREVIEW_BOX = 20;
 
 /** First name, with a preview of how it shows up on a To Buy row. */
 export default function Name() {
+  const styles = useStyles();
   const router = useRouter();
   const { state, actions } = useStore();
   const [name, setName] = useState(state.user.name);
@@ -78,7 +79,7 @@ export default function Name() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((color) => ({
   preview: { gap: space.s2 },
   card: {
     flexDirection: 'row',
@@ -90,4 +91,4 @@ const styles = StyleSheet.create({
     backgroundColor: color.surfaceSunken,
   },
   box: { width: PREVIEW_BOX, height: PREVIEW_BOX, borderRadius: radius.check - 1, borderWidth: 1.5, borderColor: color.controlLine },
-});
+}));
