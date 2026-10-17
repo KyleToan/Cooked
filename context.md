@@ -25,7 +25,7 @@ The feel: calm, white, uncluttered, with one warm, homemade touch (sticky notes 
 
 Every screen is designed. `design/screens/README.md` lists them all with their states and where each one goes; `design/screens/screenshots/` has a picture of each.
 
-- **App:** Home (and an empty first-run Home), Scan, Check your scan, Couldn't read this receipt, Your Kitchen (Fridge, Pantry, Freezer and To Buy tabs), Recipes, Recipe, Import a recipe (and its error), Account (and the delete-account sheet), Rivera kitchen (household), Notifications.
+- **App:** Home (and an empty first-run Home), Scan, Check your scan, Couldn't read this receipt, Your Kitchen (Fridge, Pantry, Freezer and To Buy tabs), Recipes (with a Ranked filter), Recipe (with the Beli-style rating sheet, `design/recipe-ranking.md`), Import a recipe (and its error), Account (and the delete-account sheet), Rivera kitchen (household), Notifications.
 - **Onboarding:** Welcome, Log in or sign up (Apple, Google, email or phone with a code, no password), Your name, Who you cook with (Just me / Me and my household / I have an invite), Join a kitchen, Scan your first receipt, camera and check items, Invite your household, Your kitchen is ready.
 
 ## Design

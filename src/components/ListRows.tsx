@@ -12,6 +12,7 @@ import { color, radius, size, space, type } from '@/theme';
 import { Chevron } from './Chevron';
 import { ROW_OPEN, Stepper } from './Controls';
 import { Icon } from './Icon';
+import { ScoreRing } from './ScoreRing';
 import { PAPER } from './StickyNote';
 import { Tap } from './Tap';
 import { Text } from './Text';
@@ -261,13 +262,15 @@ type RecipeRowProps = {
   recipe: Recipe;
   onOpen: () => void;
   onToggleToBuy: () => void;
+  /** Your score out of 10, once ranked: a ring on the right, as on Beli. */
+  score?: number;
 };
 
 /** The pill shows when this few are missing, the same as the "Missing 1–2" filter. More than that is too much to shop for. */
 const MAX_MISSING_PILL = 2;
 
 /** Name and time, what you have, the source, and "Add N to To Buy" when one or two things are missing. */
-export function RecipeRow({ recipe, onOpen, onToggleToBuy }: RecipeRowProps) {
+export function RecipeRow({ recipe, onOpen, onToggleToBuy, score }: RecipeRowProps) {
   const n = recipe.missing.length;
   const have =
     n === 0
@@ -286,21 +289,23 @@ export function RecipeRow({ recipe, onOpen, onToggleToBuy }: RecipeRowProps) {
         />
       ) : null}
       <View style={[recipe.photo ? styles.grow : null, styles.recipeBody]}>
-        <Tap accessibilityRole="link" onPress={onOpen} style={styles.recipeText}>
-          <View style={styles.recipeTop}>
-            <Text weight="semibold" style={styles.grow}>
-              {recipe.title}
-            </Text>
+        <Tap accessibilityRole="link" onPress={onOpen} style={styles.recipeLink}>
+          <View style={[styles.grow, styles.recipeText]}>
+            <Text weight="semibold">{recipe.title}</Text>
             <Text variant="caption" color="inkMuted">
-              {recipe.time}
+              {have}
+            </Text>
+            <Text variant="micro" color="inkMuted" weight="regular">
+              {recipe.sourceLine}
             </Text>
           </View>
-          <Text variant="caption" color="inkMuted">
-            {have}
-          </Text>
-          <Text variant="micro" color="inkMuted" weight="regular">
-            {recipe.sourceLine}
-          </Text>
+          {/* Time on top in every row, so it lines up; the score ring sits under it once ranked. */}
+          <View style={styles.recipeSide}>
+            <Text variant="caption" color="inkMuted" style={styles.recipeTime}>
+              {recipe.time}
+            </Text>
+            {score !== undefined ? <ScoreRing score={score} size="sm" /> : null}
+          </View>
         </Tap>
         {(n > 0 && n <= MAX_MISSING_PILL) || recipe.onToBuy ? (
           <ToBuyToggle
@@ -418,8 +423,11 @@ const styles = StyleSheet.create({
   recipeWithPhoto: { flexDirection: 'row', alignItems: 'flex-start', gap: space.s3 },
   thumb: { width: THUMB, height: THUMB, borderRadius: radius.control },
   recipeBody: { gap: space.s1 },
+  recipeLink: { flexDirection: 'row', alignItems: 'flex-start', gap: space.s3 },
+  recipeSide: { alignItems: 'flex-end', gap: space.s2 },
+  // Matches the title's line height, so the time sits on the title's line.
+  recipeTime: { lineHeight: type.body.lineHeight },
   recipeText: { gap: space.tight },
-  recipeTop: { flexDirection: 'row', alignItems: 'baseline', gap: space.s3 },
   toggleHit: { alignSelf: 'flex-start', minHeight: size.targetMin, justifyContent: 'center' },
   toggle: {
     minHeight: size.targetMin - space.s2,

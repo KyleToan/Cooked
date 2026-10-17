@@ -7,11 +7,14 @@ import { ActionPill } from '@/components/ActionPill';
 import { UndoBar } from '@/components/Controls';
 import { BackButton, PushedHeader, SectionHeader } from '@/components/Header';
 import { ToBuyToggle } from '@/components/ListRows';
+import { RateSheet } from '@/components/RateSheet';
+import { ScoreRing } from '@/components/ScoreRing';
 import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
 import { count, isUseSoon, PLACE_LABEL, recipeMeta } from '@/data/helpers';
 import { matches, usedWhenMade } from '@/data/match';
+import { ranked, scores } from '@/data/ranking';
 import { STAPLES } from '@/data/seed';
 import { useStore, useUndo } from '@/data/store';
 import { color, radius, shadow, size, space } from '@/theme';
@@ -26,6 +29,9 @@ export default function RecipeScreen() {
   const made = useUndo(`recipe:${id}`);
   // A photo that won't load hides its block rather than leaving a grey box.
   const [photoFailed, setPhotoFailed] = useState(false);
+  // Bumped on each open, so the rating sheet starts fresh at How was it?
+  const [rateKey, setRateKey] = useState(0);
+  const [rating, setRating] = useState(false);
   const back = () => (router.canGoBack() ? router.back() : router.replace('/recipes'));
 
   if (!recipe) {
@@ -60,6 +66,13 @@ export default function RecipeScreen() {
     </>
   ) : undefined;
   const photo = recipe.photo && !photoFailed ? recipe.photo : undefined;
+  const ids = state.recipes.map((r) => r.id);
+  const score = scores(state.ranks, ids).get(recipe.id);
+  const order = ranked(state.ranks, ids);
+  const rate = () => {
+    setRateKey((k) => k + 1);
+    setRating(true);
+  };
 
   return (
     <Screen
@@ -92,11 +105,30 @@ export default function RecipeScreen() {
         onBack={photo ? undefined : () => router.back()}
         backLabel="Back to recipes"
         below={
-          <Text variant="caption" color="inkMuted">
-            {recipeMeta(recipe)}
-          </Text>
+          <>
+            <Text variant="caption" color="inkMuted">
+              {recipeMeta(recipe)}
+            </Text>
+            {score !== undefined ? (
+              <View style={styles.scoreRow}>
+                <ScoreRing score={score} />
+                <View style={styles.grow}>
+                  <Text weight="semibold">Your score</Text>
+                  <Text variant="caption" color="inkMuted">
+                    {order.length > 1 ? `#${order.indexOf(recipe.id) + 1} of ${order.length} you’ve ranked` : 'Your first ranked recipe'}
+                  </Text>
+                </View>
+                <TextLink label="Rate again" onPress={rate} />
+              </View>
+            ) : (
+              <View style={styles.rateIt}>
+                <ActionPill label="Rate this recipe" icon="check" fill onPress={rate} accessibilityLabel={`Rate ${recipe.title}`} />
+              </View>
+            )}
+          </>
         }
       />
+      <RateSheet key={rateKey} recipe={recipe} visible={rating} onClose={() => setRating(false)} />
 
       {recipe.missing.length ? (
         <View style={styles.list}>
@@ -207,6 +239,8 @@ const styles = StyleSheet.create({
   },
   amount: { flexShrink: 0, maxWidth: '45%', textAlign: 'right' },
   steps: { gap: space.s3 },
+  scoreRow: { flexDirection: 'row', alignItems: 'center', gap: space.s3, marginTop: space.s2 },
+  rateIt: { flexDirection: 'row', marginTop: space.s2 },
   step: { flexDirection: 'row', gap: space.s2 },
   stepNo: { minWidth: space.s5 },
 });

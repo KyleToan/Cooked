@@ -9,6 +9,7 @@ import { AccessibilityInfo } from 'react-native';
 import { useAuth } from './auth';
 import { guessPlace, kitchenName, makeId, shortDate, USE_SOON_DAYS } from './helpers';
 import { checkRecipe, checkRecipes, usedWhenMade } from './match';
+import { EMPTY_RANKS, placeAt, pruned, type Band, type Ranks } from './ranking';
 import { shelfLifeFor } from './receipt';
 import { clearSaved, loadSaved, save, type Saved } from './saved';
 import {
@@ -59,6 +60,8 @@ export type State = {
   toBuy: ToBuyItem[];
   recipes: Recipe[];
   notifications: NotificationSettings;
+  /** Your recipe ranking, kept on this phone only (design/recipe-ranking.md). */
+  ranks: Ranks;
   undo: Undo | null;
 };
 
@@ -71,6 +74,7 @@ export function initialState(): State {
     toBuy: SEED_TO_BUY,
     recipes: SEED_RECIPES,
     notifications: SEED_NOTIFICATIONS,
+    ranks: EMPTY_RANKS,
     undo: null,
   };
 }
@@ -87,6 +91,7 @@ export type Action =
   | { type: 'toggleRecipeToBuy'; id: string }
   | { type: 'madeRecipe'; id: string }
   | { type: 'importRecipe'; recipe: Recipe }
+  | { type: 'rankRecipe'; id: string; band: Band; index: number }
   | { type: 'undo' }
   | { type: 'clearUndo'; scope: string }
   | { type: 'expireUndo'; undo: Undo }
@@ -280,6 +285,10 @@ export function reducer(s: State, a: Action): State {
       if (s.recipes.some((x) => x.id === r.id || (r.url && x.url === r.url))) return s;
       return { ...s, recipes: [...s.recipes, r] };
     }
+    case 'rankRecipe':
+      if (!s.recipes.some((r) => r.id === a.id)) return s;
+      // Indexes count only recipes that still exist (the sheet compares against pruned ranks too).
+      return { ...s, ranks: placeAt(pruned(s.ranks, s.recipes.map((r) => r.id)), a.id, a.band, a.index) };
     case 'undo':
       if (!s.undo) return s;
       return { ...s, ...s.undo.snapshot, undo: null };
@@ -306,7 +315,7 @@ export function reducer(s: State, a: Action): State {
     }
     case 'leaveKitchen':
       // The others keep the kitchen; you start a new, empty one.
-      return { ...s, kitchen: newKitchen(s.user), items: [], toBuy: [], recipes: [], undo: null };
+      return { ...s, kitchen: newKitchen(s.user), items: [], toBuy: [], recipes: [], ranks: EMPTY_RANKS, undo: null };
     case 'setNotification':
       return { ...s, notifications: { ...s.notifications, [a.key]: a.on } };
     case 'setUseSoonTime':
@@ -332,7 +341,7 @@ export function reducer(s: State, a: Action): State {
         return { ...s, session, kitchen: { ...SEED_KITCHEN, people }, items: SEED_ITEMS, toBuy: SEED_TO_BUY, recipes: SEED_RECIPES };
       }
       // Just me or a household: a new, empty kitchen. The first scan fills it.
-      return { ...s, session, kitchen: newKitchen(s.user), items: [], toBuy: [], recipes: [] };
+      return { ...s, session, kitchen: newKitchen(s.user), items: [], toBuy: [], recipes: [], ranks: EMPTY_RANKS };
     }
     case 'skipFirstScan':
       // Nothing scanned yet: Home opens as the empty, first-run Home.
@@ -382,6 +391,8 @@ function makeActions(dispatch: (a: Action) => void) {
     toggleRecipeToBuy: (id: string) => dispatch({ type: 'toggleRecipeToBuy', id }),
     madeRecipe: (id: string) => dispatch({ type: 'madeRecipe', id }),
     importRecipe: (recipe: Recipe) => dispatch({ type: 'importRecipe', recipe }),
+    /** Puts the recipe at `index` (best first) in `band`, out of wherever it was. */
+    rankRecipe: (id: string, band: Band, index: number) => dispatch({ type: 'rankRecipe', id, band, index }),
     undo: () => dispatch({ type: 'undo' }),
     clearUndo: (scope: string) => dispatch({ type: 'clearUndo', scope }),
     renameKitchen: (name: string) => dispatch({ type: 'renameKitchen', name }),

@@ -13,22 +13,24 @@ import { BigNote } from '@/components/StickyNote';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
 import { canMakeNow } from '@/data/helpers';
+import { ranked, scores } from '@/data/ranking';
 import { useStore } from '@/data/store';
 import type { Recipe } from '@/data/types';
 import { size, space } from '@/theme';
 
-type Filter = 'all' | 'now' | 'almost' | 'imported';
+type Filter = 'all' | 'now' | 'almost' | 'imported' | 'ranked';
 
 const FILTERS: { value: Filter; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'now', label: 'Can make now' },
   { value: 'almost', label: 'Missing 1 or 2' },
   { value: 'imported', label: 'Imported' },
+  { value: 'ranked', label: 'Ranked' },
 ];
 
-const passes = (r: Recipe, f: Filter) => {
+const passes = (r: Recipe, f: Filter, isRanked: boolean) => {
   const miss = r.need - r.have;
-  return f === 'all' || (f === 'now' && miss === 0) || (f === 'almost' && miss > 0 && miss <= 2) || (f === 'imported' && r.imported);
+  return f === 'all' || (f === 'ranked' && isRanked) || (f === 'now' && miss === 0) || (f === 'almost' && miss > 0 && miss <= 2) || (f === 'imported' && r.imported);
 };
 
 export default function Recipes() {
@@ -55,9 +57,16 @@ export default function Recipes() {
     r.title.toLowerCase().includes(q) ||
     r.ingredients.some((g) => g.name.toLowerCase().includes(q)) ||
     r.missing.some((m) => m.toLowerCase().includes(q));
-  const shown = recipes.filter((r) => r !== tonight && passes(r, filter) && matches(r));
-  const tonightShown = Boolean(tonight && matches(tonight));
-  const noneMatch = recipes.length > 0 && shown.length === 0 && !(tonightShown && passes(tonight!, filter));
+  const ids = recipes.map((r) => r.id);
+  const score = scores(state.ranks, ids);
+  const order = ranked(state.ranks, ids);
+  // Ranked is your list best first, Tonight's pick included, so the note steps aside.
+  const byRank = filter === 'ranked';
+  const shown = recipes
+    .filter((r) => (byRank || r !== tonight) && passes(r, filter, score.has(r.id)) && matches(r))
+    .sort((a, b) => (byRank ? order.indexOf(a.id) - order.indexOf(b.id) : 0));
+  const tonightShown = Boolean(tonight && matches(tonight) && !byRank);
+  const noneMatch = recipes.length > 0 && shown.length === 0 && !(tonightShown && passes(tonight!, filter, score.has(tonight!.id)));
   const clear = () => {
     setFilter('all');
     setQuery('');
@@ -116,7 +125,7 @@ export default function Recipes() {
         <FilterPills options={FILTERS} value={filter} onChange={setFilter} />
         <View>
           {shown.map((r) => (
-            <RecipeRow key={r.id} recipe={r} onOpen={() => open(r.id)} onToggleToBuy={() => actions.toggleRecipeToBuy(r.id)} />
+            <RecipeRow key={r.id} recipe={r} score={score.get(r.id)} onOpen={() => open(r.id)} onToggleToBuy={() => actions.toggleRecipeToBuy(r.id)} />
           ))}
           {recipes.length === 0 ? (
             <View style={styles.empty}>
@@ -127,7 +136,13 @@ export default function Recipes() {
             </View>
           ) : noneMatch ? (
             <View style={styles.empty}>
-              <Text color="inkMuted">{filter === 'now' && !q ? 'Nothing you can make right now.' : 'No recipes match.'}</Text>
+              <Text color="inkMuted">
+                {filter === 'now' && !q
+                  ? 'Nothing you can make right now.'
+                  : byRank && !q && !order.length
+                    ? 'Nothing ranked yet. Open a recipe you’ve made and rate it to start your list.'
+                    : 'No recipes match.'}
+              </Text>
               <TextLink label="Clear filters" onPress={clear} />
             </View>
           ) : null}
