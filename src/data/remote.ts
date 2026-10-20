@@ -13,7 +13,8 @@ export type ItemRow = {
   kitchen_id: string;
   name: string;
   place: Place;
-  qty: number;
+  /** Null when nobody counted it. */
+  qty: number | null;
   unit: string;
   amount_text: string | null;
   meta: string;
@@ -67,7 +68,7 @@ export function itemToRow(item: Item, kitchenId: string, today: Date): ItemRow {
     kitchen_id: kitchenId,
     name: item.name,
     place: item.place,
-    qty: item.qty,
+    qty: item.qty ?? null,
     unit: item.unit,
     amount_text: item.amountText ?? null,
     meta: item.meta,
@@ -83,7 +84,7 @@ export function rowToItem(row: ItemRow, today: Date): Item {
     id: row.id,
     name: row.name,
     place: row.place,
-    qty: row.qty,
+    qty: row.qty ?? undefined,
     unit: row.unit,
     amountText: row.amount_text ?? undefined,
     meta: row.meta,

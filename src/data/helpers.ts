@@ -24,13 +24,29 @@ export function isDueSoon(item: Item): boolean {
   return item.useSoon ?? item.daysLeft <= USE_SOON_DAYS;
 }
 
+/** Still in the kitchen: uncounted things are there until used up (qty 0). */
+export function hasSome(item: Item): boolean {
+  return item.qty !== 0;
+}
+
+/** A receipt line's count as an item's amount: one of something stays uncounted (Decisions #124). */
+export function receiptCount(qty: number): number | undefined {
+  return qty > 1 ? qty : undefined;
+}
+
+/** Bought more of something already there. Uncounted stays uncounted; used up starts again from the receipt. */
+export function addCounts(have: number | undefined, bought: number): number | undefined {
+  if (have === undefined) return undefined;
+  return have === 0 ? receiptCount(bought) : have + bought;
+}
+
 /** Due soon and still there: the "2 use soon" flag and the recipe labels. */
 export function isUseSoon(item: Item): boolean {
-  return item.qty > 0 && isDueSoon(item);
+  return hasSome(item) && isDueSoon(item);
 }
 
 export function inStock(items: Item[], place?: Place): Item[] {
-  return items.filter((i) => i.qty > 0 && (!place || i.place === place));
+  return items.filter((i) => hasSome(i) && (!place || i.place === place));
 }
 
 export const PLACES: Place[] = ['fridge', 'pantry', 'freezer'];
@@ -48,10 +64,11 @@ export function joinAnd(words: string[]): string {
   return `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}`;
 }
 
-/** The amount on the right of a Kitchen row: "1 carton", "About 1 cup", "× 2", "Used up". */
+/** The amount on the right of a Kitchen row: "1 carton", "About 1 cup", "× 2", "Used up"; empty with no amount. */
 export function amountLabel(item: Item, startQty?: number): string {
   if (item.qty === 0) return 'Used up';
   if (item.amountText && (startQty === undefined || item.qty === startQty)) return item.amountText;
+  if (item.qty === undefined) return '';
   return item.unit ? `${item.qty} ${plural(item.unit, item.qty)}` : `× ${item.qty}`;
 }
 

@@ -7,7 +7,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useReducer,
 import { AccessibilityInfo } from 'react-native';
 
 import { useAuth } from './auth';
-import { guessPlace, makeId, shortDate, USE_SOON_DAYS } from './helpers';
+import { addCounts, guessPlace, hasSome, makeId, receiptCount, shortDate, USE_SOON_DAYS } from './helpers';
 import { checkRecipe, checkRecipes, usedWhenMade } from './match';
 import { shelfLifeFor } from './receipt';
 import { clearSaved, loadSaved, save, type Saved } from './saved';
@@ -80,6 +80,7 @@ export type Action =
   | { type: 'addToBuy'; name: string; place?: Place }
   | { type: 'addItem'; name: string; place: Place }
   | { type: 'setQty'; id: string; qty: number; scope: string }
+  | { type: 'setAmount'; id: string; qty?: number; unit: string }
   | { type: 'itemToBuy'; id: string }
   | { type: 'setUseSoon'; id: string; on: boolean }
   | { type: 'setBestBy'; id: string; daysLeft: number }
@@ -160,7 +161,6 @@ export function reducer(s: State, a: Action): State {
         id: makeId('i'),
         name,
         place: a.place,
-        qty: 1,
         unit: '',
         meta: `Added by ${s.user.name}`,
         daysLeft: shelfLifeFor(name, a.place),
@@ -173,8 +173,15 @@ export function reducer(s: State, a: Action): State {
       if (!item) return s;
       const qty = Math.max(0, a.qty);
       const items = s.items.map((i) => (i.id === a.id ? { ...i, qty } : i));
-      const undo = qty === 0 && item.qty > 0 ? withUndo(s, `${item.name} used up`, a.scope) : null;
+      const undo = qty === 0 && hasSome(item) ? withUndo(s, `${item.name} used up`, a.scope) : null;
       return { ...s, items, undo };
+    }
+    case 'setAmount': {
+      // Typed by hand, so it replaces the receipt's "About 1 cup". No count clears the unit too.
+      const qty = a.qty === undefined ? undefined : Math.max(0, a.qty);
+      const unit = qty === undefined ? '' : a.unit.trim();
+      const items = s.items.map((i) => (i.id === a.id ? { ...i, qty, unit, amountText: undefined } : i));
+      return { ...s, items, undo: null };
     }
     case 'setUseSoon': {
       // Kept only when it disagrees with the date, so agreeing with it goes back to following the date.
@@ -198,13 +205,21 @@ export function reducer(s: State, a: Action): State {
     case 'addScanned': {
       let items = s.items;
       let toBuy = s.toBuy;
+      // The same thing twice on one receipt is two of it, so lines are merged before they're counted.
+      const merged: (ScanLine & { place: Place })[] = [];
       for (const line of a.lines) {
         if (line.place === 'skip' || !line.name.trim()) continue;
+        const place = line.place;
+        const same = merged.find((m) => m.place === place && sameName(m.name, line.name));
+        if (same) same.qty += line.qty;
+        else merged.push({ ...line, place });
+      }
+      for (const line of merged) {
         const place = line.place;
         const existing = items.find((i) => i.place === place && sameName(i.name, line.name));
         if (existing) {
           items = items.map((i) =>
-            i.id === existing.id ? { ...i, qty: i.qty + line.qty, amountText: undefined, meta: 'From today’s receipt' } : i,
+            i.id === existing.id ? { ...i, qty: addCounts(i.qty, line.qty), amountText: undefined, meta: 'From today’s receipt' } : i,
           );
         } else {
           items = [
@@ -213,7 +228,7 @@ export function reducer(s: State, a: Action): State {
               id: makeId('i'),
               name: line.name.trim(),
               place,
-              qty: line.qty,
+              qty: receiptCount(line.qty),
               unit: '',
               meta: 'From today’s receipt',
               daysLeft: shelfLifeFor(line.name, place),
@@ -260,7 +275,7 @@ export function reducer(s: State, a: Action): State {
       const recipe = s.recipes.find((r) => r.id === a.id);
       if (!recipe) return s;
       const used = usedWhenMade(recipe, s.items, STAPLES);
-      const items = s.items.map((i) => (used.includes(i) ? { ...i, qty: i.qty - 1 } : i));
+      const items = s.items.map((i) => (used.includes(i) && i.qty !== undefined ? { ...i, qty: i.qty - 1 } : i));
       return { ...s, items, undo: withUndo(s, `Made ${recipe.title}`, `recipe:${recipe.id}`) };
     }
     case 'importRecipe': {
@@ -354,6 +369,7 @@ function makeActions(dispatch: (a: Action) => void) {
     addToBuy: (name: string, place?: Place) => dispatch({ type: 'addToBuy', name, place }),
     addItem: (name: string, place: Place) => dispatch({ type: 'addItem', name, place }),
     setQty: (id: string, qty: number, scope: string) => dispatch({ type: 'setQty', id, qty, scope }),
+    setAmount: (id: string, qty: number | undefined, unit: string) => dispatch({ type: 'setAmount', id, qty, unit }),
     addItemToBuy: (id: string) => dispatch({ type: 'itemToBuy', id }),
     /** Use soon by hand, on or off. Matching the date clears the override. */
     setUseSoon: (id: string, on: boolean) => dispatch({ type: 'setUseSoon', id, on }),

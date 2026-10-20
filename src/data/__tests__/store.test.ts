@@ -103,9 +103,10 @@ describe('To Buy', () => {
 });
 
 describe('items', () => {
-  test('adding an item starts at 1 with the place default shelf life', () => {
+  test('adding an item starts with no amount and the place default shelf life', () => {
     const fridge = run(s, { type: 'addItem', name: ' Tofu ', place: 'fridge' }).items.at(-1)!;
-    expect(fridge).toMatchObject({ name: 'Tofu', place: 'fridge', qty: 1, unit: '', meta: 'Added by Alex', daysLeft: 7, addedBy: 'alex' });
+    expect(fridge).toMatchObject({ name: 'Tofu', place: 'fridge', unit: '', meta: 'Added by Alex', daysLeft: 7, addedBy: 'alex' });
+    expect(fridge.qty).toBeUndefined();
     expect(run(s, { type: 'addItem', name: 'Cumin', place: 'pantry' }).items.at(-1)!.daysLeft).toBe(180);
     expect(run(s, { type: 'addItem', name: 'Ice', place: 'freezer' }).items.at(-1)!.daysLeft).toBe(90);
   });
@@ -122,6 +123,28 @@ describe('items', () => {
   test('using something up offers an undo', () => {
     const next = run(s, { type: 'setQty', id: 'f1', qty: 0, scope: 'kitchen' });
     expect(next.undo).toMatchObject({ text: 'Spinach used up', scope: 'kitchen' });
+  });
+
+  test('an amount can be added, changed and cleared by hand', () => {
+    const tofu = run(s, { type: 'addItem', name: 'Tofu', place: 'fridge' }).items.at(-1)!;
+    const added = run(s, { type: 'addItem', name: 'Tofu', place: 'fridge' }, { type: 'setAmount', id: tofu.id, qty: 2, unit: ' block ' });
+    expect(added.items.at(-1)).toMatchObject({ qty: 2, unit: 'block' });
+    const cleared = run(added, { type: 'setAmount', id: tofu.id, qty: undefined, unit: 'block' });
+    expect(cleared.items.at(-1)!.qty).toBeUndefined();
+    expect(cleared.items.at(-1)!.unit).toBe('');
+  });
+
+  test('typing an amount replaces the receipt text', () => {
+    const withText = { ...s, items: s.items.map((i) => (i.id === 'f1' ? { ...i, amountText: 'About 1 cup' } : i)) };
+    expect(item(run(withText, { type: 'setAmount', id: 'f1', qty: 3, unit: 'cup' }), 'f1').amountText).toBeUndefined();
+  });
+
+  test('using up something uncounted offers an undo', () => {
+    const added = run(s, { type: 'addItem', name: 'Tofu', place: 'fridge' });
+    const id = added.items.at(-1)!.id;
+    const next = run(added, { type: 'setQty', id, qty: 0, scope: 'kitchen' });
+    expect(next.items.at(-1)!.qty).toBe(0);
+    expect(next.undo?.text).toBe('Tofu used up');
   });
 
   test('using one of several offers no new undo', () => {
@@ -173,7 +196,9 @@ describe('scanning', () => {
   test('new lines become items with the place default shelf life', () => {
     const next = run(s, { type: 'addScanned', lines: [line('Tofu', 'fridge', 2), line('Cumin', 'pantry')] });
     expect(byName(next, 'Tofu')[0]).toMatchObject({ place: 'fridge', qty: 2, daysLeft: 7, meta: 'From today’s receipt' });
-    expect(byName(next, 'Cumin')[0]).toMatchObject({ place: 'pantry', qty: 1, daysLeft: 180 });
+    expect(byName(next, 'Cumin')[0]).toMatchObject({ place: 'pantry', daysLeft: 180 });
+    // One of something stays uncounted (Decisions #124).
+    expect(byName(next, 'Cumin')[0].qty).toBeUndefined();
   });
 
   test('new lines get the shelf life of what they are', () => {

@@ -27,7 +27,7 @@ Suggested order: Phase 0 → 1 → 2 → 3 → 4 and 5 side by side → 6 → 7.
 - [x] **T2.3 Sign in with Google.** Google OAuth (client IDs in env vars). *Through Supabase's OAuth page (`src/data/auth.ts`).*
 - [x] **T2.4 Stay signed in.** Session in `expo-secure-store`; "onboarded" saved on the account. *The session is kept in `expo-sqlite/localStorage` (`src/data/supabase.ts`), not `expo-secure-store`.*
 - [x] **T2.5 Log out and delete account.** Delete removes sign-in and name, keeps the kitchen for the others (server function). *The `delete_account` function is called from Account. The App Store requires in-app account deletion, so this covers that requirement (T7.4).*
-- [ ] **T2.6 Edit an item's quantity and unit.** Per Decisions #122: a new item has no quantity unless one is entered (`Item.qty` becomes optional; rows show just the name when it's missing), and an item's quantity and unit can be added, changed or cleared by hand, saved to the server. The account's name sheet only needs to save to the server. *Done when an item can get a quantity and unit, lose them again, and both show on a second phone.*
+- [x] **T2.6 Edit an item's quantity and unit.** Per Decisions #122: a new item has no quantity unless one is entered (`Item.qty` becomes optional; rows show just the name when it's missing), and an item's quantity and unit can be added, changed or cleared by hand, saved to the server. The account's name sheet only needs to save to the server. *Done when an item can get a quantity and unit, lose them again, and both show on a second phone.* *Built (Decisions #124). The owner applies `supabase/migrations/20261020230000_item_qty_optional.sql` to the Supabase project; not yet tried on two phones.*
 
 ## Phase 3: Kitchens and sharing
 

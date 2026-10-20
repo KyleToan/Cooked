@@ -5,7 +5,7 @@ import Animated, { useAnimatedReaction, useSharedValue, type SharedValue } from 
 import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { amountLabel, joinAnd, PLACE_LABEL } from '@/data/helpers';
+import { amountLabel, hasSome, joinAnd, PLACE_LABEL } from '@/data/helpers';
 import type { Item, Place, Recipe, ScanLine } from '@/data/types';
 import { haptics } from '@/hooks/haptics';
 import { color, radius, size, space, type } from '@/theme';
@@ -30,6 +30,8 @@ type KitchenRowProps = {
   actionLabel: string;
   onAction: () => void;
   onQty: (qty: number) => void;
+  /** Opens the sheet that adds, changes or clears the amount and unit. */
+  onEditAmount: () => void;
   /**
    * Swiping the row left shows "Use up", which sets the amount to 0 (the same
    * as stepping down to 0, so the undo bar shows). Also a VoiceOver action.
@@ -40,10 +42,22 @@ type KitchenRowProps = {
 };
 
 /** Name, meta line, amount and a chevron. Opens in place to a stepper; swipes left to use up. */
-export function KitchenRow({ item, startQty, soon, open, onToggleOpen, actionLabel, onAction, onQty, onUseUp, extra }: KitchenRowProps) {
+export function KitchenRow({
+  item,
+  startQty,
+  soon,
+  open,
+  onToggleOpen,
+  actionLabel,
+  onAction,
+  onQty,
+  onEditAmount,
+  onUseUp,
+  extra,
+}: KitchenRowProps) {
   const amount = amountLabel(item, startQty);
   const swipe = useRef<SwipeableMethods>(null);
-  const canUseUp = !!onUseUp && item.qty > 0;
+  const canUseUp = !!onUseUp && hasSome(item);
   const rowWidth = useSharedValue(0);
   // Past the commit point, letting go uses the item up.
   const armed = useRef(false);
@@ -61,7 +75,7 @@ export function KitchenRow({ item, startQty, soon, open, onToggleOpen, actionLab
     <View style={[styles.divider, styles.ground]} onLayout={(e) => rowWidth.set(e.nativeEvent.layout.width)}>
       <Tap
         accessibilityRole="button"
-        accessibilityLabel={`${item.name}, ${item.meta}, ${amount}`}
+        accessibilityLabel={[item.name, item.meta, amount].filter(Boolean).join(', ')}
         accessibilityHint={open ? 'Closes the amount' : 'Opens the amount'}
         accessibilityState={{ expanded: open }}
         accessibilityActions={canUseUp ? [{ name: 'useUp', label: 'Use up' }] : undefined}
@@ -88,8 +102,22 @@ export function KitchenRow({ item, startQty, soon, open, onToggleOpen, actionLab
                 {actionLabel}
               </Text>
             </Tap>
-            <Stepper value={item.qty} onChange={onQty} />
+            {item.qty !== undefined ? <Stepper value={item.qty} onChange={onQty} /> : null}
           </View>
+          <Tap
+            accessibilityRole="button"
+            accessibilityLabel={amount ? `Amount, ${amount}` : 'Add an amount'}
+            accessibilityHint="Opens the amount and unit"
+            onPress={onEditAmount}
+            style={styles.amountPill}
+          >
+            <Text variant="caption" color="inkMuted">
+              Amount
+            </Text>
+            <Text variant="button" weight="semibold" color={amount ? 'ink' : 'sageInk'}>
+              {amount || 'Add'}
+            </Text>
+          </Tap>
           {extra}
         </Animated.View>
       ) : null}
@@ -376,6 +404,18 @@ const styles = StyleSheet.create({
   openArea: { gap: space.s1, paddingBottom: space.s3 },
   open: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   action: { minHeight: size.targetMin, justifyContent: 'center' },
+  // A grey pill like Kitchen's Use by: the label on the left, the amount (or Add) on the right.
+  amountPill: {
+    minHeight: size.targetMin,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: space.s2,
+    paddingVertical: space.s1,
+    paddingHorizontal: space.roomy,
+    borderRadius: radius.pill,
+    backgroundColor: color.surfaceSunken,
+  },
   checkRow: { minHeight: size.rowHeight + space.s1, flexDirection: 'row', alignItems: 'center', gap: space.s3 },
   nameInput: { ...type.body, paddingVertical: 2, paddingHorizontal: 0, borderBottomWidth: 1, outlineWidth: 0 },
   tagHit: { minHeight: size.targetMin, justifyContent: 'center' },

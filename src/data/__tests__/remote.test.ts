@@ -70,6 +70,13 @@ describe('mappers round-trip', () => {
     expect(rowToItem(row, today)).toEqual(item);
   });
 
+  test('items: no amount is a null qty and back', () => {
+    const item: Item = { id: 'x', name: 'Basil', place: 'fridge', unit: '', meta: '', daysLeft: 4, addedBy: 'a' };
+    const row = itemToRow(item, K, today);
+    expect(row.qty).toBeNull();
+    expect(rowToItem(row, today).qty).toBeUndefined();
+  });
+
   test('items: use soon set off by hand stays off, apart from following the date', () => {
     const item: Item = { id: 'x', name: 'Milk', place: 'fridge', qty: 1, unit: 'carton', meta: '', daysLeft: 1, useSoon: false, addedBy: 'a' };
     expect(itemToRow(item, K, today).use_soon).toBe(false);
