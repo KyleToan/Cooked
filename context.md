@@ -85,7 +85,6 @@ Local mode (no env vars, development only; a release build without them shows "C
 
 ## Open questions
 
-- Offline use: writes need a connection for now, and a failed write rolls back.
 - How items get sorted into fridge, pantry or freezer beyond the keyword table in `receipt.ts`.
 - Whether recipe links should move from on-device fetching to a server.
 - Push notifications: the design has To Buy changes, a daily use-soon nudge, someone joining and a weekly summary.

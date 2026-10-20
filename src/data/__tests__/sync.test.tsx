@@ -1,5 +1,6 @@
 // Write-through with a (mocked) backend: hydrate replaces the local copy, a load
-// never echoes back as a write, and a failed write rolls back to the server's copy.
+// never echoes back as a write, a write that fails offline is kept and sent again
+// (even after a restart), and a write the server refuses rolls back.
 
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 import { useEffect } from 'react';
@@ -21,7 +22,14 @@ jest.mock('@/data/remote', () => ({
   writeDiff: (kitchenId: string, prev: Synced, next: Synced, today: Date) => mockWriteDiff(kitchenId, prev, next, today),
   markSynced: async () => undefined,
   subscribeKitchen: () => () => undefined,
+  writeFailure: (e: unknown) => (jest.requireActual('@/data/remote') as typeof import('@/data/remote')).writeFailure(e),
 }));
+
+/** What supabase-js gives back: status 0 offline, the HTTP status when the server answered. */
+const requestError = (status: number) => {
+  const { RequestError } = jest.requireActual('@/data/remote') as typeof import('@/data/remote');
+  return new RequestError('failed', status);
+};
 
 const user = { id: 'u1', name: 'Alex', email: 'alex@example.com', note: 'Made this kitchen' };
 const loaded = (): Loaded => ({
@@ -114,12 +122,40 @@ describe('StoreProvider with a backend', () => {
     expect(next.toBuy[0].done).toBe(true);
   });
 
-  test('a failed write rolls back to the server copy', async () => {
-    mockWriteDiff.mockRejectedValueOnce(new Error('offline'));
+  test('offline, the change is kept and sent again on Retry', async () => {
+    mockWriteDiff.mockRejectedValueOnce(requestError(0));
+    await act(async () => box.store!.actions.toggleToBuy('t1', 'home'));
+    await flush();
+    expect(box.store!.state.toBuy[0].done).toBe(true);
+    expect(box.store!.sync).toMatchObject({ problem: 'offline', unsent: true });
+    // A change made while offline waits for the same send.
+    await act(async () => box.store!.actions.addToBuy('Eggs'));
+    expect(mockWriteDiff).toHaveBeenCalledTimes(1);
+    await act(async () => box.store!.sync.retry());
+    await flush();
+    expect(mockWriteDiff).toHaveBeenCalledTimes(2);
+    const [, prev, next] = mockWriteDiff.mock.calls[1];
+    // Everything since the server last answered, in one diff.
+    expect(prev.toBuy.map((t) => t.done)).toEqual([false]);
+    expect(next.toBuy.map((t) => t.name)).toEqual(['Bread', 'Eggs']);
+    expect(box.store!.sync).toMatchObject({ problem: null, unsent: false });
+  });
+
+  test('a server error keeps the change too', async () => {
+    mockWriteDiff.mockRejectedValueOnce(requestError(503));
+    await act(async () => box.store!.actions.toggleToBuy('t1', 'home'));
+    await flush();
+    expect(box.store!.state.toBuy[0].done).toBe(true);
+    expect(box.store!.sync.problem).toBe('server');
+  });
+
+  test('a write the server refuses rolls back to the server copy', async () => {
+    mockWriteDiff.mockRejectedValueOnce(requestError(403));
     await act(async () => box.store!.actions.toggleToBuy('t1', 'home'));
     await flush();
     await flush();
     expect(box.store!.state.toBuy[0].done).toBe(false);
+    expect(box.store!.sync).toMatchObject({ problem: 'rejected', unsent: false });
     // The rollback itself is not written.
     expect(mockWriteDiff).toHaveBeenCalledTimes(1);
   });
@@ -182,6 +218,24 @@ describe('StoreProvider with a backend and a copy on the phone', () => {
     await act(async () => box.store!.actions.toggleToBuy('t1', 'home'));
     await flush();
     expect(mockWriteDiff).toHaveBeenCalledTimes(1);
+  });
+
+  test('a change made offline goes up after the app is closed and opened again', async () => {
+    cache('u1');
+    await mount();
+    mockWriteDiff.mockRejectedValueOnce(requestError(0));
+    await act(async () => box.store!.actions.toggleToBuy('t1', 'home'));
+    await flush();
+    expect(box.store!.sync.unsent).toBe(true);
+    act(() => renderer.unmount());
+
+    mockWriteDiff.mockReset().mockResolvedValue(undefined);
+    await mount();
+    expect(box.store!.state.toBuy[0].done).toBe(true);
+    expect(mockWriteDiff).toHaveBeenCalledTimes(1);
+    const [, prev, next] = mockWriteDiff.mock.calls[0];
+    expect(prev.toBuy[0].done).toBe(false);
+    expect(next.toBuy[0].done).toBe(true);
   });
 
   test("someone else's copy is dropped", async () => {

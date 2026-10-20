@@ -4,7 +4,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { ActionPill, PillRow } from '@/components/ActionPill';
 import { Chevron } from '@/components/Chevron';
-import { UndoBar } from '@/components/Controls';
+import { SyncNotice, UndoBar } from '@/components/Controls';
 import { SectionHeader, TopBar } from '@/components/Header';
 import { Icon } from '@/components/Icon';
 import { Screen } from '@/components/Screen';
@@ -31,7 +31,7 @@ function snapshot(list: ToBuyItem[]) {
 
 export default function Home() {
   const router = useRouter();
-  const { state, actions } = useStore();
+  const { state, actions, sync } = useStore();
   const undo = useUndo('home');
   const [query, setQuery] = useState('');
 
@@ -111,6 +111,8 @@ export default function Home() {
         onScan={() => router.push('/scan')}
         onAccount={() => router.push('/account')}
       />
+
+      <SyncNotice problem={sync.problem} onRetry={sync.retry} />
 
       {emptyKitchen ? null : (
         <SearchField placeholder="Search your kitchen and recipes" value={query} onChangeText={setQuery} />

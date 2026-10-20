@@ -14,7 +14,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { ActionPill } from '@/components/ActionPill';
-import { Field, ROW_LAYOUT, Switch, UndoBar } from '@/components/Controls';
+import { Field, ROW_LAYOUT, Switch, SyncNotice, UndoBar } from '@/components/Controls';
 import { GreetingHeader, SectionHeader } from '@/components/Header';
 import { Icon } from '@/components/Icon';
 import { KitchenRow } from '@/components/ListRows';
@@ -66,7 +66,7 @@ const isTab = (t: unknown): t is Tab => t === 'fridge' || t === 'pantry' || t ==
 export default function Kitchen() {
   const params = useLocalSearchParams<{ tab?: string }>();
   const router = useRouter();
-  const { state, actions } = useStore();
+  const { state, actions, sync } = useStore();
   const undo = useUndo('kitchen');
 
   const [tab, setTab] = useState<Tab>(isTab(params.tab) ? params.tab : 'fridge');
@@ -109,6 +109,8 @@ export default function Kitchen() {
         overlay={undo ? <UndoBar text={undo.text} onUndo={actions.undo} onDismiss={() => actions.clearUndo(undo.scope)} /> : null}
       >
         <GreetingHeader line={statusLine} title="Your Kitchen" onAccount={() => router.push('/account')} />
+
+        <SyncNotice problem={sync.problem} onRetry={sync.retry} />
 
         <SearchField placeholder={placeholder} value={query} onChangeText={setQuery} />
 

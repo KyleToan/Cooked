@@ -122,7 +122,7 @@ export default function Join() {
         <>
           {failMessage ? <ErrorLine text={failMessage} /> : null}
           <ActionPill
-            label={note ? `Join ${note.kitchen}` : 'Join'}
+            label={result === 'offline' || result === 'server' ? 'Try again' : note ? `Join ${note.kitchen}` : 'Join'}
             variant="primary"
             height="bottom"
             onPress={join}

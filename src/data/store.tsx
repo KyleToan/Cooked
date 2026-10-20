@@ -4,15 +4,16 @@
 
 import { useFocusEffect } from 'expo-router';
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
-import { AccessibilityInfo } from 'react-native';
+import { AccessibilityInfo, AppState } from 'react-native';
 
 import { useAuth } from './auth';
 import { addCounts, DEFAULT_NOTIFICATIONS, guessPlace, hasSome, makeId, receiptCount, shortDate, STAPLES, USE_SOON_DAYS } from './helpers';
 import { checkRecipe, checkRecipes, usedWhenMade } from './match';
 import { shelfLifeFor } from './receipt';
-import { clearSaved, loadSaved, save, type Saved } from './saved';
+import { clearSaved, loadSaved, loadServerCopy, save, saveServerCopy, type Saved } from './saved';
 import { devSeed } from './devSeed';
-import { loadAll, markSynced, subscribeKitchen, writeDiff, type Loaded, type Synced } from './remote';
+import { loadAll, markSynced, subscribeKitchen, writeDiff, writeFailure, type Loaded, type Synced } from './remote';
+import type { Failure } from './errors';
 import { hasBackend } from './supabase';
 import type {
   Item,
@@ -372,7 +373,29 @@ type Store = {
   reload: () => Promise<void>;
   /** False while a signed-in person's first load is running. */
   ready: boolean;
+  sync: SyncStatus;
 };
+
+/** How the kitchen is getting on with the server, for the line under Home's and Kitchen's titles. */
+export type SyncStatus = {
+  /**
+   * Null when all's well. 'offline' or 'server': changes are kept on the phone and sent when it works again.
+   * 'rejected': the server refused the last change, so it was undone. 'load': the kitchen couldn't be loaded.
+   */
+  problem: Failure | 'rejected' | 'load' | null;
+  /** True while changes made here haven't reached the server. */
+  unsent: boolean;
+  /** Tries again now: sends what's waiting, or loads the kitchen. */
+  retry: () => void;
+  /** True when this phone has no copy of the kitchen to show (first load failed with nothing saved). */
+  empty: boolean;
+};
+
+/** A failed load says so, unless changes waiting to go up already explain what's wrong. */
+const loadFailed = (p: SyncStatus['problem']): SyncStatus['problem'] => (p === 'offline' || p === 'server' ? p : 'load');
+
+/** How long to wait before sending changes again after a failed write. */
+export const RETRY_MS = 5000;
 
 const StoreContext = createContext<Store | null>(null);
 
@@ -423,32 +446,45 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   // The person whose first load has finished, so the loader shows once per sign-in.
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
 
-  // What the server is known to hold (`synced`), the last write it confirmed (`confirmed`),
-  // and how many writes are still on their way.
-  // The restored copy is the baseline, like a hydrate, so it is never written back as local edits.
-  const restored: Synced | null =
-    hasBackend && cached ? { kitchen: state.kitchen, items: state.items, toBuy: state.toBuy, recipes: state.recipes } : null;
+  // `confirmed` is what the server held when it last answered; `synced` is the newest local copy handed to the writer.
+  // While they differ, changes are waiting to go up. The confirmed copy is also kept on the phone, so changes made
+  // offline go up after a restart. The restored copy is the baseline, like a hydrate, so it isn't written back.
+  const restored: Synced | null = useMemo(() => {
+    if (!hasBackend || !cached) return null;
+    const server = loadServerCopy();
+    const mine = { kitchen: state.kitchen, items: state.items, toBuy: state.toBuy, recipes: state.recipes };
+    return server && server.kitchen?.id === mine.kitchen.id ? server : mine;
+    // Only the first render's copy.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const synced = useRef<Synced | null>(restored);
   const confirmed = useRef<Synced | null>(restored);
-  const chain = useRef(Promise.resolve());
-  const pending = useRef(0);
-  const writes = useRef(0);
+  const flushing = useRef(false);
+  const retryTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const reloadAfterWrites = useRef(false);
   const sessionRef = useRef(session);
   const kitchenId = useRef(state.kitchen.id);
+  const [problem, setProblem] = useState<SyncStatus['problem']>(null);
+  const [unsent, setUnsent] = useState(false);
   // Declared before the load effect, so reload sees this render's session.
   useEffect(() => {
     sessionRef.current = session;
     kitchenId.current = state.kitchen.id;
   });
 
+  const waiting = () => synced.current !== confirmed.current;
+
   const reload = useCallback(async () => {
     const s = sessionRef.current;
     if (!hasBackend || !s) return;
-    const startedAt = writes.current;
+    // Changes waiting to go up: this load would miss them, so load once they're sent.
+    if (flushing.current || waiting()) {
+      reloadAfterWrites.current = true;
+      return;
+    }
     const data = await loadAll(s.user.id, { email: s.user.email, phone: s.user.phone });
-    // A local change happened meanwhile: this load may miss it, so load again once it's written.
-    if (pending.current || writes.current !== startedAt) {
+    // A local change happened meanwhile: load again once it's written.
+    if (flushing.current || waiting()) {
       reloadAfterWrites.current = true;
       return;
     }
@@ -456,8 +492,59 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     // Set before dispatching, so the write effect sees no difference and nothing echoes back.
     synced.current = snapshot;
     confirmed.current = snapshot;
+    saveServerCopy(snapshot);
+    // "Couldn't save your last change" stays until it's read and Reload is tapped.
+    setProblem((p) => (p === 'rejected' ? p : null));
     dispatch({ type: 'hydrate', data });
   }, []);
+
+  /** Sends everything that changed since the server last answered, one write at a time. */
+  const flush = useCallback(function send() {
+    clearTimeout(retryTimer.current);
+    retryTimer.current = undefined;
+    const base = confirmed.current;
+    const next = synced.current;
+    const id = next?.kitchen?.id;
+    if (flushing.current || !base || !next || base === next || !id || base.kitchen?.id !== id) {
+      setUnsent(waiting());
+      return;
+    }
+    flushing.current = true;
+    setUnsent(true);
+    writeDiff(id, base, next, new Date())
+      .then(
+        () => {
+          confirmed.current = next;
+          saveServerCopy(next);
+          setProblem(null);
+        },
+        (e) => {
+          const why = writeFailure(e);
+          if (why === 'rejected') {
+            // It will never be accepted: back to what the server has, and tell the person.
+            synced.current = base;
+            dispatch({ type: 'hydrate', data: base });
+            reloadAfterWrites.current = true;
+          } else {
+            // Kept on the phone, with the server's copy beside it so a restart still knows what to send.
+            // Try again in a few seconds, and when the app comes back to the front.
+            saveServerCopy(base);
+            retryTimer.current = setTimeout(send, RETRY_MS);
+          }
+          setProblem(why);
+        },
+      )
+      .finally(() => {
+        flushing.current = false;
+        setUnsent(waiting());
+        // Newer changes arrived while this one was on its way.
+        if (waiting() && !retryTimer.current) send();
+        else if (!waiting() && reloadAfterWrites.current) {
+          reloadAfterWrites.current = false;
+          reload().catch(() => undefined);
+        }
+      });
+  }, [reload]);
 
   const userId = session?.user.id;
   // The phone's copy belongs to someone else (or nobody is signed in any more): drop it.
@@ -471,11 +558,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (!authReady) return;
     if (!userId) {
       synced.current = confirmed.current = null;
+      setProblem(null);
       return;
     }
-    // shortcut: a failed first load (offline) opens the app on local data, add a retry screen if testers hit it.
+    // Offline at launch: with a copy on the phone the app opens on it; without one, the Routes show "Couldn't load".
     reload()
-      .catch(() => undefined)
+      .catch(() => setProblem(loadFailed))
       .finally(() => setLoadedFor(userId));
   }, [authReady, userId, reload]);
 
@@ -493,34 +581,34 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const prev = synced.current;
     const id = state.kitchen.id;
     if (!hasBackend || !id || !prev || prev.kitchen?.id !== id) return;
-    if (prev.items === state.items && prev.toBuy === state.toBuy && prev.recipes === state.recipes && prev.kitchen?.name === state.kitchen.name) return;
-    const next: Synced = { kitchen: state.kitchen, items: state.items, toBuy: state.toBuy, recipes: state.recipes };
-    synced.current = next;
-    pending.current++;
-    writes.current++;
-    // One write at a time, in order, each against the one before it.
-    chain.current = chain.current
-      .then(() => writeDiff(id, prev, next, new Date()))
-      .then(
-        () => {
-          confirmed.current = next;
-        },
-        () => {
-          // shortcut: no offline queue, writes need a connection; add a queue if testers hit it.
-          const back = confirmed.current;
-          synced.current = back;
-          if (back) dispatch({ type: 'hydrate', data: back });
-          reloadAfterWrites.current = true;
-        },
-      )
-      .finally(() => {
-        pending.current--;
-        if (!pending.current && reloadAfterWrites.current) {
-          reloadAfterWrites.current = false;
-          reload().catch(() => undefined);
-        }
-      });
-  }, [state.kitchen, state.items, state.toBuy, state.recipes, reload]);
+    if (prev.items === state.items && prev.toBuy === state.toBuy && prev.recipes === state.recipes && prev.kitchen?.name === state.kitchen.name) {
+      // Nothing new, but a restored copy may still hold changes made offline before the app was closed.
+      if (waiting()) flush();
+      return;
+    }
+    synced.current = { kitchen: state.kitchen, items: state.items, toBuy: state.toBuy, recipes: state.recipes };
+    // Waiting on a retry: the new change goes with it, unless it's the first one.
+    if (!retryTimer.current) flush();
+    else setUnsent(true);
+  }, [state.kitchen, state.items, state.toBuy, state.recipes, flush]);
+
+  // Back in the app: send what's waiting straight away.
+  useEffect(() => {
+    if (!hasBackend) return;
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'active' && waiting()) flush();
+    });
+    return () => {
+      sub.remove();
+      clearTimeout(retryTimer.current);
+    };
+  }, [flush]);
+
+  const retry = useCallback(() => {
+    if (waiting()) return flush();
+    setProblem((p) => (p === 'rejected' ? null : p));
+    reload().catch(() => setProblem(loadFailed));
+  }, [flush, reload]);
 
   // Other people's changes. shortcut: whole refetch on any event, fine for household-sized kitchens.
   const liveId = state.kitchen.id;
@@ -530,8 +618,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const unsubscribe = subscribeKitchen(liveId, () => {
       clearTimeout(timer);
       timer = setTimeout(() => {
-        if (pending.current) reloadAfterWrites.current = true;
-        else reload().catch(() => undefined);
+        reload().catch(() => undefined);
       }, 300);
     });
     return () => {
@@ -562,7 +649,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(timer);
   }, [undo, reader]);
   const ready = authReady && (!userId || loadedFor === userId || (cachedFor === userId && state.user.id === userId));
-  const value = useMemo(() => ({ state: { ...state, recipes }, actions, reload, ready }), [state, recipes, actions, reload, ready]);
+  // Nothing to show: the first load failed and the phone has no copy of this person's kitchen.
+  const empty = !!userId && problem === 'load' && !(cachedFor && cachedFor === userId) && !state.kitchen.id;
+  const sync = useMemo<SyncStatus>(() => ({ problem, unsent, retry, empty }), [problem, unsent, retry, empty]);
+  const value = useMemo(() => ({ state: { ...state, recipes }, actions, reload, ready, sync }), [state, recipes, actions, reload, ready, sync]);
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
 

@@ -9,10 +9,13 @@ import { StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { ActionPill } from '@/components/ActionPill';
 import { CookingLoader } from '@/components/Loader';
+import { OnbScreen } from '@/components/Onboarding';
 import { Text } from '@/components/Text';
+import { TextLink } from '@/components/TextLink';
 import { StoreProvider, useStore } from '@/data/store';
-import { hasBackend } from '@/data/supabase';
+import { hasBackend, supabase } from '@/data/supabase';
 import { useLocalNotifications } from '@/hooks/useLocalNotifications';
 import { color, fontFaces, space } from '@/theme';
 
@@ -45,7 +48,7 @@ export default function RootLayout() {
 
 /** Onboarding until it has been finished once, then the app. Scan is shared by both. */
 function Routes() {
-  const { state, ready } = useStore();
+  const { state, actions, ready, sync } = useStore();
   const onboarded = state.session.onboarded;
   useLocalNotifications(state);
 
@@ -71,6 +74,32 @@ function Routes() {
         <CookingLoader />
         <Text color="inkMuted">Opening your kitchen…</Text>
       </View>
+    );
+  }
+
+  // Signed in, but the first load failed and this phone has no copy of the kitchen: nothing to show yet.
+  if (sync.empty) {
+    return (
+      <OnbScreen
+        title="Couldn’t open your kitchen"
+        sub="Check your connection and try again."
+        topSpace={space.s5}
+        bottom={
+          <>
+            <ActionPill label="Try again" variant="primary" height="bottom" onPress={sync.retry} />
+            <TextLink
+              label="Log out"
+              variant="button"
+              align="center"
+              color="ink"
+              onPress={() => {
+                supabase?.auth.signOut().catch(() => undefined);
+                actions.reset();
+              }}
+            />
+          </>
+        }
+      />
     );
   }
 

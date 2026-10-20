@@ -408,6 +408,36 @@ export function ErrorLine({ text }: { text: string }) {
   );
 }
 
+/* ---------- Sync notice ---------- */
+
+const SYNC_COPY: Record<'offline' | 'server' | 'rejected' | 'load', { text: string; error: boolean }> = {
+  offline: { text: 'You’re offline. Changes stay on this phone and sync when you’re back.', error: false },
+  server: { text: 'We couldn’t sync your changes. They’re kept on this phone and we’ll keep trying.', error: true },
+  rejected: { text: 'We couldn’t save your last change, so it was undone.', error: true },
+  load: { text: 'We couldn’t load the latest. This is the copy on your phone.', error: false },
+};
+
+/**
+ * One line under a tab's title when the kitchen and the server are out of step, with Retry.
+ * Offline is a state, not an error, so it stays `ink-muted`; the server failing is `error-ink`.
+ */
+export function SyncNotice({ problem, onRetry }: { problem: keyof typeof SYNC_COPY | null; onRetry: () => void }) {
+  if (!problem) return null;
+  const copy = SYNC_COPY[problem];
+  return (
+    <View style={styles.sync} accessibilityRole="alert" accessibilityLiveRegion="polite">
+      <Text variant="caption" color={copy.error ? 'errorInk' : 'inkMuted'} style={styles.syncText}>
+        {copy.text}
+      </Text>
+      <Tap accessibilityRole="button" accessibilityLabel={problem === 'rejected' ? 'Reload the kitchen' : 'Retry'} onPress={onRetry} style={styles.syncRetry}>
+        <Text variant="link" color="sageInk" weight="semibold">
+          {problem === 'rejected' ? 'Reload' : 'Retry'}
+        </Text>
+      </Tap>
+    </View>
+  );
+}
+
 /* ---------- Checkbox ---------- */
 
 const BOX = 24;
@@ -469,6 +499,9 @@ export function AddBox() {
 }
 
 const styles = StyleSheet.create({
+  sync: { flexDirection: 'row', alignItems: 'center', gap: space.s3 },
+  syncText: { flex: 1 },
+  syncRetry: { minHeight: size.targetMin, justifyContent: 'center', paddingHorizontal: space.s1, marginRight: -space.s1 },
   track: {
     minHeight: size.controlHeight,
     padding: TRACK_PAD,

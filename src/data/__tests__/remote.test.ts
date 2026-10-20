@@ -25,6 +25,8 @@ describe('diffRows', () => {
 
   test('unchanged rows by reference are skipped', () => {
     expect(diffRows([a, b], [a, b])).toEqual({ upserts: [], deletes: [] });
+    // A copy read back from the phone is a new object with the same content.
+    expect(diffRows([a, b], [{ ...a }, JSON.parse(JSON.stringify(b))])).toEqual({ upserts: [], deletes: [] });
   });
 
   test('add, change and delete', () => {

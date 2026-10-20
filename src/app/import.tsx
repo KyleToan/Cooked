@@ -44,6 +44,8 @@ export default function Import() {
   const [parsed, setParsed] = useState<Recipe | null>(null);
   const [focused, setFocused] = useState(false);
   const [addMissing, setAddMissing] = useState(true);
+  // The link didn't load (offline, timed out): the error offers Try again instead of "No recipe".
+  const [unreachable, setUnreachable] = useState(false);
 
   const lines = countIngredients(text);
   const close = () => router.back();
@@ -56,8 +58,10 @@ export default function Import() {
     // Pasted text is read at once, so it skips the minimum and goes straight to the result.
     const wait = mode === 'text' ? null : new Promise((done) => setTimeout(done, MIN_READ_MS));
     let live = true;
-    Promise.all([read, wait]).then(([recipe]) => {
+    Promise.all([read, wait]).then(([result]) => {
       if (!live) return;
+      const recipe = result === 'unreachable' ? null : result;
+      setUnreachable(result === 'unreachable');
       setParsed(recipe);
       setStep(recipe ? 'done' : 'error');
       if (recipe) haptics.success();
@@ -93,10 +97,19 @@ export default function Import() {
   const added = saved?.onToBuy ?? false;
   const meta = saved ? [saved.time, saved.servings].filter(Boolean).join(' · ') : '';
 
-  const title = step === 'done' && saved ? saved.title : step === 'error' ? 'No recipe on that page' : 'Import a recipe';
+  const title =
+    step === 'done' && saved
+      ? saved.title
+      : step === 'error'
+        ? unreachable
+          ? 'Couldn’t open that page'
+          : 'No recipe on that page'
+        : 'Import a recipe';
   const sub =
     step === 'error'
-      ? scanned
+      ? unreachable
+        ? 'Check your connection and try again.'
+        : scanned
         ? 'We couldn’t find an ingredient list in that photo. Try a sharper photo, or paste the text.'
         : 'We couldn’t find ingredients or steps there. It may be a list of recipes, or behind a login.'
       : step === 'done'
@@ -206,17 +219,32 @@ export default function Import() {
               </Text>
             </View>
           ) : null}
-          <ActionPill
-            label="Paste the recipe text instead"
-            variant="primary"
-            height="bottom"
-            onPress={() => {
-              setMode('text');
-              setStep('edit');
-            }}
-          />
-          {/* After a photo there was no link to try again. */}
-          {scanned ? null : (
+          {unreachable ? (
+            <ActionPill label="Try again" variant="primary" height="bottom" onPress={() => setStep('loading')} />
+          ) : null}
+          {unreachable ? (
+            <TextLink
+              label="Paste the recipe text instead"
+              variant="button"
+              align="center"
+              onPress={() => {
+                setMode('text');
+                setStep('edit');
+              }}
+            />
+          ) : (
+            <ActionPill
+              label="Paste the recipe text instead"
+              variant="primary"
+              height="bottom"
+              onPress={() => {
+                setMode('text');
+                setStep('edit');
+              }}
+            />
+          )}
+          {/* After a photo there was no link to try again; offline, Try again is the way back. */}
+          {scanned || unreachable ? null : (
             <TextLink
               label="Try another link"
               variant="button"
