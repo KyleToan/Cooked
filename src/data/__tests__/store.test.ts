@@ -4,7 +4,7 @@
 
 import { beforeEach, describe, expect, test } from '@jest/globals';
 
-import { initialState, reducer, type Action, type State } from '@/data/store';
+import { initialState, sampleState, reducer, type Action, type State } from '@/data/store';
 import { isDueSoon, shortDate } from '@/data/helpers';
 import { ALEX, NEW_INVITE_CODE, SAMPLE_SCAN, SAM, SEED_ITEMS, SEED_KITCHEN, SEED_TO_BUY } from '@/data/seed';
 import type { ScanLine } from '@/data/types';
@@ -19,21 +19,30 @@ const line = (name: string, place: ScanLine['place'], qty = 1): ScanLine => ({ i
 
 let s: State;
 beforeEach(() => {
-  s = initialState();
+  s = sampleState();
 });
 
 describe('initial state', () => {
-  test('starts in onboarding with the sample kitchen', () => {
-    expect(s.session.onboarded).toBe(false);
-    expect(s.session.signIn).toBeNull();
+  test('starts in onboarding with nobody and nothing', () => {
+    const blank = initialState();
+    expect(blank.session.onboarded).toBe(false);
+    expect(blank.session.signIn).toBeNull();
+    expect(blank.user.name).toBe('');
+    expect(blank.kitchen.name).toBe('');
+    expect(blank.items).toEqual([]);
+    expect(blank.toBuy).toEqual([]);
+    expect(blank.recipes).toEqual([]);
+    expect(blank.undo).toBeNull();
+  });
+
+  test('the sample state is Alex in the Rivera kitchen', () => {
     expect(s.user).toBe(ALEX);
     expect(s.kitchen).toBe(SEED_KITCHEN);
     expect(s.items).toBe(SEED_ITEMS);
-    expect(s.undo).toBeNull();
   });
 
   test('every call returns a fresh session', () => {
-    expect(initialState().session).not.toBe(initialState().session);
+    expect(sampleState().session).not.toBe(sampleState().session);
   });
 
   test('reducer never mutates the seed', () => {
@@ -126,8 +135,9 @@ describe('items', () => {
   });
 
   test('an amount can be added, changed and cleared by hand', () => {
-    const tofu = run(s, { type: 'addItem', name: 'Tofu', place: 'fridge' }).items.at(-1)!;
-    const added = run(s, { type: 'addItem', name: 'Tofu', place: 'fridge' }, { type: 'setAmount', id: tofu.id, qty: 2, unit: ' block ' });
+    const withTofu = run(s, { type: 'addItem', name: 'Tofu', place: 'fridge' });
+    const tofu = withTofu.items.at(-1)!;
+    const added = run(withTofu, { type: 'setAmount', id: tofu.id, qty: 2, unit: ' block ' });
     expect(added.items.at(-1)).toMatchObject({ qty: 2, unit: 'block' });
     const cleared = run(added, { type: 'setAmount', id: tofu.id, qty: undefined, unit: 'block' });
     expect(cleared.items.at(-1)!.qty).toBeUndefined();
@@ -485,7 +495,9 @@ describe('onboarding', () => {
     const me = { ...s, user: { id: 'me', name: 'Jo', note: '' } };
     const next = run(me, { type: 'choosePath', path: 'join' });
     expect(next.session.path).toBe('join');
-    expect(next.kitchen.people.map((p) => p.id)).toEqual(['me', 'alex', 'sam']);
+    // You join as Alex's id so the sample's "Added by" lines read as in the design; your name stays yours.
+    expect(next.kitchen.people.map((p) => p.id)).toEqual(['alex', 'sam']);
+    expect(next.kitchen.people[0].name).toBe('Jo');
     expect(next.items).toBe(SEED_ITEMS);
     expect(next.toBuy).toBe(SEED_TO_BUY);
   });

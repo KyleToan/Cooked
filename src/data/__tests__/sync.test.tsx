@@ -7,7 +7,7 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 
 import type { Loaded, Synced } from '@/data/remote';
 import { toSaved } from '@/data/saved';
-import { initialState, reducer, StoreProvider, useStore } from '@/data/store';
+import { sampleState, reducer, StoreProvider, useStore } from '@/data/store';
 
 jest.mock('expo-router', () => ({ useFocusEffect: () => undefined }));
 jest.mock('@/data/supabase', () => ({ supabase: {}, hasBackend: true }));
@@ -38,7 +38,7 @@ const loaded = (): Loaded => ({
 describe('hydrate', () => {
   test('replaces the kitchen, user, notifications and onboarded, and clears undo', () => {
     const data = loaded();
-    const start = initialState();
+    const start = sampleState();
     const before = reducer(start, { type: 'toggleToBuy', id: start.toBuy.find((t) => !t.done)!.id, scope: 'home' });
     expect(before.undo).not.toBeNull();
     const s = reducer(before, { type: 'hydrate', data });
@@ -52,14 +52,14 @@ describe('hydrate', () => {
   });
 
   test('no kitchen yet gives an empty kitchen named after the person', () => {
-    const s = reducer(initialState(), { type: 'hydrate', data: { ...loaded(), kitchen: null, items: [], toBuy: [] } });
+    const s = reducer(sampleState(), { type: 'hydrate', data: { ...loaded(), kitchen: null, items: [], toBuy: [] } });
     expect(s.kitchen.id).toBeUndefined();
     expect(s.kitchen.name).toBe('Alex kitchen');
     expect(s.items).toEqual([]);
   });
 
   test('only the snapshot (a rollback) leaves the session and user alone', () => {
-    const start = initialState();
+    const start = sampleState();
     const s = reducer(start, { type: 'hydrate', data: { kitchen: loaded().kitchen, items: [], toBuy: [], recipes: [] } });
     expect(s.session.onboarded).toBe(false);
     expect(s.user).toBe(start.user);
@@ -140,7 +140,7 @@ describe('StoreProvider with a backend and a copy on the phone', () => {
 
   const cache = (userId: string) => {
     const data = loaded();
-    const s = reducer(initialState(), { type: 'hydrate', data: { ...data, user: { ...data.user, id: userId } } });
+    const s = reducer(sampleState(), { type: 'hydrate', data: { ...data, user: { ...data.user, id: userId } } });
     store.set('cooked.state', toSaved(s, new Date()));
   };
   const mount = async () => {

@@ -72,7 +72,7 @@ Built (branch `build-screens`): onboarding (all three paths, Apple and Google, e
 
 Backend (Supabase, Decisions #82–89): the schema and RPCs are in `supabase/migrations/` and applied to the Supabase project (access rules checked with two test users), and the app code is built: real sign-in (`src/data/supabase.ts`, `auth.ts`), loading, write-through and realtime sync (`remote.ts`, `store.tsx`), and kitchen actions (`kitchenApi.ts`). It turns on when `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` are set; without them the app runs in the local mode below. The app itself hasn't been run against it yet.
 
-Local mode (no env vars):
+Local mode (no env vars, development only; a release build without them shows "Cooked can't reach its server", Decisions #125):
 
 - **Sign-in.** Any email or number works and the code is always `481726`. Apple's button is Apple's own on iOS, but no real Apple or Google sign-in happens.
 - **Accounts and sync.** Everything lives on this phone only; nothing syncs. Sam never changes anything.

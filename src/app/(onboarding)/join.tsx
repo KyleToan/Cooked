@@ -11,7 +11,7 @@ import { Text } from '@/components/Text';
 import { inStock } from '@/data/helpers';
 import { failText } from '@/data/errors';
 import * as api from '@/data/kitchenApi';
-import { SEED_ITEMS, SEED_KITCHEN, SEED_TO_BUY, SAM } from '@/data/seed';
+import { devSeed } from '@/data/devSeed';
 import { useStore } from '@/data/store';
 import { hasBackend } from '@/data/supabase';
 import { space } from '@/theme';
@@ -48,13 +48,19 @@ export default function Join() {
   const [peek, setPeek] = useState<{ code: string; info: api.InvitePeek | null } | null>(null);
 
   const code = codeOf(value);
-  // Without a backend only the sample code is known, so it shows the kitchen before joining.
-  const found = !hasBackend && code === SEED_KITCHEN.inviteCode;
+  // Without a backend (development) only the sample code is known, so it shows the kitchen before joining.
+  const sample = !hasBackend ? devSeed : null;
+  const found = !!sample && code === sample.SEED_KITCHEN.inviteCode;
   const peeked = hasBackend && peek?.code === code ? peek : null;
   const note: api.InvitePeek | null = hasBackend
     ? (peeked?.info ?? null)
-    : found
-      ? { kitchen: SEED_KITCHEN.name, invitedBy: SAM.name, items: inStock(SEED_ITEMS).length, toBuy: SEED_TO_BUY.length }
+    : found && sample
+      ? {
+          kitchen: sample.SEED_KITCHEN.name,
+          invitedBy: sample.SAM.name,
+          items: inStock(sample.SEED_ITEMS).length,
+          toBuy: sample.SEED_TO_BUY.length,
+        }
       : null;
   const result = failed?.code === code ? failed.result : null;
   const failMessage = result ? FAILED[result] : undefined;
@@ -130,7 +136,7 @@ export default function Join() {
         label="Invite link or code"
         value={value}
         onChangeText={setValue}
-        placeholder="rivera-kitchen"
+        placeholder="cooked.app/join/…"
         autoFocus
         autoCapitalize="none"
         autoCorrect={false}

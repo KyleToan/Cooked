@@ -55,7 +55,7 @@ List the variable names here (never the values). Keep values in EAS environment 
 - `EXPO_PUBLIC_SUPABASE_URL`: the Supabase project URL.
 - `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`: the Supabase publishable key (safe in the app bundle; row level security protects the data).
 
-Without both, the app runs in its local fake mode (sign-in code `481726`, nothing leaves the phone).
+Without both, a development build runs in its local fake mode (sign-in code `481726`, nothing leaves the phone). A release build refuses to: it shows "Cooked can't reach its server", and EAS stops a preview or production build that's missing them (`scripts/check-env.mjs`). Sample data lives in `src/data/seed.ts`, reached only through `devSeed`, so it never ships.
 
 ### Expo rules
 

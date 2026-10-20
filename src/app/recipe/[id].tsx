@@ -10,9 +10,8 @@ import { ToBuyToggle } from '@/components/ListRows';
 import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
-import { isUseSoon, PLACE_LABEL, recipeMeta } from '@/data/helpers';
+import { isUseSoon, PLACE_LABEL, recipeMeta, STAPLES } from '@/data/helpers';
 import { matches, usedWhenMade } from '@/data/match';
-import { STAPLES } from '@/data/seed';
 import { useStore, useUndo } from '@/data/store';
 import { color, radius, shadow, size, space } from '@/theme';
 

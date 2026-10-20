@@ -7,20 +7,11 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useReducer,
 import { AccessibilityInfo } from 'react-native';
 
 import { useAuth } from './auth';
-import { addCounts, guessPlace, hasSome, makeId, receiptCount, shortDate, USE_SOON_DAYS } from './helpers';
+import { addCounts, DEFAULT_NOTIFICATIONS, guessPlace, hasSome, makeId, receiptCount, shortDate, STAPLES, USE_SOON_DAYS } from './helpers';
 import { checkRecipe, checkRecipes, usedWhenMade } from './match';
 import { shelfLifeFor } from './receipt';
 import { clearSaved, loadSaved, save, type Saved } from './saved';
-import {
-  ALEX,
-  NEW_INVITE_CODE,
-  SEED_ITEMS,
-  SEED_KITCHEN,
-  SEED_NOTIFICATIONS,
-  SEED_RECIPES,
-  SEED_TO_BUY,
-  STAPLES,
-} from './seed';
+import { devSeed } from './devSeed';
 import { loadAll, markSynced, subscribeKitchen, writeDiff, type Loaded, type Synced } from './remote';
 import { hasBackend } from './supabase';
 import type {
@@ -62,16 +53,33 @@ export type State = {
   undo: Undo | null;
 };
 
+/** Before onboarding: nobody signed in, nothing in the kitchen. Onboarding names the person and makes or joins a kitchen. */
 export function initialState(): State {
+  const user: Person = { id: 'me', name: '', note: '' };
   return {
     session: { onboarded: false, signIn: null, contact: '', path: null, lastScan: { fridge: [], pantry: [], freezer: [] } },
+    user,
+    kitchen: { name: '', people: [user], inviteCode: '', newLink: false, syncedAgo: '' },
+    items: [],
+    toBuy: [],
+    recipes: [],
+    notifications: DEFAULT_NOTIFICATIONS,
+    undo: null,
+  };
+}
+
+/** Development and tests: signed in as Alex in the sample Rivera kitchen, as the design screenshots show. */
+export function sampleState(): State {
+  if (!devSeed) throw new Error('The sample kitchen is development only');
+  const { ALEX, SEED_ITEMS, SEED_KITCHEN, SEED_NOTIFICATIONS, SEED_RECIPES, SEED_TO_BUY } = devSeed;
+  return {
+    ...initialState(),
     user: ALEX,
     kitchen: SEED_KITCHEN,
     items: SEED_ITEMS,
     toBuy: SEED_TO_BUY,
     recipes: SEED_RECIPES,
     notifications: SEED_NOTIFICATIONS,
-    undo: null,
   };
 }
 
@@ -304,7 +312,8 @@ export function reducer(s: State, a: Action): State {
     case 'newInviteLink': {
       // A fresh code kills the old link. The sample kitchen's next code is the one in the design.
       const family = s.kitchen.inviteCode.replace(/-kitchen$|-[a-z0-9]{4}$/, '');
-      const fresh = s.kitchen.inviteCode === SEED_KITCHEN.inviteCode ? NEW_INVITE_CODE : `${family}-${Math.random().toString(36).slice(2, 6)}`;
+      const sampleCode = devSeed && s.kitchen.inviteCode === devSeed.SEED_KITCHEN.inviteCode ? devSeed.NEW_INVITE_CODE : null;
+      const fresh = sampleCode ?? `${family}-${Math.random().toString(36).slice(2, 6)}`;
       return { ...s, kitchen: { ...s.kitchen, inviteCode: fresh, newLink: true }, undo: null };
     }
     case 'leaveKitchen':
@@ -325,9 +334,13 @@ export function reducer(s: State, a: Action): State {
     case 'choosePath': {
       const session = { ...s.session, path: a.path };
       if (a.path === 'join') {
-        // Until there's a backend, the only kitchen to join is the sample Rivera kitchen.
-        const people = [s.user, ...SEED_KITCHEN.people.filter((p) => p.id !== s.user.id)];
-        return { ...s, session, kitchen: { ...SEED_KITCHEN, people }, items: SEED_ITEMS, toBuy: SEED_TO_BUY, recipes: SEED_RECIPES };
+        // With a backend, Join loads the real kitchen. Without one (development), the only kitchen to join is the
+        // sample Rivera kitchen, joined as Alex so "Added by" lines read as in the design.
+        if (!devSeed || hasBackend) return { ...s, session };
+        const sample = sampleState();
+        const user = { ...s.user, id: sample.user.id };
+        const people = [user, ...sample.kitchen.people.filter((p) => p.id !== user.id)];
+        return { ...s, session, user, kitchen: { ...sample.kitchen, people }, items: sample.items, toBuy: sample.toBuy, recipes: sample.recipes };
       }
       // Just me or a household: a new, empty kitchen. The first scan fills it.
       return { ...s, session, kitchen: newKitchen(s.user), items: [], toBuy: [], recipes: [] };

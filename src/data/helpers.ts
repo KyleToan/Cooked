@@ -1,6 +1,18 @@
 import * as Crypto from 'expo-crypto';
 
-import type { Item, Place, Recipe, ScanFlow, ToBuyItem } from './types';
+import type { Item, NotificationSettings, Place, Recipe, ScanFlow, ToBuyItem } from './types';
+
+/** Oil and spices stay in the pantry when you make something. */
+export const STAPLES = ['Olive oil', 'Cumin'];
+
+/** A new account's notification switches. */
+export const DEFAULT_NOTIFICATIONS: NotificationSettings = {
+  toBuy: true,
+  useSoon: true,
+  joins: true,
+  weekly: false,
+  useSoonTime: '5:00 pm',
+};
 
 /** "Up late" before 5am, "Good morning" before noon, "Good afternoon" before 5pm, "Good evening" after. */
 export function timeOfDay(date = new Date()): string {
