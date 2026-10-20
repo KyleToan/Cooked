@@ -9,7 +9,7 @@ Suggested order: Phase 0 → 1 → 2 → 3 → 4 and 5 side by side → 6 → 7.
 - [x] **T0.1 🔑 Backend.** Pick one for accounts, database, real-time sync and file storage (Supabase or Firebase are the usual Expo choices). Create the project with your own account; keys go in EAS environment variables. Log it in `Decisions.md`. *Supabase (Decisions #82).*
 - [x] **T0.2 🔑 Receipt reading.** On-device (Apple Vision, needs a development build) or an AI/OCR service (sends photos out). How items get sorted into fridge, pantry or freezer. *On the phone with Google ML Kit (Decisions #86, #92); places still come from the keyword table in `receipt.ts`.*
 - [x] **T0.3 🔑 Open product rules.** Who can remove whom from a kitchen. How "use soon" dates are worked out (shelf-life defaults, by hand, or both). Whether recipe links are fetched on a server or on the device. *Only the kitchen's maker removes people (Decisions #84), and when the maker leaves, the earliest joiner takes over. Use soon is both: a per-item shelf life sets it, and you can mark or change it by hand. Links are fetched on the device (Decisions #59; see T5.5).*
-- [ ] **T0.4 🔑 Account fields.** Can Email, Sign-in method and Units be changed, and how? Decisions #54 left them read-only. For Units: is metric wanted, and where do units show besides recipe amounts? Needs design if yes. *Replaces "Units" under "Needs a decision".*
+- [x] **T0.4 🔑 Account fields.** Can Email, Sign-in method and Units be changed, and how? *Email and Sign-in method stay read-only. Units belong to items, not the account: an item's quantity is empty by default and optional, and its quantity and unit can be added or changed by hand (Decisions #122).*
 
 ## Phase 1: Foundations
 
@@ -27,7 +27,7 @@ Suggested order: Phase 0 → 1 → 2 → 3 → 4 and 5 side by side → 6 → 7.
 - [x] **T2.3 Sign in with Google.** Google OAuth (client IDs in env vars). *Through Supabase's OAuth page (`src/data/auth.ts`).*
 - [x] **T2.4 Stay signed in.** Session in `expo-secure-store`; "onboarded" saved on the account. *The session is kept in `expo-sqlite/localStorage` (`src/data/supabase.ts`), not `expo-secure-store`.*
 - [x] **T2.5 Log out and delete account.** Delete removes sign-in and name, keeps the kitchen for the others (server function). *The `delete_account` function is called from Account. The App Store requires in-app account deletion, so this covers that requirement (T7.4).*
-- [ ] **T2.6 Edit account fields.** Build whatever T0.4 decides for Email, Sign-in method and Units. The name sheet already exists and only needs to save to the server. *Done when each field T0.4 makes editable changes on the server and shows on the next sign-in.*
+- [ ] **T2.6 Edit an item's quantity and unit.** Per Decisions #122: a new item has no quantity unless one is entered (`Item.qty` becomes optional; rows show just the name when it's missing), and an item's quantity and unit can be added, changed or cleared by hand, saved to the server. The account's name sheet only needs to save to the server. *Done when an item can get a quantity and unit, lose them again, and both show on a second phone.*
 
 ## Phase 3: Kitchens and sharing
 
@@ -228,7 +228,7 @@ Account links to `cooked.app/help`, `/privacy` and `/terms`, which don't exist. 
 These are features the design mentions but that need the owner's choice before they can become tickets.
 
 - **Fridge, Pantry and Freezer scan modes.** Recognising food on a shelf from a photo needs an image model, either on the phone (big download, rough results) or a service (backend, costs per scan). Which, or drop it?
-- **Units, Email and Sign-in.** Now T0.4 and T2.6 above.
+- **Units, Email and Sign-in.** Decided (T0.4, Decisions #122); the build is T2.6.
 - **Editing an item by hand** (quantity, place). The design has Use and swipe to Use up, but no edit screen. Marking an item use soon or changing its date by hand is decided (T0.3) and being built.
 - **Import from Safari's share sheet.** Sharing a recipe link straight to Cooked needs a share extension (a native config plugin and a new build). Wanted?
 - **Dark mode and iPad** (Decision #40: light mode and iPhone only). No designs yet.
