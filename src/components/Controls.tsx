@@ -412,6 +412,10 @@ export function ErrorLine({ text }: { text: string }) {
 
 /* ---------- Sync notice ---------- */
 
+/** The notice fades in and out when the kitchen falls out of step or catches up; Reduce Motion skips it. */
+const NOTICE_IN = FadeIn.duration(200);
+const NOTICE_OUT = FadeOut.duration(150);
+
 const SYNC_COPY: Record<'offline' | 'server' | 'rejected' | 'load', { text: string; error: boolean }> = {
   offline: { text: 'You’re offline. Changes stay on this phone and sync when you’re back.', error: false },
   server: { text: 'We couldn’t sync your changes. They’re kept on this phone and we’ll keep trying.', error: true },
@@ -427,7 +431,7 @@ export function SyncNotice({ problem, onRetry }: { problem: keyof typeof SYNC_CO
   if (!problem) return null;
   const copy = SYNC_COPY[problem];
   return (
-    <View style={styles.sync} accessibilityRole="alert" accessibilityLiveRegion="polite">
+    <Animated.View entering={NOTICE_IN} exiting={NOTICE_OUT} style={styles.sync} accessibilityRole="alert" accessibilityLiveRegion="polite">
       <Text variant="caption" color={copy.error ? 'errorInk' : 'inkMuted'} style={styles.syncText}>
         {copy.text}
       </Text>
@@ -436,7 +440,7 @@ export function SyncNotice({ problem, onRetry }: { problem: keyof typeof SYNC_CO
           {problem === 'rejected' ? 'Reload' : 'Retry'}
         </Text>
       </Tap>
-    </View>
+    </Animated.View>
   );
 }
 

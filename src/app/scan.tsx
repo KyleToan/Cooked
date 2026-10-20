@@ -386,7 +386,8 @@ const styles = StyleSheet.create({
   shutterDot: { width: SHUTTER_DOT, height: SHUTTER_DOT, borderRadius: radius.pill, backgroundColor: color.onInk },
   // The prototype's strip: a 56pt glass pill inset 6pt, so each mode is a 44pt target.
   strip: { height: STRIP, marginTop: space.s5, marginHorizontal: space.s5, borderRadius: radius.pill },
-  modes: { flex: 1, padding: STRIP_PAD, flexDirection: 'row', gap: space.s1 },
+  // Glass centres what it holds, so the row stretches itself across the strip.
+  modes: { flex: 1, alignSelf: 'stretch', padding: STRIP_PAD, flexDirection: 'row', gap: space.s1 },
   mode: { flex: 1, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   // The picked mode: a white pill that slides between modes under the labels.
   modePill: {

@@ -10,8 +10,9 @@ import { color } from '@/theme';
 
 const GLASS = 0.4;
 const BLUR = 30;
-// Android's BlurView only fakes the blur unless it wraps the camera as a blur target, so it keeps the flat wash.
-const CAN_BLUR = Platform.OS !== 'android';
+// Android's BlurView only fakes the blur unless it wraps the camera as a blur target, and on the web it blurs the
+// icons it holds, so both keep the flat wash.
+const CAN_BLUR = Platform.OS === 'ios';
 
 /** True while Reduce Transparency is on (iOS); the glass then turns flat. iOS only: the web has no such setting. */
 function useReduceTransparency() {

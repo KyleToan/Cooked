@@ -55,16 +55,7 @@ function Routes() {
   // A release build always talks to Supabase. Built without its settings, it says so instead of running the
   // development fake (any code works, nothing leaves the phone). scripts/check-env.mjs stops such a build on EAS.
   if (!hasBackend && !__DEV__) {
-    return (
-      <View style={[styles.loading, styles.blocked]} accessibilityRole="alert">
-        <Text color="errorInk" weight="semibold" style={styles.center}>
-          Cooked can’t reach its server.
-        </Text>
-        <Text color="inkMuted" style={styles.center}>
-          This build is missing its settings. Please update the app.
-        </Text>
-      </View>
-    );
+    return <OnbScreen title="Cooked can’t reach its server" sub="This copy of the app is missing its settings. Update Cooked from the App Store." topSpace={space.s5} />;
   }
 
   // Restoring the saved Supabase session and loading its kitchen on launch; instant without a backend.
@@ -136,6 +127,4 @@ function Routes() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.s4, backgroundColor: color.surface },
-  blocked: { paddingHorizontal: space.s5, gap: space.s2 },
-  center: { textAlign: 'center' },
 });

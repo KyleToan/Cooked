@@ -102,20 +102,25 @@ export function KitchenRow({
                 {actionLabel}
               </Text>
             </Tap>
-            {item.qty !== undefined ? <Stepper value={item.qty} onChange={onQty} /> : null}
+            {item.qty !== undefined ? (
+              <Animated.View entering={ROW_OPEN}>
+                <Stepper value={item.qty} onChange={onQty} />
+              </Animated.View>
+            ) : null}
           </View>
+          {/* The amount already shows on the row and in the stepper, so the pill only says what tapping does. */}
           <Tap
             accessibilityRole="button"
-            accessibilityLabel={amount ? `Amount, ${amount}` : 'Add an amount'}
-            accessibilityHint="Opens the amount and unit"
+            accessibilityLabel={amount && hasSome(item) ? `Change the amount, ${amount}` : 'Add an amount'}
+            accessibilityHint="Opens how many and the unit"
             onPress={onEditAmount}
             style={styles.amountPill}
           >
             <Text variant="caption" color="inkMuted">
               Amount
             </Text>
-            <Text variant="button" weight="semibold" color={amount ? 'ink' : 'sageInk'}>
-              {amount || 'Add'}
+            <Text variant="link" color="sageInk">
+              {amount && hasSome(item) ? 'Change' : 'Add'}
             </Text>
           </Tap>
           {extra}

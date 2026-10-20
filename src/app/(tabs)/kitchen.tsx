@@ -453,7 +453,7 @@ function StockTab({
         <AddRow placeholder={copy.add} label={copy.add.replace('…', '')} onSubmit={(name) => actions.addItem(name, place)} />
       </View>
 
-      <Sheet visible={amountOpen} onClose={() => setAmountOpen(false)} title={`How much ${amountFor?.name ?? ''}`.trim()}>
+      <Sheet visible={amountOpen} onClose={() => setAmountOpen(false)} title={amountFor ? `How much ${amountFor.name}?` : 'How much?'}>
         <Field
           label="How many (optional)"
           value={qtyText}

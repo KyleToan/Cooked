@@ -12,7 +12,7 @@ import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
 import { failText, type Failure } from '@/data/errors';
-import { parseClock } from '@/data/helpers';
+import { nudgeText, parseClock, weeklyText } from '@/data/helpers';
 import { failure, saveNotifications } from '@/data/kitchenApi';
 import { useStore } from '@/data/store';
 import { hasBackend } from '@/data/supabase';
@@ -129,14 +129,18 @@ export default function NotificationsScreen() {
     }
   };
 
+  // The words this kitchen would get today, the same helpers the scheduled ones use.
+  const nudge = nudgeText(state.items);
   const preview =
     PUSH_READY && isOn('toBuy')
       ? 'Sam added tomatoes, feta and 1 more to To Buy.'
-      : isOn('useSoon')
-        ? 'Chicken thighs and Spinach need using.'
+      : isOn('useSoon') && nudge
+        ? nudge
         : isOn('weekly')
-          ? 'This week: 2 things to use soon and 3 on To Buy.'
-          : 'Notifications are off. Cooked will stay quiet.';
+          ? weeklyText(state.items, state.toBuy)
+          : isOn('useSoon')
+            ? 'Nothing needs using soon, so no nudge today.'
+            : 'Notifications are off. Cooked will stay quiet.';
 
   return (
     <Screen>
