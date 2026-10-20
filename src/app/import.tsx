@@ -215,16 +215,19 @@ export default function Import() {
               setStep('edit');
             }}
           />
-          <TextLink
-            label="Try another link"
-            variant="button"
-            align="center"
-            onPress={() => {
-              setMode('link');
-              setLink('');
-              setStep('edit');
-            }}
-          />
+          {/* After a photo there was no link to try again. */}
+          {scanned ? null : (
+            <TextLink
+              label="Try another link"
+              variant="button"
+              align="center"
+              onPress={() => {
+                setMode('link');
+                setLink('');
+                setStep('edit');
+              }}
+            />
+          )}
         </View>
       ) : null}
 

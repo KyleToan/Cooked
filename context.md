@@ -6,7 +6,7 @@ Everything an agent or new contributor needs to know about Cooked. Rules for age
 
 Cooked is a shared kitchen app for a household. You:
 
-- **Scan** a grocery receipt and Cooked puts each item where it lives, or a cookbook page to import the recipe. (Scanning a shelf is planned.)
+- **Scan** a grocery receipt and Cooked puts each item where it lives, or a cookbook page to import the recipe. (Scanning a shelf and sharing from Safari are planned for after launch, Decisions #123.)
 - **Track** what's in your Fridge, Pantry and Freezer, with quantities and what to use soon.
 - **Import** recipes from a link or pasted text and see what you already have for them.
 - **Share one To Buy list** with the people you live with.

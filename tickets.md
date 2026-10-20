@@ -39,7 +39,7 @@ Suggested order: Phase 0 → 1 → 2 → 3 → 4 and 5 side by side → 6 → 7.
 ## Phase 4: Scanning
 
 - [x] **T4.1 Receipts.** Photo → text (T0.2) → lines with `parseReceipt` in `src/data/receipt.ts` → Check your scan. Unreadable → Couldn't read this receipt. *ML Kit is wired into Scan (Decisions #92, #93); not yet checked against real receipt photos.*
-- [ ] **T4.2 Fridge, Pantry, Freezer and Recipe modes.** Recognize items on a shelf; read a recipe page photo. *Recipe mode is done (Decisions #94). The shelf modes wait on "Needs a decision".*
+- [x] **T4.2 Fridge, Pantry, Freezer and Recipe modes.** Recognize items on a shelf; read a recipe page photo. *Recipe mode is done (Decisions #94). Shelf modes are not in the launch; they are under "After launch" below (Decisions #123).*
 - [ ] **T4.3 Use-soon dates.** `daysLeft` from the T0.3 rule instead of `DEFAULT_DAYS`. *The automatic part is done: a per-item shelf life (Decisions #95). Marking or changing it by hand is being built now.*
 
 ## Phase 5: Recipes
@@ -66,6 +66,13 @@ Suggested order: Phase 0 → 1 → 2 → 3 → 4 and 5 side by side → 6 → 7.
 - [ ] **T7.6 Accessibility pass on a device.** VoiceOver labels on every control, Dynamic Type at the largest sizes, reduced motion, 44pt tap targets and 4.5:1 contrast for text that matters (design checklist). *Done when every flow in `design/screens/README.md` works with VoiceOver and at the largest text size on a phone.*
 
 ---
+
+## After launch
+
+Wanted, but not in the first App Store release (Decisions #123).
+
+- [ ] **L1 Scan a shelf.** Fridge, Pantry and Freezer modes on Scan: point the camera at a shelf and add what it sees. Needs an image model, either on the phone or a service (a service sends photos out, so it needs the owner's OK, a server function and a line in the privacy policy). Add the modes to `MODES` in `src/app/scan.tsx` when it works.
+- [ ] **L2 Share to Cooked from Safari.** A share extension so a recipe link can be sent from Safari's share sheet straight into Import. Needs a native config plugin and a new build.
 
 ## Step by step: everything except the backend
 
@@ -227,10 +234,10 @@ Account links to `cooked.app/help`, `/privacy` and `/terms`, which don't exist. 
 
 These are features the design mentions but that need the owner's choice before they can become tickets.
 
-- **Fridge, Pantry and Freezer scan modes.** Recognising food on a shelf from a photo needs an image model, either on the phone (big download, rough results) or a service (backend, costs per scan). Which, or drop it?
+- **Fridge, Pantry and Freezer scan modes.** Decided: not for launch, see "After launch" (Decisions #123).
 - **Units, Email and Sign-in.** Decided (T0.4, Decisions #122); the build is T2.6.
 - **Editing an item by hand** (quantity, place). The design has Use and swipe to Use up, but no edit screen. Marking an item use soon or changing its date by hand is decided (T0.3) and being built.
-- **Import from Safari's share sheet.** Sharing a recipe link straight to Cooked needs a share extension (a native config plugin and a new build). Wanted?
+- **Import from Safari's share sheet.** Decided: not for launch, see "After launch" (Decisions #123).
 - **Dark mode and iPad** (Decision #40: light mode and iPhone only). No designs yet.
 
 ---
@@ -282,9 +289,9 @@ Pushing failed with "could not read Username". Run `gh auth login` (or set up a 
   - the largest text size
 
 ### 7. Small calls to make
-- **Nudge text:** it keeps names as stored, so it reads "Chicken thighs and Spinach need using." Keep that, or lower-case all but proper nouns?
+- [x] **Nudge text:** keep names as stored ("Chicken thighs and Spinach need using.") (Decisions #123).
 - **Shelf-life numbers:** check a few in ticket 4's table against USDA FoodKeeper.
-- **Photo scan error:** after a failed photo scan, Import's error still offers "Try another link". Hide it?
+- [x] **Photo scan error:** "Try another link" is hidden after a photo scan (Decisions #123).
 - **Icon source:** re-export `design/system/design-system.json` from the design source so it lists the two new icons.
 - **`npm run doctor`:** it fails because `expo-doctor` isn't installed (`npx -y expo-doctor` works). An agent can fix the script.
 
