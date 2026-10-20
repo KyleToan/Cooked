@@ -12,6 +12,7 @@ import { inStock } from '@/data/helpers';
 import { failText } from '@/data/errors';
 import * as api from '@/data/kitchenApi';
 import { devSeed } from '@/data/devSeed';
+import { clearPendingInvite, pendingInvite } from '@/data/pendingInvite';
 import { useStore } from '@/data/store';
 import { hasBackend } from '@/data/supabase';
 import { space } from '@/theme';
@@ -37,7 +38,8 @@ const FAILED: Partial<Record<api.Result, string>> = {
 export default function Join() {
   const router = useRouter();
   const { actions, reload } = useStore();
-  const [value, setValue] = useState('');
+  // Opened from an invite link: its code is already in the field.
+  const [value, setValue] = useState(() => pendingInvite() ?? '');
   // The server's answer for the code that was last tried; cleared when the code changes.
   const [failed, setFailed] = useState<{ code: string; result: api.Result } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -105,10 +107,12 @@ export default function Join() {
       if (r === 'ok') await reload();
       setBusy(false);
       if (r !== 'ok') return setFailed({ code, result: r });
+      clearPendingInvite();
       actions.finishOnboarding();
       return;
     }
     if (!found) return;
+    clearPendingInvite();
     actions.choosePath('join');
     actions.finishOnboarding();
   };

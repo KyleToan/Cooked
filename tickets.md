@@ -33,7 +33,7 @@ Suggested order: Phase 0 → 1 → 2 → 3 → 4 and 5 side by side → 6 → 7.
 
 - [x] **T3.1 Create a kitchen.** Just me and Me and my household make a real kitchen. *`create_kitchen` (`src/data/kitchenApi.ts`).*
 - [x] **T3.2 Invite links.** `cooked.app/join/<code>`, one person, 7 days; Make a new link cancels the old; system share sheet.
-- [ ] **T3.3 Join.** Server checks the code; universal links open the app; existing error for unknown or expired codes. Before joining, Join shows a preview of the kitchen the code belongs to (its name and who made it). *The server check and the error are built; universal links (`associatedDomains` and the apple-app-site-association file on `cooked.app`) aren't. The preview is being built now.*
+- [ ] **T3.3 Join.** Server checks the code; universal links open the app; existing error for unknown or expired codes. Before joining, Join shows a preview of the kitchen the code belongs to (its name and who made it). *The server check, the error and the preview are built. The app side of universal links is built (Decisions #127); the owner serves the files in `site/.well-known/` on `cooked.app` with their Team ID and signing fingerprint.*
 - [x] **T3.4 Household.** Rename, remove (rule from T0.3) with undo, leave; "Added by Sam" and activity lines from real data. *Only the maker removes people (Decisions #84). When the maker leaves, the earliest joiner becomes the maker; that hand-over is being built now.*
 
 ## Phase 4: Scanning
@@ -54,7 +54,7 @@ Suggested order: Phase 0 → 1 → 2 → 3 → 4 and 5 side by side → 6 → 7.
 ## Phase 6: Notifications
 
 - [ ] **T6.1 🔑 Push.** `expo-notifications`, permission, save device tokens.
-- [ ] **T6.2 The four notifications.** To Buy changes, daily use soon at the chosen time, someone joins, weekly summary. Switches saved on the server; sent by scheduled server jobs.
+- [ ] **T6.2 The four notifications.** *For launch only the nudge and the weekly summary show, both scheduled on the phone; To Buy changes and joins are hidden until push works (`PUSH_READY`, Decisions #127).* To Buy changes, daily use soon at the chosen time, someone joins, weekly summary. Switches saved on the server; sent by scheduled server jobs.
 
 ## Phase 7: Launch
 

@@ -19,12 +19,16 @@ import { hasBackend } from '@/data/supabase';
 import type { NotificationKey } from '@/data/types';
 import { color, radius, shadow, size, space } from '@/theme';
 
-const ROWS: { key: NotificationKey; title: string; sub: string; time?: boolean }[] = [
-  { key: 'toBuy', title: 'To Buy changes', sub: 'When someone adds to To Buy while you’re out. Grouped, so you get one buzz, not five.' },
+/** `push`: sent by the server to this phone, which isn't built yet (T6.1), so those rows stay hidden (Decisions #127). */
+const ALL_ROWS: { key: NotificationKey; title: string; sub: string; time?: boolean; push?: boolean }[] = [
+  { key: 'toBuy', title: 'To Buy changes', sub: 'When someone adds to To Buy while you’re out. Grouped, so you get one buzz, not five.', push: true },
   { key: 'useSoon', title: 'Use-soon nudge', sub: 'Once a day, only if something needs using in the next two days.', time: true },
-  { key: 'joins', title: 'Someone joins your kitchen', sub: 'When an invite link is used.' },
-  { key: 'weekly', title: 'Weekly kitchen summary', sub: 'Sundays: what got used, what got thrown out.' },
+  { key: 'joins', title: 'Someone joins your kitchen', sub: 'When an invite link is used.', push: true },
+  { key: 'weekly', title: 'Weekly kitchen summary', sub: 'Sundays: what needs using soon and what’s on To Buy.' },
 ];
+/** Flip once server push sends To Buy changes and joins. */
+const PUSH_READY = false;
+const ROWS = ALL_ROWS.filter((r) => PUSH_READY || !r.push);
 
 /** The web has no time picker or notification permission; there the time steps through these. */
 const WEB_TIMES = ['8:00 am', '12:00 pm', '5:00 pm', '7:00 pm'];
@@ -125,11 +129,14 @@ export default function NotificationsScreen() {
     }
   };
 
-  const preview = isOn('toBuy')
-    ? 'Sam added tomatoes, feta and 1 more to To Buy.'
-    : isOn('useSoon')
-      ? 'Spinach and chicken thighs need using by tomorrow.'
-      : 'Notifications are off. Cooked will stay quiet.';
+  const preview =
+    PUSH_READY && isOn('toBuy')
+      ? 'Sam added tomatoes, feta and 1 more to To Buy.'
+      : isOn('useSoon')
+        ? 'Chicken thighs and Spinach need using.'
+        : isOn('weekly')
+          ? 'This week: 2 things to use soon and 3 on To Buy.'
+          : 'Notifications are off. Cooked will stay quiet.';
 
   return (
     <Screen>
@@ -188,9 +195,6 @@ export default function NotificationsScreen() {
           </View>
         ) : null}
         {saveFailed ? <ErrorLine text={failText('save that', saveFailed)} /> : null}
-        <Text variant="caption" color="inkMuted" style={styles.honest}>
-          To Buy changes and joins start once your kitchen syncs. Until then, those two are only saved.
-        </Text>
       </View>
 
       <View style={styles.preview}>
@@ -230,7 +234,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   blocked: { flexDirection: 'row', alignItems: 'center', gap: space.s3, paddingTop: space.s2 },
-  honest: { paddingTop: space.s2 },
   preview: { gap: space.cozy },
   // Looks like an iOS banner: white, round, floating. The mark is paper, since sage fills only the primary button.
   card: {

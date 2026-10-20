@@ -12,6 +12,7 @@ import * as api from '@/data/kitchenApi';
 import { useStore } from '@/data/store';
 import { hasBackend } from '@/data/supabase';
 import type { KitchenPath } from '@/data/types';
+import { pendingInvite } from '@/data/pendingInvite';
 import { color, radius, space } from '@/theme';
 
 const CHOICES: { id: KitchenPath; title: string; sub: string }[] = [
@@ -30,7 +31,8 @@ const RADIO = 22;
 export default function Household() {
   const router = useRouter();
   const { state, actions, reload } = useStore();
-  const [picked, setPicked] = useState<KitchenPath>('household');
+  // Opened from an invite link: joining is what they came for.
+  const [picked, setPicked] = useState<KitchenPath>(() => (pendingInvite() ? 'join' : 'household'));
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState<Failure | null>(null);
 

@@ -19,6 +19,7 @@ Rules for any AI agent (Claude Code, Cursor, Copilot, etc.) working in this repo
 | `scripts/build-tokens.mjs` | Generates `src/theme/tokens.ts`, `src/theme/fonts.ts` and `src/components/icon-data.ts` from `design/system/`. |
 | `design/` | The design spec: design system, every screen as a prototype and a screenshot. Read `design/README.md` first. Nothing in it ships. |
 | `assets/` | App icon, splash and favicon (Expo placeholders for now). |
+| `site/` | Files the `cooked.app` website serves so invite links open the app. Not part of the app. |
 | `app.json`, `eas.json` | App config and EAS build and update channels. |
 | `.cursor/rules/cooked-design.mdc` | The design rules Cursor loads for every request. |
 | `CLAUDE.md` | Makes Claude Code load this file and the design rules. |

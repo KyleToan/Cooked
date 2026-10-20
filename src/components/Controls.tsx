@@ -137,6 +137,8 @@ export function Switch({ value, onChange, label }: { value: boolean; onChange: (
         trackColor={{ true: color.sageInk, false: color.checkBorder }}
         ios_backgroundColor={color.checkBorder}
         thumbColor={color.surface}
+        // react-native-web draws the on thumb in its own teal unless told otherwise.
+        {...(Platform.OS === 'web' ? { activeThumbColor: color.surface } : null)}
       />
     </Tap>
   );
