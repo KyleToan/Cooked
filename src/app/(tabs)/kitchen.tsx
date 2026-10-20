@@ -533,7 +533,8 @@ function ToBuyTab({
 
   const share = () => {
     const left = sortToBuy(state.toBuy).filter((t) => !t.done);
-    Share.share({ message: ['To Buy', ...left.map((t) => `• ${t.name}`)].join('\n') });
+    // Rejects where there's no share sheet (most desktop browsers); nothing to do then.
+    Share.share({ message: ['To Buy', ...left.map((t) => `• ${t.name}`)].join('\n') }).catch(() => undefined);
   };
 
   if (query && list.length === 0) {

@@ -19,10 +19,11 @@ export default function ScanUnreadable() {
   const { actions } = useStore();
 
   const byHand = () => {
-    router.dismissAll();
     if (flow === 'app') {
-      router.navigate({ pathname: '/kitchen', params: { tab: 'fridge' } });
+      // Back past Scan to the tabs, on Kitchen's Fridge, in one step.
+      router.dismissTo({ pathname: '/kitchen', params: { tab: 'fridge' } });
     } else {
+      router.dismissAll();
       // In onboarding the kitchen isn't open yet: carry on, and add things from Home later.
       actions.skipFirstScan();
       router.push(flow === 'onb' ? '/invite' : '/ready');

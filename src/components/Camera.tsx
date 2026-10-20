@@ -13,11 +13,14 @@ const BLUR = 30;
 // Android's BlurView only fakes the blur unless it wraps the camera as a blur target, so it keeps the flat wash.
 const CAN_BLUR = Platform.OS !== 'android';
 
-/** True while Reduce Transparency is on (iOS); the glass then turns flat. */
+/** True while Reduce Transparency is on (iOS); the glass then turns flat. iOS only: the web has no such setting. */
 function useReduceTransparency() {
   const [on, setOn] = useState(false);
   useEffect(() => {
-    AccessibilityInfo.isReduceTransparencyEnabled().then(setOn);
+    if (Platform.OS !== 'ios') return;
+    AccessibilityInfo.isReduceTransparencyEnabled()
+      .then(setOn)
+      .catch(() => undefined);
     const sub = AccessibilityInfo.addEventListener('reduceTransparencyChanged', setOn);
     return () => sub.remove();
   }, []);

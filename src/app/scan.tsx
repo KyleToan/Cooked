@@ -241,7 +241,7 @@ export default function Scan() {
               </Text>
             </>
           ) : (
-            <PermissionAsk canAsk={permission.canAskAgain} onAsk={requestPermission} />
+            <PermissionAsk what={mode === 'recipe' ? 'a recipe page' : 'your receipt'} canAsk={permission.canAskAgain} onAsk={requestPermission} />
           )}
         </View>
       </View>
@@ -333,11 +333,11 @@ export default function Scan() {
 }
 
 /** Shown in place of the hint when the camera isn't allowed yet. */
-function PermissionAsk({ canAsk, onAsk }: { canAsk: boolean; onAsk: () => void }) {
+function PermissionAsk({ what, canAsk, onAsk }: { what: string; canAsk: boolean; onAsk: () => void }) {
   return (
     <View style={styles.ask}>
       <Text variant="body" weight="medium" color="onInk" style={styles.center} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
-        Cooked needs the camera to scan your receipt.
+        Cooked needs the camera to scan {what}.
       </Text>
       <Tap accessibilityRole="button" onPress={canAsk ? onAsk : () => Linking.openSettings()} style={styles.askBtn}>
         <Text variant="button" weight="semibold" maxFontSizeMultiplier={CHROME_MAX_SCALE}>
