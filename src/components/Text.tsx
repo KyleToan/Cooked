@@ -25,7 +25,16 @@ export function Text({ variant = 'body', color: tint = 'ink', weight, strike, st
     strike && { textDecorationLine: 'line-through' as const },
     style,
   ];
+  const flat = StyleSheet.flatten(styles);
   // Custom fonts don't follow Bold Text on their own, so step each face up one weight.
-  const family = bold ? StyleSheet.flatten(styles).fontFamily : undefined;
-  return <RNText {...rest} style={family && bolder[family] ? [styles, { fontFamily: bolder[family] }] : styles} />;
+  const family = bold ? flat.fontFamily : undefined;
+  // Caveat's strokes reach past the glyph box, so iOS clips the last letter ("Bread" loses its d).
+  // Room on the right, taken back by the margin, so the layout doesn't move.
+  const room = flat.fontFamily?.startsWith('Caveat') ? Math.ceil((flat.fontSize ?? 16) / 6) : 0;
+  return (
+    <RNText
+      {...rest}
+      style={[styles, family && bolder[family] ? { fontFamily: bolder[family] } : null, room ? { paddingRight: room, marginRight: -room } : null]}
+    />
+  );
 }

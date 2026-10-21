@@ -76,6 +76,11 @@ describe('To Buy', () => {
     expect(run(s, { type: 'addToBuy', name: '   ' })).toBe(s);
   });
 
+  test('an amount, when given, is the line under the name', () => {
+    expect(run(s, { type: 'addToBuy', name: 'Milk', amount: ' 2 L ' }).toBuy.at(-1)!.note).toBe('2 L');
+    expect(run(s, { type: 'addToBuy', name: 'Milk', amount: ' ' }).toBuy.at(-1)!.note).toMatch(/^Added by/);
+  });
+
   test('adding clears any undo', () => {
     const next = run(s, { type: 'toggleToBuy', id: 't', scope: 'home' }, { type: 'addToBuy', name: 'Lemons' });
     expect(next.undo).toBeNull();
@@ -116,11 +121,12 @@ describe('items', () => {
 
   test('changing the count keeps it at 0 or more', () => {
     expect(item(run(s, { type: 'setQty', id: 'f4', qty: 7, scope: 'kitchen' }), 'f4').qty).toBe(7);
-    expect(item(run(s, { type: 'setQty', id: 'f4', qty: -3, scope: 'kitchen' }), 'f4').qty).toBe(0);
+    expect(run(s, { type: 'setQty', id: 'f4', qty: -3, scope: 'kitchen' }).items.some((i) => i.id === 'f4')).toBe(false);
   });
 
-  test('using something up offers an undo', () => {
+  test('using something up takes it off the list and offers an undo', () => {
     const next = run(s, { type: 'setQty', id: 'f1', qty: 0, scope: 'kitchen' });
+    expect(next.items.some((i) => i.id === 'f1')).toBe(false);
     expect(next.undo).toMatchObject({ text: 'Spinach used up', scope: 'kitchen' });
   });
 
@@ -161,6 +167,12 @@ describe('use soon by hand', () => {
     expect(item(next, 'f4')).toMatchObject({ daysLeft: 1, useSoon: undefined, meta: `Best by ${shortDate(1)}` });
     expect(isDueSoon(item(next, 'f4'))).toBe(true);
     expect(isDueSoon(item(run(s, { type: 'setBestBy', id: 'z1', daysLeft: 10 }), 'z1'))).toBe(false);
+  });
+
+  test('a measurement sets the unit and drops the imported wording', () => {
+    const next = run(s, { type: 'setUnit', id: 'f4', unit: ' cup ' });
+    expect(item(next, 'f4')).toMatchObject({ unit: 'cup', amountText: undefined });
+    expect(item(run(next, { type: 'setUnit', id: 'f4', unit: '' }), 'f4').unit).toBe('');
   });
 
   test('leaves the other items alone', () => {
@@ -344,7 +356,7 @@ describe('undo', () => {
       { type: 'itemToBuy', id: 'f3' },
       { type: 'undo' },
     );
-    expect(item(next, 'f1').qty).toBe(0);
+    expect(next.items.some((i) => i.id === 'f1')).toBe(false);
     expect(item(next, 'f4').qty).toBe(7);
     expect(next.toBuy.some((t) => t.name === 'Milk 2%')).toBe(true);
   });
@@ -526,5 +538,52 @@ describe('onboarding', () => {
       { type: 'reset' },
     );
     expect(next).toEqual(initialState());
+  });
+});
+
+describe('recipe to To Buy', () => {
+  const recipeItems = (st: State) => st.toBuy.filter((t) => ['Tomatoes', 'Feta'].includes(t.name) && !t.done);
+
+  test('adds what is missing with how much the recipe needs, and takes it off again', () => {
+    const empty = { ...s, toBuy: s.toBuy.filter((t) => !['Tomatoes', 'Feta'].includes(t.name)) };
+    const on = run(empty, { type: 'toggleRecipeToBuy', id: 'shakshuka' });
+    expect(Object.fromEntries(recipeItems(on).map((t) => [t.name, t.note]))).toEqual({ Tomatoes: '400 g', Feta: '50 g' });
+    expect(recipeItems(run(on, { type: 'toggleRecipeToBuy', id: 'shakshuka' }))).toEqual([]);
+  });
+
+  test('takes off items added before amounts, which say what they were for', () => {
+    const legacy = { ...s, toBuy: [...s.toBuy.filter((t) => t.name !== 'Tomatoes'), { id: 'old', name: 'Tomatoes', note: 'For Shakshuka', place: 'fridge' as const, done: false, addedBy: 'alex' }], recipes: s.recipes.map((r) => (r.id === 'shakshuka' ? { ...r, onToBuy: true } : r)) };
+    expect(run(legacy, { type: 'toggleRecipeToBuy', id: 'shakshuka' }).toBuy.some((t) => t.id === 'old')).toBe(false);
+  });
+});
+
+describe('Just bought', () => {
+  const named = (st: State, name: string) => st.items.filter((i) => i.name === name);
+
+  test('ticking off something new puts it under Just bought; unticking takes it back', () => {
+    const ticked = run(s, { type: 'toggleToBuy', id: 't', scope: 'kitchen' });
+    expect(named(ticked, 'Tomatoes')).toEqual([expect.objectContaining({ qty: 1, unsorted: true, place: 'fridge', meta: 'Just bought' })]);
+    expect(named(run(ticked, { type: 'toggleToBuy', id: 't', scope: 'kitchen' }), 'Tomatoes')).toEqual([]);
+  });
+
+  test('ticking off something already in the kitchen adds one to it', () => {
+    const rice = s.items.find((i) => i.name === 'Rice')!;
+    const ticked = run(s, { type: 'toggleToBuy', id: 'r', scope: 'kitchen' });
+    expect(named(ticked, 'Rice')).toEqual([expect.objectContaining({ id: rice.id, qty: rice.qty + 1 })]);
+    expect(named(ticked, 'Rice')[0].unsorted).toBeUndefined();
+  });
+
+  test('scanned food lands under Just bought', () => {
+    expect(named(run(s, { type: 'addScanned', lines: [line('Tofu', 'fridge')] }), 'Tofu')[0].unsorted).toBe(true);
+  });
+
+  test('sorting puts it in the place, and joins the same thing already there', () => {
+    const ticked = run(s, { type: 'toggleToBuy', id: 't', scope: 'kitchen' });
+    const id = named(ticked, 'Tomatoes')[0].id;
+    const put = run(ticked, { type: 'sortItem', id, place: 'pantry' });
+    expect(named(put, 'Tomatoes')).toEqual([expect.objectContaining({ place: 'pantry', unsorted: undefined })]);
+    const basil = { ...item(s, 'f7'), id: 'new', qty: 1, unsorted: true };
+    const joined = run({ ...s, items: [...s.items, basil] }, { type: 'sortItem', id: 'new', place: 'fridge' });
+    expect(named(joined, 'Basil')).toEqual([expect.objectContaining({ id: 'f7', qty: 2 })]);
   });
 });

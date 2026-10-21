@@ -47,13 +47,15 @@ export type Item = {
   runningLow?: boolean;
   /** Set by hand, overrides the days-left rule either way (leftovers on, a hardy thing off). Unset follows the date. */
   useSoon?: boolean;
+  /** Just bought and not put away yet: listed under Just bought instead of its place, which is only a guess. */
+  unsorted?: boolean;
   addedBy: string;
 };
 
 export type ToBuyItem = {
   id: string;
   name: string;
-  /** "For Shakshuka", "Added by Sam", "Running low". */
+  /** How much a recipe needs ("400 g", empty when it doesn't say), "Added by Sam", "Running low". */
   note: string;
   place: Place;
   done: boolean;

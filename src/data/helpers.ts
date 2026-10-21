@@ -76,10 +76,12 @@ export function amountLabel(item: Item, startQty?: number): string {
 }
 
 const IRREGULAR: Record<string, string> = { loaf: 'loaves' };
+/** Abbreviations read the same for any amount: "500 g", "2 L". */
+const SAME_PLURAL = new Set(['g', 'kg', 'mg', 'oz', 'ml', 'l', 'tsp', 'tbsp']);
 
 /** "1 loaf", "2 loaves"; "1 bunch", "2 bunches". Units already in the plural stay as they are. */
 export function plural(unit: string, n: number): string {
-  if (n === 1 || unit.endsWith('s')) return unit;
+  if (n === 1 || unit.endsWith('s') || SAME_PLURAL.has(unit.toLowerCase())) return unit;
   return IRREGULAR[unit] ?? (/(ch|sh|x)$/.test(unit) ? `${unit}es` : `${unit}s`);
 }
 
@@ -97,6 +99,62 @@ export function toBuyProgress(list: ToBuyItem[], hidden?: Set<string>): { done: 
 /** Not-done items first, done ones drop to the bottom; otherwise keep list order. */
 export function sortToBuy(list: ToBuyItem[]): ToBuyItem[] {
   return list.slice().sort((a, b) => Number(a.done) - Number(b.done));
+}
+
+export type RecipeSort = 'rank' | 'az' | 'newest';
+
+/**
+ * Recipes in the picked order. `ranked` is your ranking, best first; unranked recipes follow in
+ * saved order. `recipes` is in saved order, oldest first.
+ */
+export function sortRecipes(recipes: Recipe[], sort: RecipeSort, ranked: string[]): Recipe[] {
+  if (sort === 'az') return [...recipes].sort((a, b) => a.title.localeCompare(b.title));
+  if (sort === 'newest') return [...recipes].reverse();
+  const at = (id: string) => (ranked.includes(id) ? ranked.indexOf(id) : ranked.length);
+  return [...recipes].sort((a, b) => at(a.id) - at(b.id));
+}
+
+const FRACTIONS: Record<string, number> = { '¼': 0.25, '½': 0.5, '¾': 0.75, '⅓': 1 / 3, '⅔': 2 / 3, '⅛': 0.125, '⅜': 0.375, '⅝': 0.625, '⅞': 0.875 };
+// Longest form first, so "1/4" isn't read as 1.
+const QTY = String.raw`\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?(?:\s*[¼½¾⅓⅔⅛⅜⅝⅞])?|[¼½¾⅓⅔⅛⅜⅝⅞]`;
+/** A leading amount, or a range of two ("2-3 cloves"). Later numbers ("1 (14 oz) can") are the pack, not the amount. */
+const LEADING = new RegExp(String.raw`^(${QTY})(\s*[-–]\s*(${QTY}))?`);
+
+function parseQty(t: string): number {
+  return t
+    .trim()
+    .split(/\s+|(?=[¼½¾⅓⅔⅛⅜⅝⅞])/)
+    .reduce((sum, part) => {
+      if (FRACTIONS[part]) return sum + FRACTIONS[part];
+      const [n, d] = part.split('/');
+      return sum + (d ? Number(n) / Number(d) : Number(n.replace(',', '.')));
+    }, 0);
+}
+
+/** 1.5 → "1½", 0.333 → "⅓", 600 → "600", 2.4 → "2.4". */
+function formatQty(n: number): string {
+  const whole = Math.floor(n + 1e-6);
+  const rest = n - whole;
+  if (rest < 0.01) return String(whole);
+  if (n < 10) {
+    const frac = Object.entries(FRACTIONS).find(([, v]) => Math.abs(v - rest) < 0.02);
+    if (frac) return `${whole || ''}${frac[0]}`;
+  }
+  return String(Math.round(n * 10) / 10);
+}
+
+/** "24 servings" → 24. None when the recipe doesn't say. */
+export function servingsCount(servings?: string): number | undefined {
+  const n = Number(servings?.match(/\d+/)?.[0]);
+  return n > 0 ? n : undefined;
+}
+
+/** The amount for `factor` times the servings: "1 ½ cups" × 2 → "3 cups". Amounts without a number stay as they are. */
+export function scaleAmount(amount: string, factor: number): string {
+  if (factor === 1) return amount;
+  return amount.replace(LEADING, (_m, a: string, range?: string, b?: string) =>
+    formatQty(parseQty(a) * factor) + (range && b ? range.replace(b, formatQty(parseQty(b) * factor)) : ''),
+  );
 }
 
 export function canMakeNow(recipe: Recipe): boolean {

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Pressable, type GestureResponderEvent, type PressableProps, type StyleProp, type ViewStyle } from 'react-native';
+import { useState, type Ref } from 'react';
+import { Pressable, type GestureResponderEvent, type PressableProps, type StyleProp, type View, type ViewStyle } from 'react-native';
 import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withTiming, type AnimatedStyle } from 'react-native-reanimated';
 
 import { size } from '@/theme';
@@ -15,6 +15,8 @@ type Props = Omit<PressableProps, 'style'> & {
   style?: StyleProp<AnimatedStyle<ViewStyle>> | ((state: { pressed: boolean }) => StyleProp<ViewStyle>);
   /** Height of what's drawn, so the hit area can grow to 44pt around it. */
   drawn?: number;
+  /** For measuring it on screen (Kitchen's tabs, as drop targets). */
+  ref?: Ref<View>;
 };
 
 /** A Pressable that dims a little when pressed and never has a hit area under 44pt. */

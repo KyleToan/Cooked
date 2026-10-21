@@ -37,11 +37,16 @@ import { Text } from './Text';
 /** Critically damped: settles in about 300ms with no overshoot. */
 const SPRING = { duration: 300, dampingRatio: 1 } as const;
 
+const ROW_LAYOUT = LinearTransition.springify().duration(SPRING.duration).dampingRatio(SPRING.dampingRatio);
+
 /**
- * Put on each list row (`layout={ROW_LAYOUT}`) so rows slide on the same spring when one opens,
- * moves or is added. Reanimated skips it when Reduce Motion is on.
+ * Put on each list row (`layout={useRowLayout()}`) so rows slide on the same spring when one opens,
+ * moves or is added. Off under Reduce Motion: Reanimated 4.5's own skip leaves rows at their old
+ * frames, so an opened row draws over the next one and its controls can't be tapped.
  */
-export const ROW_LAYOUT = LinearTransition.springify().duration(SPRING.duration).dampingRatio(SPRING.dampingRatio);
+export function useRowLayout() {
+  return useReducedMotion() ? undefined : ROW_LAYOUT;
+}
 /** The part of a row that opens in place fades in. */
 export const ROW_OPEN = FadeIn.duration(200);
 

@@ -5,7 +5,7 @@ import Animated, { useAnimatedReaction, useSharedValue, type SharedValue } from 
 import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { amountLabel, joinAnd, PLACE_LABEL } from '@/data/helpers';
+import { amountLabel, PLACE_LABEL } from '@/data/helpers';
 import type { Item, Place, Recipe, ScanLine } from '@/data/types';
 import { haptics } from '@/hooks/haptics';
 import { makeStyles, useColors, radius, size, space, type } from '@/theme';
@@ -276,10 +276,8 @@ const MAX_MISSING_PILL = 2;
 export function RecipeRow({ recipe, onOpen, onToggleToBuy, score }: RecipeRowProps) {
   const styles = useStyles();
   const n = recipe.missing.length;
-  const have =
-    n === 0
-      ? `You have all ${recipe.need} things.`
-      : `You have ${recipe.have} of ${recipe.need}. Missing ${joinAnd(recipe.missing.map((m) => m.toLowerCase()))}.`;
+  // Just the count: what's missing and where it came from are on the recipe.
+  const have = n === 0 ? `You have all ${recipe.need} ingredients` : `You have ${recipe.have} of ${recipe.need} ingredients`;
   return (
     <View style={[styles.divider, styles.recipe, recipe.photo ? styles.recipeWithPhoto : null]}>
       {recipe.photo ? (
@@ -298,9 +296,6 @@ export function RecipeRow({ recipe, onOpen, onToggleToBuy, score }: RecipeRowPro
             <Text weight="semibold">{recipe.title}</Text>
             <Text variant="caption" color="inkMuted">
               {have}
-            </Text>
-            <Text variant="micro" color="inkMuted" weight="regular">
-              {recipe.sourceLine}
             </Text>
           </View>
           {/* Time on top in every row, so it lines up; the score ring sits under it once ranked. */}

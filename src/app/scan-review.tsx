@@ -5,7 +5,7 @@ import Animated from 'react-native-reanimated';
 
 import { ActionPill } from '@/components/ActionPill';
 import { Icon } from '@/components/Icon';
-import { ROW_LAYOUT } from '@/components/Controls';
+import { useRowLayout } from '@/components/Controls';
 import { CheckItemRow } from '@/components/ListRows';
 import { Screen } from '@/components/Screen';
 import { Sheet } from '@/components/Sheet';
@@ -30,6 +30,7 @@ function formatTime(d: Date): string {
 /** "7 items to put away": fix names, move things, change amounts, then put it all away. */
 export default function ScanReview() {
   const styles = useStyles();
+  const rowLayout = useRowLayout();
   const router = useRouter();
   const goToTab = useGoToTab();
   const flow = scanFlow(useLocalSearchParams<{ flow?: string }>().flow);
@@ -147,7 +148,7 @@ export default function ScanReview() {
 
       <View>
         {lines.map((line) => (
-          <Animated.View key={line.id} layout={ROW_LAYOUT}>
+          <Animated.View key={line.id} layout={rowLayout}>
             <CheckItemRow
               line={line}
               open={open === line.id}

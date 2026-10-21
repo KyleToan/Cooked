@@ -53,23 +53,26 @@ export default function Home() {
   const synced = syncedLabel(state.kitchen);
   const shared = state.kitchen.people.length > 1;
 
+  // Just bought and not put away: counted under Just bought, not in a note.
+  const unsorted = state.items.filter((i) => i.unsorted && i.qty > 0).length;
   const notes = useMemo(() => {
-    const soon = PLACES.map((p) => stock.filter((i) => i.place === p && isUseSoon(i)).length);
+    const sorted = inStock(state.items).filter((i) => !i.unsorted);
+    const soon = PLACES.map((p) => sorted.filter((i) => i.place === p && isUseSoon(i)).length);
     const most = Math.max(...soon);
     // At most one flag per row of notes: on the place with the most to use soon.
     const flagged = most > 0 ? soon.indexOf(most) : -1;
     return PLACES.map((p, i) => ({
       place: p,
-      count: count(stock.filter((s) => s.place === p).length, 'item'),
+      count: count(sorted.filter((s) => s.place === p).length, 'item'),
       flag: i === flagged ? `${most} use soon` : undefined,
     }));
-  }, [stock]);
+  }, [state.items]);
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return null;
     return [
-      ...stock.filter((i) => i.name.toLowerCase().includes(q)).map((i) => ({ key: i.id, name: i.name, where: PLACE_LABEL[i.place], open: () => router.navigate({ pathname: '/kitchen', params: { tab: i.place } }) })),
+      ...stock.filter((i) => i.name.toLowerCase().includes(q)).map((i) => ({ key: i.id, name: i.name, where: i.unsorted ? 'Just bought' : PLACE_LABEL[i.place], open: () => router.navigate({ pathname: '/kitchen', params: { tab: i.place } }) })),
       // Still to get (not ticked off): opens the To Buy tab.
       ...state.toBuy.filter((t) => !t.done && t.name.toLowerCase().includes(q)).map((t) => ({ key: t.id, name: t.name, where: 'To Buy', open: () => router.navigate({ pathname: '/kitchen', params: { tab: 'tobuy' } }) })),
       ...state.recipes.filter((r) => r.title.toLowerCase().includes(q)).map((r) => ({ key: r.id, name: r.title, where: 'Recipe', open: () => router.push({ pathname: '/recipe/[id]', params: { id: r.id } }) })),
@@ -98,7 +101,7 @@ export default function Home() {
             ? 'Your shared list is empty. Add the first thing you’re out of, and everyone in your kitchen will see it.'
             : 'Your list is empty. Add the first thing you’re out of.'}
         </Text>
-        <AddRow placeholder="Add an item…" label="Add an item" onSubmit={actions.addToBuy} />
+        <AddRow placeholder="Add an item…" label="Add an item" onSubmit={actions.addToBuy} amount />
       </View>
     ) : (
       toBuyList
@@ -196,6 +199,7 @@ export default function Home() {
                 />
               ))}
             </View>
+            {unsorted ? <TextLink label={`Put away ${count(unsorted, 'thing')} you just bought`} onPress={() => openKitchen('fridge')} /> : null}
           </View>
 
           {toBuySection}

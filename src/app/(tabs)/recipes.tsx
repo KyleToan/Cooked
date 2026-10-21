@@ -1,40 +1,50 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 
 import { ActionPill } from '@/components/ActionPill';
-import { FilterPills } from '@/components/Controls';
 import { GreetingHeader, SectionHeader } from '@/components/Header';
 import { Icon } from '@/components/Icon';
 import { RecipeRow } from '@/components/ListRows';
 import { Screen } from '@/components/Screen';
 import { SearchField } from '@/components/SearchField';
+import { Sheet } from '@/components/Sheet';
+import { Tap } from '@/components/Tap';
 import { BigNote } from '@/components/StickyNote';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
-import { canMakeNow } from '@/data/helpers';
+import { canMakeNow, sortRecipes, type RecipeSort } from '@/data/helpers';
 import { ranked, scores } from '@/data/ranking';
 import { useStore } from '@/data/store';
 import type { Recipe } from '@/data/types';
-import { size, space } from '@/theme';
+import { haptics } from '@/hooks/haptics';
+import { makeStyles, radius, size, space } from '@/theme';
 
 type Filter = 'now' | 'almost';
 
+const SORTS: { value: RecipeSort; label: string }[] = [
+  { value: 'rank', label: 'Your ranking' },
+  { value: 'az', label: 'A to Z' },
+  { value: 'newest', label: 'Newest' },
+];
 const FILTERS: { value: Filter; label: string }[] = [
   { value: 'now', label: 'Can make now' },
   { value: 'almost', label: 'Missing 1 or 2' },
 ];
 
-/** No filter picked shows every recipe. */
-const passes = (r: Recipe, f: Filter | null) => {
+/** None ticked shows every recipe; ticked ones add up (either can show it). */
+const passes = (r: Recipe, fs: Filter[]) => {
   const miss = r.need - r.have;
-  return !f || (f === 'now' && miss === 0) || (f === 'almost' && miss > 0 && miss <= 2);
+  return !fs.length || fs.some((f) => (f === 'now' ? miss === 0 : miss > 0 && miss <= 2));
 };
 
 export default function Recipes() {
+  const styles = useStyles();
   const router = useRouter();
   const { state, actions } = useStore();
-  const [filter, setFilter] = useState<Filter | null>(null);
+  const [filter, setFilter] = useState<Filter[]>([]);
+  const [sort, setSort] = useState<RecipeSort>('rank');
+  const [sheet, setSheet] = useState(false);
   const [query, setQuery] = useState('');
   // `/recipes?q=spinach` (Find a recipe that uses it) fills the search, and shows every recipe it's in.
   const { q: param } = useLocalSearchParams<{ q?: string }>();
@@ -43,7 +53,7 @@ export default function Recipes() {
     setSeenParam(param);
     if (param !== undefined) {
       setQuery(param);
-      setFilter(null);
+      setFilter([]);
     }
   }
 
@@ -57,14 +67,12 @@ export default function Recipes() {
     r.missing.some((m) => m.toLowerCase().includes(q));
   const ids = recipes.map((r) => r.id);
   const score = scores(state.ranks, ids);
-  const order = ranked(state.ranks, ids);
-  // Every list goes by your ranking, best first; unranked recipes follow in the order they were saved.
-  const rank = (id: string) => (order.includes(id) ? order.indexOf(id) : order.length);
-  const shown = recipes.filter((r) => r !== tonight && passes(r, filter) && matches(r)).sort((a, b) => rank(a.id) - rank(b.id));
+  const shown = sortRecipes(recipes, sort, ranked(state.ranks, ids)).filter((r) => r !== tonight && passes(r, filter) && matches(r));
+  const changed = sort !== 'rank' || filter.length > 0;
   const tonightShown = Boolean(tonight && matches(tonight));
   const noneMatch = recipes.length > 0 && shown.length === 0 && !(tonightShown && passes(tonight!, filter));
   const clear = () => {
-    setFilter(null);
+    setFilter([]);
     setQuery('');
     if (param) router.setParams({ q: undefined });
   };
@@ -113,7 +121,19 @@ export default function Recipes() {
       ) : null}
 
       <View style={styles.list}>
-        <FilterPills options={FILTERS} value={filter} onChange={setFilter} action={{ label: 'Import', icon: 'import', onPress: () => router.push('/import') }} />
+        <View style={styles.tools}>
+          <ActionPill label="Import" icon="import" fill onPress={() => router.push('/import')} />
+          {/* The dot says a sort or filter other than the default is on. */}
+          <Tap
+            accessibilityRole="button"
+            accessibilityLabel={`Sort and filter${changed ? ', on' : ''}`}
+            onPress={() => setSheet(true)}
+            style={styles.filterButton}
+          >
+            <Icon name="filter" size={size.iconSm} color="sageInk" />
+            {changed ? <View style={styles.dot} /> : null}
+          </Tap>
+        </View>
         <View>
           {shown.map((r) => (
             <RecipeRow key={r.id} recipe={r} score={score.get(r.id)} onOpen={() => open(r.id)} onToggleToBuy={() => actions.toggleRecipeToBuy(r.id)} />
@@ -128,7 +148,7 @@ export default function Recipes() {
           ) : noneMatch ? (
             <View style={styles.empty}>
               <Text color="inkMuted">
-                {filter === 'now' && !q
+                {filter.length === 1 && filter[0] === 'now' && !q
                   ? 'Nothing you can make right now.'
                   : 'No recipes match.'}
               </Text>
@@ -137,15 +157,76 @@ export default function Recipes() {
           ) : null}
         </View>
       </View>
+      <Sheet visible={sheet} onClose={() => setSheet(false)} title="Sort and filter">
+        <View>
+          <Text variant="caption" color="inkMuted">
+            Sort by
+          </Text>
+          {SORTS.map((o) => (
+            <CheckRow key={o.value} label={o.label} role="radio" on={sort === o.value} onPress={() => setSort(o.value)} />
+          ))}
+        </View>
+        <View>
+          <Text variant="caption" color="inkMuted">
+            Show
+          </Text>
+          {FILTERS.map((o) => (
+            <CheckRow
+              key={o.value}
+              label={o.label}
+              role="checkbox"
+              on={filter.includes(o.value)}
+              onPress={() => setFilter((fs) => (fs.includes(o.value) ? fs.filter((f) => f !== o.value) : [...fs, o.value]))}
+            />
+          ))}
+        </View>
+      </Sheet>
     </Screen>
   );
 }
 
-const styles = StyleSheet.create({
+/** A choice in the sheet: its label, and a check when picked. */
+function CheckRow({ label, on, onPress, role }: { label: string; on: boolean; onPress: () => void; role: 'radio' | 'checkbox' }) {
+  const styles = useStyles();
+  return (
+    <Tap
+      accessibilityRole={role}
+      accessibilityState={{ checked: on }}
+      onPress={() => {
+        haptics.select();
+        onPress();
+      }}
+      style={styles.checkRow}
+    >
+      <Text weight={on ? 'semibold' : undefined}>{label}</Text>
+      {on ? <Icon name="check" size={size.iconSm} color="sageInk" /> : null}
+    </Tap>
+  );
+}
+
+const useStyles = makeStyles((color) => ({
   grow: { flex: 1 },
   tonight: { gap: space.cozy },
   soonLine: { flexDirection: 'row', alignItems: 'center', gap: space.tight },
   cook: { marginTop: space.s1 },
   list: { gap: space.tight },
+  tools: { flexDirection: 'row', gap: space.s3 },
+  filterButton: {
+    width: size.controlHeight,
+    height: size.controlHeight,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: color.surfaceSunken,
+  },
+  dot: { position: 'absolute', top: space.s2, right: space.s2, width: 8, height: 8, borderRadius: 4, backgroundColor: color.sageInk },
+  checkRow: {
+    minHeight: size.rowHeight,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: color.lineSoft,
+  },
   empty: { paddingVertical: space.s4 + 2, minHeight: size.rowHeight, gap: space.s3 },
-});
+}));

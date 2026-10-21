@@ -2,6 +2,7 @@ import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/d
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, ScrollView, Share, useWindowDimensions, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   FadeIn,
   interpolate,
@@ -11,10 +12,11 @@ import Animated, {
   useReducedMotion,
   useSharedValue,
   withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 
 import { ActionPill } from '@/components/ActionPill';
-import { ROW_LAYOUT, Switch, UndoBar } from '@/components/Controls';
+import { Field, FilterPills, Switch, UndoBar, useRowLayout } from '@/components/Controls';
 import { GreetingHeader, SectionHeader } from '@/components/Header';
 import { Icon } from '@/components/Icon';
 import { KitchenRow } from '@/components/ListRows';
@@ -26,11 +28,11 @@ import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
 import { AddRow, TodoList } from '@/components/TodoList';
-import { count, dateIn, daysUntil, isDueSoon, doneAtOpen, joinAnd, shortDate, sinceOpen, sortToBuy, syncedLabel, toBuyProgress } from '@/data/helpers';
+import { count, dateIn, PLACES, daysUntil, isDueSoon, doneAtOpen, joinAnd, shortDate, sinceOpen, sortToBuy, syncedLabel, toBuyProgress } from '@/data/helpers';
 import { useStore, useUndo } from '@/data/store';
 import type { Item, Place } from '@/data/types';
 import { haptics } from '@/hooks/haptics';
-import { makeStyles, useColors, radius, size, space, type ColorName } from '@/theme';
+import { makeStyles, useColors, radius, shadow, size, space, type ColorName } from '@/theme';
 
 type Tab = Place | 'tobuy';
 
@@ -52,6 +54,9 @@ const PLACE_COPY: Record<Place, { soonTitle: string; soonIsDate: boolean; restTi
   pantry: { soonTitle: 'Running low', soonIsDate: false, restTitle: 'In the pantry', add: 'Add to the pantry…', where: 'the pantry' },
   freezer: { soonTitle: 'Use soon', soonIsDate: true, restTitle: 'In the freezer', add: 'Add to the freezer…', where: 'the freezer' },
 };
+
+/** Offered on every item; units the kitchen already uses (carton, or one added with Other) join them. */
+const UNITS = ['g', 'kg', 'lb', 'oz', 'ml', 'L', 'cup'];
 
 /** shortcut: the web has no date picker, so there the date steps through these days from today; fine for previews. */
 const WEB_DAYS = [1, 3, 7, 14];
@@ -101,6 +106,22 @@ export default function Kitchen() {
   };
 
   const placeholder = tab === 'tobuy' ? 'Search your list' : `Search the ${tab}`;
+  const unsorted = state.items.filter((i) => i.unsorted && i.qty > 0);
+  // While a Just bought row is held: the place under the finger (null over none). Undefined when nothing is held.
+  const [dragOver, setDragOver] = useState<Place | null | undefined>(undefined);
+  // The place tabs, for dropping a Just bought row on one.
+  const tabRefs = useRef<Partial<Record<Tab, View | null>>>({});
+  const dropTargets = () =>
+    Promise.all(
+      PLACES.map(
+        (p) =>
+          new Promise<DropTarget | null>((done) => {
+            const tabView = tabRefs.current[p];
+            if (!tabView) return done(null);
+            tabView.measureInWindow((x, y, w, h) => done({ place: p, x, y, w, h }));
+          }),
+      ),
+    ).then((all) => all.filter((t): t is DropTarget => !!t));
 
   return (
     <View style={styles.root}>
@@ -114,7 +135,9 @@ export default function Kitchen() {
 
         <SearchField placeholder={placeholder} value={query} onChangeText={setQuery} />
 
-        <KitchenTabs tab={tab} onPick={pick} />
+        <KitchenTabs tab={tab} onPick={pick} tabRefs={tabRefs} dragOver={dragOver} />
+
+        {unsorted.length ? <JustBought items={unsorted} onSort={actions.sortItem} dropTargets={dropTargets} onDrag={setDragOver} /> : null}
 
         <Animated.View key={tab} entering={LIST_FADE}>
           {tab === 'tobuy' ? (
@@ -124,7 +147,7 @@ export default function Kitchen() {
               place={tab}
               query={query.trim()}
               clearQuery={() => setQuery('')}
-              items={state.items.filter((i) => i.place === tab && matches(i.name))}
+              items={state.items.filter((i) => i.place === tab && !i.unsorted && matches(i.name))}
               open={open}
               setOpen={setOpen}
               sort={sort}
@@ -145,7 +168,18 @@ type TabLayout = { x: number; width: number };
  * its color crossing from paper to paper (To Buy: white with a `sage-ink` ring).
  * At large text the row scrolls sideways and keeps the picked tab in view.
  */
-function KitchenTabs({ tab, onPick }: { tab: Tab; onPick: (t: Tab) => void }) {
+function KitchenTabs({
+  tab,
+  onPick,
+  tabRefs,
+  dragOver,
+}: {
+  tab: Tab;
+  onPick: (t: Tab) => void;
+  tabRefs: React.RefObject<Partial<Record<Tab, View | null>>>;
+  /** Set while a Just bought row is held: the place tabs show they take a drop, the one under the finger fills. */
+  dragOver?: Place | null;
+}) {
   const color = useColors();
   const styles = useStyles();
   const { fontScale, width: screenW } = useWindowDimensions();
@@ -207,11 +241,27 @@ function KitchenTabs({ tab, onPick }: { tab: Tab; onPick: (t: Tab) => void }) {
           ))
         : null}
       {measured ? <Animated.View pointerEvents="none" style={[styles.tabPill, pill]} /> : null}
+      {measured && dragOver !== undefined
+        ? PLACES.map((p) => (
+            <View
+              key={`drop-${p}`}
+              pointerEvents="none"
+              style={[
+                styles.dropZone,
+                { left: layouts[p]!.x, width: layouts[p]!.width },
+                dragOver === p && [styles.dropZoneOver, { backgroundColor: color[PAPER[p]] }],
+              ]}
+            />
+          ))
+        : null}
       {TABS.map((t) => {
         const on = t.id === tab;
         return (
           <Tap
             key={t.id}
+            ref={(v: View | null) => {
+              tabRefs.current[t.id] = v;
+            }}
             accessibilityRole="tab"
             accessibilityState={{ selected: on }}
             onPress={() => onPick(t.id)}
@@ -255,6 +305,133 @@ function KitchenTabs({ tab, onPick }: { tab: Tab; onPick: (t: Tab) => void }) {
   );
 }
 
+type DropTarget = { place: Place; x: number; y: number; w: number; h: number };
+/** A drop this close above or below a tab still counts, since the finger covers it. */
+const DROP_SLOP = 16;
+const LIFT = { duration: 150, reduceMotion: ReduceMotion.System } as const;
+
+/**
+ * Food ticked off To Buy or scanned, not put away yet. Tap where each one goes, or hold a row
+ * and drag it onto the Fridge, Pantry or Freezer tab.
+ */
+function JustBought({
+  items,
+  onSort,
+  dropTargets,
+  onDrag,
+}: {
+  items: Item[];
+  onSort: (id: string, place: Place) => void;
+  dropTargets: () => Promise<DropTarget[]>;
+  onDrag: (over: Place | null | undefined) => void;
+}) {
+  const styles = useStyles();
+  return (
+    <View style={styles.justBought}>
+      <View>
+        <SectionHeader title="Just bought" meta={count(items.length, 'item')} />
+        <Text variant="caption" color="inkMuted">
+          Drag each one by its handle onto Fridge, Pantry or Freezer.
+        </Text>
+      </View>
+      <View>
+        {items.map((i) => (
+          <BoughtRow key={i.id} item={i} onSort={(p) => onSort(i.id, p)} dropTargets={dropTargets} onDrag={onDrag} />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function BoughtRow({
+  item,
+  onSort,
+  dropTargets,
+  onDrag,
+}: {
+  item: Item;
+  onSort: (place: Place) => void;
+  dropTargets: () => Promise<DropTarget[]>;
+  onDrag: (over: Place | null | undefined) => void;
+}) {
+  const color = useColors();
+  const styles = useStyles();
+  const x = useSharedValue(0);
+  const y = useSharedValue(0);
+  const lift = useSharedValue(0);
+  const targets = useSharedValue<DropTarget[]>([]);
+  const over = useSharedValue<Place | null>(null);
+  const hitAt = (ax: number, ay: number) =>
+    targets.get().find((t) => ax >= t.x && ax <= t.x + t.w && ay >= t.y - DROP_SLOP && ay <= t.y + t.h + DROP_SLOP)?.place ?? null;
+  const [lifted, setLifted] = useState(false);
+  const settle = () => {
+    setLifted(false);
+    onDrag(undefined);
+    x.set(withSpring(0, SPRING));
+    y.set(withSpring(0, SPRING));
+    lift.set(withTiming(0, LIFT));
+  };
+  // Held by the handle, it lifts at once; no long press to discover.
+  const drag = Gesture.Pan()
+    .minDistance(0)
+    .runOnJS(true)
+    .onStart(() => {
+      haptics.select();
+      setLifted(true);
+      over.set(null);
+      onDrag(null);
+      lift.set(withTiming(1, LIFT));
+      dropTargets().then((t) => targets.set(t));
+    })
+    .onUpdate((e) => {
+      x.set(e.translationX);
+      y.set(e.translationY);
+      const hit = hitAt(e.absoluteX, e.absoluteY);
+      if (hit !== over.get()) {
+        over.set(hit);
+        onDrag(hit);
+        if (hit) haptics.select();
+      }
+    })
+    .onEnd((e) => {
+      const hit = hitAt(e.absoluteX, e.absoluteY);
+      if (hit) {
+        haptics.success();
+        onSort(hit);
+      }
+      settle();
+    })
+    .onFinalize(settle);
+  const moving = useAnimatedStyle(() => ({
+    transform: [{ translateX: x.get() }, { translateY: y.get() }, { scale: 1 + lift.get() * 0.03 }],
+    zIndex: lift.get() > 0 ? 1 : 0,
+  }));
+
+  return (
+    <Animated.View
+      // Dragging isn't open to VoiceOver, so the row offers each place as an action instead.
+      accessible
+      accessibilityLabel={`${item.name}, ${item.meta}`}
+      accessibilityHint="Swipe up or down to pick where it goes"
+      accessibilityActions={PLACES.map((p) => ({ name: p, label: `Put in the ${p}` }))}
+      onAccessibilityAction={(e) => onSort(e.nativeEvent.actionName as Place)}
+      style={[styles.boughtRow, lifted && styles.boughtLifted, moving]}
+    >
+      <View style={styles.boughtName}>
+        <Text>{item.name}</Text>
+        <Text variant="caption" color="inkMuted">
+          {item.meta}
+        </Text>
+      </View>
+      <GestureDetector gesture={drag}>
+        <View style={[styles.handle, lifted && { backgroundColor: color.surfaceSunken }]}>
+          <Icon name="drag" size={size.iconSm} color={lifted ? 'sageInk' : 'inkMuted'} />
+        </View>
+      </GestureDetector>
+    </Animated.View>
+  );
+}
+
 /** Picked To Buy's `sage-ink` ring is a little heavier than a paper's `line` edge, as on the place picker. */
 const RING_TOBUY = 1.5;
 const RING_PAPER = 1;
@@ -286,12 +463,34 @@ function StockTab({
   const router = useRouter();
   const { state, actions } = useStore();
   const copy = PLACE_COPY[place];
+  const rowLayout = useRowLayout();
   // iOS: the item whose use-by date is being picked in the sheet, and the date so far.
   const [picking, setPicking] = useState<Item | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [draft, setDraft] = useState(() => new Date());
 
   const setBestBy = (id: string, days: number) => actions.setBestBy(id, days);
+  // The item getting a measurement of its own (Other), and what's typed so far.
+  const [unitFor, setUnitFor] = useState<Item | null>(null);
+  const [unitDraft, setUnitDraft] = useState('');
+  const units = [...new Set([...UNITS, ...state.items.map((i) => i.unit).filter(Boolean)])].map((u) => ({ value: u, label: u }));
+
+  // Optional: with none picked it counts (× 3); tapping the picked one goes back to counting.
+  const measure = (i: Item) => (
+    <FilterPills
+      options={units}
+      value={i.unit || null}
+      onChange={(u) => actions.setUnit(i.id, u ?? '')}
+      action={{
+        label: 'Other',
+        icon: 'add',
+        onPress: () => {
+          setUnitDraft('');
+          setUnitFor(i);
+        },
+      }}
+    />
+  );
 
   const openDate = (i: Item) => {
     const value = dateIn(i.daysLeft);
@@ -367,7 +566,7 @@ function StockTab({
   const row = (i: Item, inSoon: boolean) => {
     const recipeAction = inSoon && copy.soonIsDate;
     return (
-      <Animated.View key={i.id} layout={ROW_LAYOUT}>
+      <Animated.View key={i.id} layout={rowLayout}>
       <KitchenRow
         item={i}
         startQty={startQty[i.id]}
@@ -378,7 +577,12 @@ function StockTab({
         onAction={() => (recipeAction ? findRecipe(i.name) : actions.addItemToBuy(i.id))}
         onQty={(qty) => actions.setQty(i.id, qty, 'kitchen')}
         onUseUp={() => actions.setQty(i.id, 0, 'kitchen')}
-        extra={copy.soonIsDate ? dateControls(i) : undefined}
+        extra={
+          <>
+            {measure(i)}
+            {copy.soonIsDate ? dateControls(i) : null}
+          </>
+        }
       />
       </Animated.View>
     );
@@ -413,7 +617,7 @@ function StockTab({
         </View>
       ) : null}
 
-      <View style={styles.list}>
+      <Animated.View layout={rowLayout} style={styles.list}>
         <SectionHeader
           title={copy.restTitle}
           meta={count(rest.length, 'item')}
@@ -436,8 +640,36 @@ function StockTab({
           }
         />
         {rest.map((i) => row(i, false))}
-        <AddRow placeholder={copy.add} label={copy.add.replace('…', '')} onSubmit={(name) => actions.addItem(name, place)} />
-      </View>
+        <Animated.View layout={rowLayout}>
+          <AddRow placeholder={copy.add} label={copy.add.replace('…', '')} onSubmit={(name) => actions.addItem(name, place)} />
+        </Animated.View>
+      </Animated.View>
+
+      <Sheet visible={!!unitFor} onClose={() => setUnitFor(null)} title={`Measure ${unitFor?.name ?? 'it'} in`}>
+        <Field
+          label="Measurement"
+          placeholder="tbsp, bag, slice…"
+          value={unitDraft}
+          onChangeText={setUnitDraft}
+          autoFocus
+          autoCapitalize="none"
+          returnKeyType="done"
+          onSubmitEditing={() => {
+            if (unitFor && unitDraft.trim()) actions.setUnit(unitFor.id, unitDraft);
+            setUnitFor(null);
+          }}
+        />
+        <ActionPill
+          label="Done"
+          variant="primary"
+          height="bottom"
+          disabled={!unitDraft.trim()}
+          onPress={() => {
+            if (unitFor) actions.setUnit(unitFor.id, unitDraft);
+            setUnitFor(null);
+          }}
+        />
+      </Sheet>
 
       {Platform.OS === 'ios' ? (
         <Sheet visible={pickerOpen} onClose={() => setPickerOpen(false)} title={`Use ${picking?.name ?? 'it'} by`}>
@@ -528,7 +760,7 @@ function ToBuyTab({
         onAdd={actions.addToBuy}
         addLabel="Add an item to To Buy"
         helper={helper}
-        right={left.length ? <ActionPill label="Share" height="header" onPress={share} accessibilityLabel="Share list" /> : undefined}
+        right={left.length ? <TextLink label="Share" onPress={share} accessibilityLabel="Share list" /> : undefined}
       />
     </View>
   );
@@ -575,4 +807,29 @@ const useStyles = makeStyles((color) => ({
     backgroundColor: color.surfaceSunken,
   },
   picker: { alignSelf: 'stretch' },
+  // Above the lists after it, so a dragged row passes over them.
+  justBought: { gap: space.s2, zIndex: 1 },
+  boughtRow: {
+    minHeight: size.rowHeight,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.s2,
+    paddingVertical: space.s2,
+    borderBottomWidth: 1,
+    borderBottomColor: color.lineSoft,
+    backgroundColor: color.surface,
+  },
+  boughtLifted: { ...shadow.island, borderRadius: radius.field },
+  boughtName: { flex: 1 },
+  handle: {
+    width: size.targetMin,
+    height: size.targetMin,
+    marginRight: -space.s2,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Held: each place tab gets a dashed sage-ink ring; the one under the finger fills with its paper.
+  dropZone: { position: 'absolute', top: 0, bottom: 0, borderRadius: radius.pill, borderWidth: 2, borderStyle: 'dashed', borderColor: color.sageInk },
+  dropZoneOver: { borderStyle: 'solid' },
 }));

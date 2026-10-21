@@ -182,11 +182,9 @@ test('leaving a rating midway saves nothing, and opening it again starts over', 
   expect(box.store!.state.ranks.disliked).toEqual(['pasta']);
 });
 
-test('Recipes: every list goes by rank, best first, unranked after; tapping a picked filter turns it off', () => {
+test('Recipes: by rank by default; the filter button sorts A to Z and ticks filters on and off', () => {
   mockParams.id = undefined;
   render(<RecipesTab />);
-  expect(texts()).not.toContain('All');
-  expect(texts()).not.toContain('Ranked');
   act(() => {
     box.store!.actions.rankRecipe('pesto', 'fine', 0);
     box.store!.actions.rankRecipe('oats', 'loved', 0);
@@ -198,6 +196,13 @@ test('Recipes: every list goes by rank, best first, unranked after; tapping a pi
   expect(pesto).toBeLessThan(curry);
   expect(texts()).toEqual(expect.arrayContaining(['10.0', '6.6']));
   expect(texts()).toContain('Tonight');
+
+  act(() => tree.root.findAll((n) => n.props.accessibilityLabel === 'Sort and filter' && n.props.onPress)[0].props.onPress());
+  press('A to Z');
+  const [oatsAz, pestoAz, curryAz] = at(texts());
+  expect(oatsAz).toBeLessThan(curryAz);
+  expect(curryAz).toBeLessThan(pestoAz);
+
   const now = box.store!.state.recipes.filter((r) => !r.tonight && r.missing.length === 0).map((r) => r.title);
   press('Can make now');
   for (const title of box.store!.state.recipes.filter((r) => !r.tonight && !now.includes(r.title)).map((r) => r.title)) expect(texts()).not.toContain(title);

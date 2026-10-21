@@ -25,6 +25,7 @@ export type ItemRow = {
   running_low: boolean;
   /** Null follows the date; true or false is set by hand. */
   use_soon: boolean | null;
+  unsorted: boolean;
   added_by: string | null;
 };
 
@@ -77,6 +78,7 @@ export function itemToRow(item: Item, kitchenId: string, today: Date): ItemRow {
     best_by: bestByFromDays(item.daysLeft, today),
     running_low: item.runningLow ?? false,
     use_soon: item.useSoon ?? null,
+    unsorted: item.unsorted ?? false,
     added_by: item.addedBy || null,
   };
 }
@@ -93,6 +95,7 @@ export function rowToItem(row: ItemRow, today: Date): Item {
     daysLeft: daysFromBestBy(row.best_by, today),
     runningLow: row.running_low || undefined,
     useSoon: row.use_soon ?? undefined,
+    unsorted: row.unsorted || undefined,
     addedBy: row.added_by ?? '',
   };
 }

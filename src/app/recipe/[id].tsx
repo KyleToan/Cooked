@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Linking, View } from 'react-native';
 
 import { ActionPill } from '@/components/ActionPill';
-import { UndoBar } from '@/components/Controls';
+import { Stepper, UndoBar } from '@/components/Controls';
 import { BackButton, PushedHeader, SectionHeader } from '@/components/Header';
 import { ToBuyToggle } from '@/components/ListRows';
 import { RateSheet } from '@/components/RateSheet';
@@ -12,7 +12,7 @@ import { ScoreRing } from '@/components/ScoreRing';
 import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
-import { count, isUseSoon, PLACE_LABEL, recipeMeta } from '@/data/helpers';
+import { count, isUseSoon, PLACE_LABEL, recipeMeta, scaleAmount, servingsCount } from '@/data/helpers';
 import { matches, usedWhenMade } from '@/data/match';
 import { ranked, scores } from '@/data/ranking';
 import { STAPLES } from '@/data/seed';
@@ -33,6 +33,10 @@ export default function RecipeScreen() {
   // Bumped on each open, so the rating sheet starts fresh at How was it?
   const [rateKey, setRateKey] = useState(0);
   const [rating, setRating] = useState(false);
+  // Servings to cook for; the amounts scale from the recipe's own count. Not saved: each open starts at the recipe's.
+  const base = servingsCount(recipe?.servings);
+  const [serves, setServes] = useState(base ?? 1);
+  const scale = (amount?: string) => (amount && base ? scaleAmount(amount, serves / base) : amount);
   const back = () => (router.canGoBack() ? router.back() : router.replace('/recipes'));
 
   if (!recipe) {
@@ -129,6 +133,12 @@ export default function RecipeScreen() {
           </>
         }
       />
+      {base ? (
+        <View style={styles.row}>
+          <Text style={styles.grow}>Servings</Text>
+          <Stepper value={serves} onChange={setServes} min={1} decLabel="Fewer servings" incLabel="More servings" />
+        </View>
+      ) : null}
       <RateSheet key={rateKey} recipe={recipe} visible={rating} onClose={() => setRating(false)} />
 
       {recipe.missing.length ? (
@@ -155,7 +165,7 @@ export default function RecipeScreen() {
                   </Text>
                 ) : null}
               </View>
-              <Amount value={recipe.missingAmounts?.[m]} />
+              <Amount value={scale(recipe.missingAmounts?.[m])} />
             </View>
           ))}
         </View>
@@ -177,7 +187,7 @@ export default function RecipeScreen() {
                   ) : null}
                 </Text>
               </View>
-              <Amount value={g.amount} />
+              <Amount value={scale(g.amount)} />
             </View>
           ))}
         </View>

@@ -25,9 +25,12 @@ import {
   doneAtOpen,
   nudgeText,
   weeklyText,
+  sortRecipes,
+  scaleAmount,
+  servingsCount,
 } from '@/data/helpers';
 import { SEED_ITEMS, SEED_TO_BUY } from '@/data/seed';
-import type { Item } from '@/data/types';
+import type { Item, Recipe } from '@/data/types';
 
 // jest-expo's expo-crypto mock returns one fixed uuid; use Node's generator instead (jest.mock is hoisted).
 jest.mock('expo-crypto', () => ({ randomUUID: () => jest.requireActual<typeof import('crypto')>('crypto').randomUUID() }));
@@ -124,6 +127,8 @@ describe('words', () => {
     expect(plural('box', 2)).toBe('boxes');
     expect(plural('bag', 2)).toBe('bags');
     expect(plural('eggs', 1)).toBe('eggs');
+    expect(plural('g', 500)).toBe('g');
+    expect(plural('L', 2)).toBe('L');
   });
 
   test('amountLabel', () => {
@@ -253,5 +258,44 @@ describe('best-by dates', () => {
   test('round-trip over a DST change', () => {
     const march = new Date(2026, 2, 1, 23, 30);
     for (const d of [0, 7, 14, 30, 60]) expect(daysFromBestBy(bestByFromDays(d, march), march)).toBe(d);
+  });
+});
+
+describe('sortRecipes', () => {
+  const r = (id: string, title: string) => ({ id, title }) as Recipe;
+  const saved = [r('a', 'Berry oats'), r('b', 'Pesto pasta'), r('c', 'Chickpea curry')];
+  const ids = (list: Recipe[]) => list.map((x) => x.id);
+
+  test('by rank, best first, then unranked in saved order', () => {
+    expect(ids(sortRecipes(saved, 'rank', ['c']))).toEqual(['c', 'a', 'b']);
+  });
+
+  test('A to Z and newest', () => {
+    expect(ids(sortRecipes(saved, 'az', []))).toEqual(['a', 'c', 'b']);
+    expect(ids(sortRecipes(saved, 'newest', []))).toEqual(['c', 'b', 'a']);
+    expect(ids(saved)).toEqual(['a', 'b', 'c']);
+  });
+});
+
+describe('servings', () => {
+  test('reads the count from the servings line', () => {
+    expect(servingsCount('24 servings')).toBe(24);
+    expect(servingsCount('Serves 4')).toBe(4);
+    expect(servingsCount(undefined)).toBeUndefined();
+    expect(servingsCount('a crowd')).toBeUndefined();
+  });
+
+  test('scales the leading amount', () => {
+    expect(scaleAmount('400 g', 1.5)).toBe('600 g');
+    expect(scaleAmount('1 1/2 cups', 2)).toBe('3 cups');
+    expect(scaleAmount('1/4 teaspoon', 2)).toBe('½ teaspoon');
+    expect(scaleAmount('1 ½ cups', 0.5)).toBe('¾ cups');
+    expect(scaleAmount('½ tsp', 3)).toBe('1½ tsp');
+    expect(scaleAmount('2-3 cloves', 2)).toBe('4-6 cloves');
+    expect(scaleAmount('1 (14 oz) can', 2)).toBe('2 (14 oz) can');
+    expect(scaleAmount('0.5 L', 3)).toBe('1½ L');
+    expect(scaleAmount('2', 1 / 3)).toBe('⅔');
+    expect(scaleAmount('a pinch', 4)).toBe('a pinch');
+    expect(scaleAmount('100 g', 1)).toBe('100 g');
   });
 });

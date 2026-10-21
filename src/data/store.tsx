@@ -81,12 +81,14 @@ export function initialState(): State {
 
 export type Action =
   | { type: 'toggleToBuy'; id: string; scope: string }
-  | { type: 'addToBuy'; name: string; place?: Place }
+  | { type: 'addToBuy'; name: string; place?: Place; amount?: string }
   | { type: 'addItem'; name: string; place: Place }
   | { type: 'setQty'; id: string; qty: number; scope: string }
   | { type: 'itemToBuy'; id: string }
   | { type: 'setUseSoon'; id: string; on: boolean }
   | { type: 'setBestBy'; id: string; daysLeft: number }
+  | { type: 'setUnit'; id: string; unit: string }
+  | { type: 'sortItem'; id: string; place: Place }
   | { type: 'addScanned'; lines: ScanLine[]; undo?: boolean; at?: string }
   | { type: 'toggleRecipeToBuy'; id: string }
   | { type: 'madeRecipe'; id: string }
@@ -140,6 +142,31 @@ const newKitchen = (user: Person): Kitchen => {
   };
 };
 
+/** Ticked off To Buy: one more of it in the kitchen, or a new one under Just bought. */
+function buy(items: Item[], t: ToBuyItem, userId: string): Item[] {
+  const have = items.find((i) => sameName(i.name, t.name));
+  if (have) return items.map((i) => (i === have ? { ...i, qty: i.qty + 1 } : i));
+  const added: Item = {
+    id: makeId('i'),
+    name: t.name,
+    place: t.place,
+    qty: 1,
+    unit: '',
+    meta: 'Just bought',
+    daysLeft: shelfLifeFor(t.name, t.place),
+    unsorted: true,
+    addedBy: userId,
+  };
+  return [...items, added];
+}
+
+/** Unticked: takes back the one `buy` added. */
+function unbuy(items: Item[], name: string): Item[] {
+  const have = items.find((i) => i.unsorted && sameName(i.name, name)) ?? items.find((i) => i.qty > 0 && sameName(i.name, name));
+  if (!have) return items;
+  return have.qty <= 1 ? items.filter((i) => i !== have) : items.map((i) => (i === have ? { ...i, qty: i.qty - 1 } : i));
+}
+
 export function reducer(s: State, a: Action): State {
   switch (a.type) {
     case 'toggleToBuy': {
@@ -148,7 +175,7 @@ export function reducer(s: State, a: Action): State {
       const toBuy = s.toBuy.map((t) => (t.id === a.id ? { ...t, done: !t.done } : t));
       // Ticking off can be undone; unticking is its own undo.
       const undo = item.done ? null : withUndo(s, `${item.name} ticked off`, a.scope);
-      return { ...s, toBuy, undo };
+      return { ...s, toBuy, items: item.done ? unbuy(s.items, item.name) : buy(s.items, item, s.user.id), undo };
     }
     case 'addToBuy': {
       const name = a.name.trim();
@@ -156,7 +183,8 @@ export function reducer(s: State, a: Action): State {
       const item: ToBuyItem = {
         id: makeId('t'),
         name,
-        note: `Added by ${s.user.name}`,
+        // How much, when they said; otherwise who added it.
+        note: a.amount?.trim() || `Added by ${s.user.name}`,
         place: a.place ?? guessPlace(name, s.items),
         done: false,
         addedBy: s.user.id,
@@ -183,8 +211,10 @@ export function reducer(s: State, a: Action): State {
       const item = s.items.find((i) => i.id === a.id);
       if (!item) return s;
       const qty = Math.max(0, a.qty);
-      const items = s.items.map((i) => (i.id === a.id ? { ...i, qty } : i));
-      const undo = qty === 0 && item.qty > 0 ? withUndo(s, `${item.name} used up`, a.scope) : null;
+      // Used up leaves the list; the undo bar is the way back.
+      const usedUp = qty === 0 && item.qty > 0;
+      const items = usedUp ? s.items.filter((i) => i.id !== a.id) : s.items.map((i) => (i.id === a.id ? { ...i, qty } : i));
+      const undo = usedUp ? withUndo(s, `${item.name} used up`, a.scope) : null;
       return { ...s, items, undo };
     }
     case 'setUseSoon': {
@@ -197,6 +227,21 @@ export function reducer(s: State, a: Action): State {
       const items = s.items.map((i) =>
         i.id === a.id ? { ...i, daysLeft: a.daysLeft, useSoon: undefined, meta: `Best by ${shortDate(a.daysLeft)}` } : i,
       );
+      return { ...s, items, undo: null };
+    }
+    case 'sortItem': {
+      const item = s.items.find((i) => i.id === a.id);
+      if (!item) return s;
+      // Already in that place under the same name: one item with both counts.
+      const same = s.items.find((i) => i.id !== item.id && !i.unsorted && i.place === a.place && sameName(i.name, item.name));
+      if (same) return { ...s, items: s.items.filter((i) => i.id !== item.id).map((i) => (i === same ? { ...i, qty: i.qty + item.qty } : i)), undo: null };
+      // Its shelf life was only a guess for the guessed place.
+      const daysLeft = item.unsorted ? shelfLifeFor(item.name, a.place) : item.daysLeft;
+      return { ...s, items: s.items.map((i) => (i === item ? { ...i, place: a.place, unsorted: undefined, daysLeft } : i)), undo: null };
+    }
+    case 'setUnit': {
+      // A new measurement replaces the imported wording ("About 1 cup"), which no longer matches.
+      const items = s.items.map((i) => (i.id === a.id ? { ...i, unit: a.unit.trim(), amountText: undefined } : i));
       return { ...s, items, undo: null };
     }
     case 'itemToBuy': {
@@ -231,6 +276,7 @@ export function reducer(s: State, a: Action): State {
               unit: '',
               meta: 'From today’s receipt',
               daysLeft: shelfLifeFor(line.name, place),
+              unsorted: true,
               addedBy: s.user.id,
             },
           ];
@@ -253,17 +299,19 @@ export function reducer(s: State, a: Action): State {
       const saved = s.recipes.find((r) => r.id === a.id);
       const recipe = saved && checkRecipe(saved, s.items);
       if (!recipe || recipe.missing.length === 0) return s;
-      const note = `For ${recipe.title}`;
+      // The line under each item is how much the recipe needs. Items from before this said `For <title>`.
+      const amountOf = (m: string) => recipe.missingAmounts?.[m] ?? '';
+      const fromRecipe = (t: ToBuyItem) => recipe.missing.some((m) => sameName(m, t.name) && (t.note === amountOf(m) || t.note === `For ${recipe.title}`));
       let toBuy: ToBuyItem[];
       if (recipe.onToBuy) {
-        toBuy = s.toBuy.filter((t) => !(t.note === note && !t.done && recipe.missing.some((m) => sameName(m, t.name))));
+        toBuy = s.toBuy.filter((t) => t.done || !fromRecipe(t));
       } else {
         const add = recipe.missing
           .filter((m) => !s.toBuy.some((t) => !t.done && sameName(t.name, m)))
           .map<ToBuyItem>((m) => ({
             id: makeId('t'),
             name: m,
-            note,
+            note: amountOf(m),
             place: guessPlace(m, s.items),
             done: false,
             addedBy: s.user.id,
@@ -377,7 +425,8 @@ const StoreContext = createContext<Store | null>(null);
 function makeActions(dispatch: (a: Action) => void) {
   return {
     toggleToBuy: (id: string, scope: string) => dispatch({ type: 'toggleToBuy', id, scope }),
-    addToBuy: (name: string, place?: Place) => dispatch({ type: 'addToBuy', name, place }),
+    /** `amount` is optional: "2 L", "a bunch". */
+    addToBuy: (name: string, amount?: string) => dispatch({ type: 'addToBuy', name, amount }),
     addItem: (name: string, place: Place) => dispatch({ type: 'addItem', name, place }),
     setQty: (id: string, qty: number, scope: string) => dispatch({ type: 'setQty', id, qty, scope }),
     addItemToBuy: (id: string) => dispatch({ type: 'itemToBuy', id }),
@@ -385,6 +434,10 @@ function makeActions(dispatch: (a: Action) => void) {
     setUseSoon: (id: string, on: boolean) => dispatch({ type: 'setUseSoon', id, on }),
     /** A new use-by date, `daysLeft` from today. */
     setBestBy: (id: string, daysLeft: number) => dispatch({ type: 'setBestBy', id, daysLeft }),
+    /** What the amount counts in ("g", "cup"); empty counts with × n. */
+    setUnit: (id: string, unit: string) => dispatch({ type: 'setUnit', id, unit }),
+    /** Puts something from Just bought (or anywhere) away in a place. */
+    sortItem: (id: string, place: Place) => dispatch({ type: 'sortItem', id, place }),
     /** With `undo: true`, Home shows "Added N items to your kitchen" with Undo. */
     addScanned: (lines: ScanLine[], opts?: { undo?: boolean }) =>
       dispatch({ type: 'addScanned', lines, undo: opts?.undo, at: new Date().toISOString() }),
