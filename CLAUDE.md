@@ -4,3 +4,7 @@ The shared rules for every coding agent live in AGENTS.md, and the design rules 
 
 @AGENTS.md
 @.cursor/rules/cooked-design.mdc
+
+## Design review
+
+When the owner says "design review" (with or without naming screens, a feature or a branch), invoke the `design-review` skill in `.claude/skills/design-review/`. It runs every installed UI and UX skill as a lens, checks each finding against the design system above, then fixes and re-checks.

@@ -16,7 +16,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { ActionPill } from '@/components/ActionPill';
-import { Field, FilterPills, Switch, UndoBar, useRowLayout } from '@/components/Controls';
+import { Field, FilterPills, Switch, SyncNotice, UndoBar, useRowLayout } from '@/components/Controls';
 import { GreetingHeader, SectionHeader } from '@/components/Header';
 import { Icon } from '@/components/Icon';
 import { KitchenRow } from '@/components/ListRows';
@@ -28,7 +28,7 @@ import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
 import { AddRow, TodoList } from '@/components/TodoList';
-import { count, dateIn, PLACES, daysUntil, isDueSoon, doneAtOpen, joinAnd, shortDate, sinceOpen, sortToBuy, syncedLabel, toBuyProgress } from '@/data/helpers';
+import { count, dateIn, PLACES, daysUntil, hasSome, isDueSoon, doneAtOpen, joinAnd, shortDate, sinceOpen, sortToBuy, syncedLabel, toBuyProgress } from '@/data/helpers';
 import { useStore, useUndo } from '@/data/store';
 import type { Item, Place } from '@/data/types';
 import { haptics } from '@/hooks/haptics';
@@ -72,7 +72,7 @@ export default function Kitchen() {
   const styles = useStyles();
   const params = useLocalSearchParams<{ tab?: string }>();
   const router = useRouter();
-  const { state, actions } = useStore();
+  const { state, actions, sync } = useStore();
   const undo = useUndo('kitchen');
 
   const [tab, setTab] = useState<Tab>(isTab(params.tab) ? params.tab : 'fridge');
@@ -106,7 +106,7 @@ export default function Kitchen() {
   };
 
   const placeholder = tab === 'tobuy' ? 'Search your list' : `Search the ${tab}`;
-  const unsorted = state.items.filter((i) => i.unsorted && i.qty > 0);
+  const unsorted = state.items.filter((i) => i.unsorted && hasSome(i));
   // While a Just bought row is held: the place under the finger (null over none). Undefined when nothing is held.
   const [dragOver, setDragOver] = useState<Place | null | undefined>(undefined);
   // The place tabs, for dropping a Just bought row on one.
@@ -132,6 +132,8 @@ export default function Kitchen() {
         overlay={undo ? <UndoBar text={undo.text} onUndo={actions.undo} onDismiss={() => actions.clearUndo(undo.scope)} /> : null}
       >
         <GreetingHeader line={statusLine} title="Your Kitchen" onAccount={() => router.push('/account')} />
+
+        <SyncNotice problem={sync.problem} onRetry={sync.retry} />
 
         <SearchField placeholder={placeholder} value={query} onChangeText={setQuery} />
 
@@ -456,7 +458,7 @@ function StockTab({
   setOpen: (id: string | null) => void;
   sort: 'az' | 'useby';
   toggleSort: () => void;
-  startQty: Record<string, number>;
+  startQty: Record<string, number | undefined>;
 }) {
   const color = useColors();
   const styles = useStyles();
@@ -468,6 +470,25 @@ function StockTab({
   const [picking, setPicking] = useState<Item | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [draft, setDraft] = useState(() => new Date());
+  // The item whose amount is being typed in the sheet, and the two fields so far.
+  const [amountFor, setAmountFor] = useState<Item | null>(null);
+  const [amountOpen, setAmountOpen] = useState(false);
+  const [qtyText, setQtyText] = useState('');
+  const [unitText, setUnitText] = useState('');
+  const qtyValue = qtyText.trim() ? Number(qtyText.trim().replace(',', '.')) : undefined;
+  const qtyBad = qtyValue !== undefined && (!Number.isFinite(qtyValue) || qtyValue <= 0);
+  const unitAlone = qtyValue === undefined && !!unitText.trim();
+
+  const openAmount = (i: Item) => {
+    setAmountFor(i);
+    setQtyText(i.qty ? String(i.qty) : '');
+    setUnitText(i.qty ? i.unit : '');
+    setAmountOpen(true);
+  };
+  const saveAmount = () => {
+    if (amountFor) actions.setAmount(amountFor.id, qtyValue, unitText);
+    setAmountOpen(false);
+  };
 
   const setBestBy = (id: string, days: number) => actions.setBestBy(id, days);
   // The item getting a measurement of its own (Other), and what's typed so far.
@@ -576,6 +597,7 @@ function StockTab({
         actionLabel={recipeAction ? 'Find a recipe that uses it' : onList(i) ? 'On your To Buy list' : 'Add to To Buy'}
         onAction={() => (recipeAction ? findRecipe(i.name) : actions.addItemToBuy(i.id))}
         onQty={(qty) => actions.setQty(i.id, qty, 'kitchen')}
+        onEditAmount={() => openAmount(i)}
         onUseUp={() => actions.setQty(i.id, 0, 'kitchen')}
         extra={
           <>
@@ -669,6 +691,39 @@ function StockTab({
             setUnitFor(null);
           }}
         />
+      </Sheet>
+
+      <Sheet visible={amountOpen} onClose={() => setAmountOpen(false)} title={amountFor ? `How much ${amountFor.name}?` : 'How much?'}>
+        <Field
+          label="How many (optional)"
+          value={qtyText}
+          onChangeText={setQtyText}
+          keyboardType="decimal-pad"
+          autoFocus
+          error={qtyBad ? 'Use a number above 0, or leave it empty.' : undefined}
+        />
+        <Field
+          label="Unit (optional)"
+          placeholder="carton, g, cups"
+          value={unitText}
+          onChangeText={setUnitText}
+          autoCapitalize="none"
+          returnKeyType="done"
+          onSubmitEditing={() => !qtyBad && !unitAlone && saveAmount()}
+          error={unitAlone ? 'Add how many first, or clear the unit.' : undefined}
+        />
+        <ActionPill label="Save" variant="primary" height="bottom" disabled={qtyBad || unitAlone} onPress={saveAmount} />
+        {amountFor?.qty !== undefined || amountFor?.amountText ? (
+          <TextLink
+            label="No amount"
+            variant="button"
+            align="center"
+            onPress={() => {
+              if (amountFor) actions.setAmount(amountFor.id, undefined, '');
+              setAmountOpen(false);
+            }}
+          />
+        ) : null}
       </Sheet>
 
       {Platform.OS === 'ios' ? (

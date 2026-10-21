@@ -1,0 +1,10 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["TEAMID.com.kylet.cooked"],
+        "components": [{ "/": "/join/*", "comment": "Invite links open Cooked's Join" }]
+      }
+    ]
+  }
+}

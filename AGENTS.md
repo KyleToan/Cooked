@@ -19,9 +19,11 @@ Rules for any AI agent (Claude Code, Cursor, Copilot, etc.) working in this repo
 | `scripts/build-tokens.mjs` | Generates `src/theme/tokens.ts`, `src/theme/fonts.ts` and `src/components/icon-data.ts` from `design/system/`. |
 | `design/` | The design spec: design system, every screen as a prototype and a screenshot. Read `design/README.md` first. Nothing in it ships. |
 | `assets/` | App icon, splash and favicon (Expo placeholders for now). |
+| `site/` | Files the `cooked.app` website serves so invite links open the app. Not part of the app. |
 | `app.json`, `eas.json` | App config and EAS build and update channels. |
 | `.cursor/rules/cooked-design.mdc` | The design rules Cursor loads for every request. |
 | `CLAUDE.md` | Makes Claude Code load this file and the design rules. |
+| `.claude/skills/` | Claude Code skills, pinned in `skills-lock.json`. `design-review` runs the design and motion skills together when the owner says "design review". |
 | `context.md`, `Decisions.md` | What Cooked is, and every decision made. |
 
 ### Commands
@@ -56,7 +58,7 @@ List the variable names here (never the values). Keep values in EAS environment 
 - `EXPO_PUBLIC_SUPABASE_URL`: the Supabase project URL.
 - `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`: the Supabase publishable key (safe in the app bundle; row level security protects the data).
 
-Without both, the app runs in its local fake mode (sign-in code `481726`, nothing leaves the phone).
+Without both, a development build runs in its local fake mode (sign-in code `481726`, nothing leaves the phone). A release build refuses to: it shows "Cooked can't reach its server", and EAS stops a preview or production build that's missing them (`scripts/check-env.mjs`). Sample data lives in `src/data/seed.ts`, reached only through `devSeed`, so it never ships.
 
 ### Expo rules
 

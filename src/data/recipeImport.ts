@@ -1,6 +1,8 @@
 // Recipe import: reads a recipe from a page's schema.org data or from pasted text,
 // and checks its ingredients against the kitchen. Link import fetches the page on the device for now.
 
+import { Platform } from 'react-native';
+
 import { inStock, makeId } from './helpers';
 import { itemsFor } from './match';
 import type { Ingredient, Item, Recipe } from './types';
@@ -654,8 +656,13 @@ export function normalizeUrl(link: string): string {
 }
 
 /** Fetches the page on the device and reads its recipe. Null when it can't be loaded or has none. */
-export async function importFromLink(link: string, items: Item[] = [], signal?: AbortSignal): Promise<Recipe | null> {
-  return (await readLink(link, items, signal)).recipe;
+/**
+ * The recipe on the page, null when the page has none, or 'unreachable' when the page didn't load
+ * (offline or timed out), so Import says to check the connection instead of "No recipe on that page".
+ */
+export async function importFromLink(link: string, items: Item[] = [], signal?: AbortSignal): Promise<Recipe | null | 'unreachable'> {
+  const { recipe, reached } = await readLink(link, items, signal);
+  return reached ? recipe : 'unreachable';
 }
 
 /**
@@ -835,7 +842,12 @@ async function fetchRecipe(
     }
     return { recipe: null, reached: true };
   } catch {
-    // No network, a timeout, or (in a browser) a blocked request: the page was never read.
+    // Left Import before it loaded: nobody is waiting for the answer, so don't call it a connection problem.
+    if (signal?.aborted) return { recipe: null, reached: true };
+    // On the web most sites refuse the fetch outright (Decisions #59), which looks the same as offline:
+    // only call it unreachable when the browser says it's offline.
+    if (Platform.OS === 'web') return { recipe: null, reached: globalThis.navigator?.onLine !== false };
+    // No network or a timeout: the page was never read.
     return { recipe: null, reached: false };
   } finally {
     clearTimeout(timer);

@@ -110,7 +110,7 @@ export default function Import() {
     step === 'done' && saved ? saved.title : offline ? 'Couldn’t open that page' : step === 'error' ? 'No recipe on that page' : 'Import a recipe';
   const sub =
     offline
-      ? `${failText('open that page', 'offline')} Or paste the recipe text instead.`
+      ? failText('open that page', 'offline')
       : step === 'error'
       ? scanned
         ? 'We couldn’t find an ingredient list in that photo. Try a sharper photo, or paste the text.'
@@ -222,25 +222,43 @@ export default function Import() {
               </Text>
             </View>
           ) : null}
-          <ActionPill
-            label="Paste the recipe text instead"
-            variant="primary"
-            height="bottom"
-            onPress={() => {
-              setMode('text');
-              setStep('edit');
-            }}
-          />
-          <TextLink
-            label="Try another link"
-            variant="button"
-            align="center"
-            onPress={() => {
-              setMode('link');
-              setLink('');
-              setStep('edit');
-            }}
-          />
+          {offline ? (
+            <ActionPill label="Try again" variant="primary" height="bottom" onPress={() => setStep('loading')} />
+          ) : null}
+          {offline ? (
+            <TextLink
+              label="Paste the recipe text instead"
+              variant="button"
+              align="center"
+              onPress={() => {
+                setMode('text');
+                setStep('edit');
+              }}
+            />
+          ) : (
+            <ActionPill
+              label="Paste the recipe text instead"
+              variant="primary"
+              height="bottom"
+              onPress={() => {
+                setMode('text');
+                setStep('edit');
+              }}
+            />
+          )}
+          {/* After a photo there was no link to try again; offline, Try again is the way back. */}
+          {scanned || offline ? null : (
+            <TextLink
+              label="Try another link"
+              variant="button"
+              align="center"
+              onPress={() => {
+                setMode('link');
+                setLink('');
+                setStep('edit');
+              }}
+            />
+          )}
         </View>
       ) : null}
 

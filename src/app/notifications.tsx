@@ -12,25 +12,23 @@ import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
 import { failText, type Failure } from '@/data/errors';
-import { parseClock } from '@/data/helpers';
+import { nudgeText, parseClock, weeklyText } from '@/data/helpers';
 import { failure, saveNotifications } from '@/data/kitchenApi';
 import { useStore } from '@/data/store';
 import { hasBackend } from '@/data/supabase';
 import type { NotificationKey } from '@/data/types';
 import { makeStyles, useColors, radius, shadow, size, space } from '@/theme';
 
-const ROWS: { key: NotificationKey; title: string; sub: string; time?: boolean }[] = [
-  { key: 'toBuy', title: 'To Buy changes', sub: 'When someone adds to To Buy while you’re out. Grouped, so you get one buzz, not five.' },
+/** `push`: sent by the server to this phone, which isn't built yet (T6.1), so those rows stay hidden (Decisions #165). */
+const ALL_ROWS: { key: NotificationKey; title: string; sub: string; time?: boolean; push?: boolean }[] = [
+  { key: 'toBuy', title: 'To Buy changes', sub: 'When someone adds to To Buy while you’re out. Grouped, so you get one buzz, not five.', push: true },
   { key: 'useSoon', title: 'Use-soon nudge', sub: 'Once a day, only if something needs using in the next two days.', time: true },
-  { key: 'joins', title: 'Someone joins your kitchen', sub: 'When an invite link is used.' },
+  { key: 'joins', title: 'Someone joins your kitchen', sub: 'When an invite link is used.', push: true },
   { key: 'weekly', title: 'Weekly kitchen summary', sub: 'Sundays at 10 am: what needs using soon and what’s on To Buy.' },
 ];
-
-/**
- * The switches the phone can act on today. To Buy changes and joins need the server to send them (Decision #87),
- * so they stay hidden instead of being switches that do nothing; their saved settings are kept for when they ship.
- */
-const SENT: NotificationKey[] = ['useSoon', 'weekly'];
+/** Flip once server push sends To Buy changes and joins. */
+const PUSH_READY = false;
+const ROWS = ALL_ROWS.filter((r) => PUSH_READY || !r.push);
 
 /** The web has no time picker or notification permission; there the time steps through these. */
 const WEB_TIMES = ['8:00 am', '12:00 pm', '5:00 pm', '7:00 pm'];
@@ -133,11 +131,18 @@ export default function NotificationsScreen() {
     }
   };
 
-  const preview = isOn('useSoon')
-    ? 'Spinach and chicken thighs need using.'
-    : isOn('weekly')
-      ? 'This week: 2 things to use soon and 3 on To Buy.'
-      : 'Notifications are off. Cooked will stay quiet.';
+  // The words this kitchen would get today, the same helpers the scheduled ones use.
+  const nudge = nudgeText(state.items);
+  const preview =
+    PUSH_READY && isOn('toBuy')
+      ? 'Sam added tomatoes, feta and 1 more to To Buy.'
+      : isOn('useSoon') && nudge
+        ? nudge
+        : isOn('weekly')
+          ? weeklyText(state.items, state.toBuy)
+          : isOn('useSoon')
+            ? 'Nothing needs using soon, so no nudge today.'
+            : 'Notifications are off. Cooked will stay quiet.';
 
   return (
     <Screen>
@@ -153,7 +158,7 @@ export default function NotificationsScreen() {
       />
 
       <View>
-        {ROWS.filter((r) => SENT.includes(r.key)).map((r) => (
+        {ROWS.map((r) => (
           <SwitchRow key={r.key} title={r.title} description={r.sub} value={isOn(r.key)} onChange={(on) => toggle(r.key, on)}>
             {r.time ? (
               <View style={styles.time}>
@@ -166,7 +171,7 @@ export default function NotificationsScreen() {
                     value={parseTime(n.useSoonTime)}
                     mode="time"
                     display="compact"
-                                        accentColor={color.sageInk}
+                    accentColor={color.sageInk}
                     onValueChange={(_e, d) => actions.setUseSoonTime(formatTime(d))}
                   />
                 ) : (

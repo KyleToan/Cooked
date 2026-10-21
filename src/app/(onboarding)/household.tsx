@@ -26,8 +26,8 @@ const CHOICES: Choice<KitchenPath>[] = [
 export default function Household() {
   const router = useRouter();
   const { state, actions, reload } = useStore();
-  // Opened from an invite link: start on I have an invite.
-  const [picked, setPicked] = useState<KitchenPath>(pendingInvite.code ? 'join' : 'household');
+  // Opened from an invite link: joining is what they came for.
+  const [picked, setPicked] = useState<KitchenPath>(() => (pendingInvite() ? 'join' : 'household'));
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState<Failure | null>(null);
 

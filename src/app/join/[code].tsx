@@ -2,7 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { View } from 'react-native';
 
-import { rememberInvite } from '@/data/pendingInvite';
+import { setPendingInvite } from '@/data/pendingInvite';
 import { useStore } from '@/data/store';
 import { useColors } from '@/theme';
 
@@ -19,7 +19,7 @@ export default function InviteLink() {
   const onboarded = state.session.onboarded;
 
   useEffect(() => {
-    if (!onboarded && code) rememberInvite(code);
+    if (!onboarded && code) setPendingInvite(code.trim().toLowerCase());
     // Before onboarding, Home is behind the guard, so start at Welcome.
     router.replace(onboarded ? '/' : '/welcome');
   }, [code, onboarded, router]);

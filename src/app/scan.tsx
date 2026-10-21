@@ -23,7 +23,7 @@ import { Text } from '@/components/Text';
 import { scanFlow } from '@/data/helpers';
 import { lastScan, readText } from '@/data/ocr';
 import { parseReceipt } from '@/data/receipt';
-import { SAMPLE_RECIPE_PAGE, SAMPLE_SCAN } from '@/data/seed';
+import { devSeed } from '@/data/devSeed';
 import type { ScanLine } from '@/data/types';
 import { haptics } from '@/hooks/haptics';
 import { FixedScheme, palette, radius, size, space } from '@/theme';
@@ -143,7 +143,7 @@ export default function Scan() {
       text = '';
     }
     // No reader in this build (Expo Go, web): a sample page keeps the flow usable in development.
-    lastScan.recipeText = text ?? (__DEV__ ? SAMPLE_RECIPE_PAGE : '');
+    lastScan.recipeText = text ?? devSeed?.SAMPLE_RECIPE_PAGE ?? '';
     router.replace({ pathname: '/import', params: { from: 'scan' } });
   };
 
@@ -157,8 +157,8 @@ export default function Scan() {
       const text = uri ? await readWithLimit(uri) : null;
       // No reader in this build (Expo Go, web): the sample receipt keeps the screens usable in development.
       if (text === null) {
-        lines = __DEV__ ? SAMPLE_SCAN : [];
-        store = 'Corner Market';
+        lines = devSeed?.SAMPLE_SCAN ?? [];
+        store = devSeed ? 'Corner Market' : null;
       } else {
         ({ lines, store } = parseReceipt(text));
       }
@@ -271,7 +271,7 @@ export default function Scan() {
                 </Text>
               </>
             ) : (
-              <PermissionAsk canAsk={permission.canAskAgain} onAsk={requestPermission} />
+              <PermissionAsk what={mode === 'recipe' ? 'a recipe page' : 'your receipt'} canAsk={permission.canAskAgain} onAsk={requestPermission} />
             )}
           </View>
         </View>
@@ -364,11 +364,11 @@ export default function Scan() {
 }
 
 /** Shown in place of the hint when the camera isn't allowed yet. */
-function PermissionAsk({ canAsk, onAsk }: { canAsk: boolean; onAsk: () => void }) {
+function PermissionAsk({ what, canAsk, onAsk }: { what: string; canAsk: boolean; onAsk: () => void }) {
   return (
     <View style={styles.ask}>
       <Text variant="body" weight="medium" color="onInk" style={styles.center} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
-        Cooked needs the camera to scan your receipt.
+        Cooked needs the camera to scan {what}.
       </Text>
       <Tap accessibilityRole="button" onPress={canAsk ? onAsk : () => Linking.openSettings()} style={styles.askBtn}>
         <Text variant="button" weight="semibold" maxFontSizeMultiplier={CHROME_MAX_SCALE}>

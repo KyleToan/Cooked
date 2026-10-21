@@ -4,7 +4,7 @@
 
 import { beforeEach, describe, expect, test } from '@jest/globals';
 
-import { initialState, reducer, type Action, type State } from '@/data/store';
+import { initialState, sampleState, reducer, type Action, type State } from '@/data/store';
 import { isDueSoon, shortDate, syncedLabel } from '@/data/helpers';
 import { ALEX, NEW_INVITE_CODE, SAMPLE_SCAN, SAM, SEED_ITEMS, SEED_KITCHEN, SEED_TO_BUY } from '@/data/seed';
 import type { ScanLine } from '@/data/types';
@@ -19,21 +19,30 @@ const line = (name: string, place: ScanLine['place'], qty = 1): ScanLine => ({ i
 
 let s: State;
 beforeEach(() => {
-  s = initialState();
+  s = sampleState();
 });
 
 describe('initial state', () => {
-  test('starts in onboarding with the sample kitchen', () => {
-    expect(s.session.onboarded).toBe(false);
-    expect(s.session.signIn).toBeNull();
+  test('starts in onboarding with nobody and nothing', () => {
+    const blank = initialState();
+    expect(blank.session.onboarded).toBe(false);
+    expect(blank.session.signIn).toBeNull();
+    expect(blank.user.name).toBe('');
+    expect(blank.kitchen.name).toBe('');
+    expect(blank.items).toEqual([]);
+    expect(blank.toBuy).toEqual([]);
+    expect(blank.recipes).toEqual([]);
+    expect(blank.undo).toBeNull();
+  });
+
+  test('the sample state is Alex in the Rivera kitchen', () => {
     expect(s.user).toBe(ALEX);
     expect(s.kitchen).toBe(SEED_KITCHEN);
     expect(s.items).toBe(SEED_ITEMS);
-    expect(s.undo).toBeNull();
   });
 
   test('every call returns a fresh session', () => {
-    expect(initialState().session).not.toBe(initialState().session);
+    expect(sampleState().session).not.toBe(sampleState().session);
   });
 
   test('reducer never mutates the seed', () => {
@@ -108,9 +117,10 @@ describe('To Buy', () => {
 });
 
 describe('items', () => {
-  test('adding an item starts at 1 with the place default shelf life', () => {
+  test('adding an item starts with no amount and the place default shelf life', () => {
     const fridge = run(s, { type: 'addItem', name: ' Tofu ', place: 'fridge' }).items.at(-1)!;
-    expect(fridge).toMatchObject({ name: 'Tofu', place: 'fridge', qty: 1, unit: '', meta: 'Added by Alex', daysLeft: 7, addedBy: 'alex' });
+    expect(fridge).toMatchObject({ name: 'Tofu', place: 'fridge', unit: '', meta: 'Added by Alex', daysLeft: 7, addedBy: 'alex' });
+    expect(fridge.qty).toBeUndefined();
     expect(run(s, { type: 'addItem', name: 'Cumin', place: 'pantry' }).items.at(-1)!.daysLeft).toBe(180);
     expect(run(s, { type: 'addItem', name: 'Ice', place: 'freezer' }).items.at(-1)!.daysLeft).toBe(90);
   });
@@ -128,6 +138,30 @@ describe('items', () => {
     const next = run(s, { type: 'setQty', id: 'f1', qty: 0, scope: 'kitchen' });
     expect(next.items.some((i) => i.id === 'f1')).toBe(false);
     expect(next.undo).toMatchObject({ text: 'Spinach used up', scope: 'kitchen' });
+  });
+
+  test('an amount can be added, changed and cleared by hand', () => {
+    const withTofu = run(s, { type: 'addItem', name: 'Tofu', place: 'fridge' });
+    const tofu = withTofu.items.at(-1)!;
+    const added = run(withTofu, { type: 'setAmount', id: tofu.id, qty: 2, unit: ' block ' });
+    expect(added.items.at(-1)).toMatchObject({ qty: 2, unit: 'block' });
+    const cleared = run(added, { type: 'setAmount', id: tofu.id, qty: undefined, unit: 'block' });
+    expect(cleared.items.at(-1)!.qty).toBeUndefined();
+    expect(cleared.items.at(-1)!.unit).toBe('');
+  });
+
+  test('typing an amount replaces the receipt text', () => {
+    const withText = { ...s, items: s.items.map((i) => (i.id === 'f1' ? { ...i, amountText: 'About 1 cup' } : i)) };
+    expect(item(run(withText, { type: 'setAmount', id: 'f1', qty: 3, unit: 'cup' }), 'f1').amountText).toBeUndefined();
+  });
+
+  test('using up something uncounted offers an undo', () => {
+    const added = run(s, { type: 'addItem', name: 'Tofu', place: 'fridge' });
+    const id = added.items.at(-1)!.id;
+    const next = run(added, { type: 'setQty', id, qty: 0, scope: 'kitchen' });
+    // Used up leaves the list (Decisions #150).
+    expect(next.items.some((i) => i.id === id)).toBe(false);
+    expect(next.undo?.text).toBe('Tofu used up');
   });
 
   test('using one of several offers no new undo', () => {
@@ -185,7 +219,9 @@ describe('scanning', () => {
   test('new lines become items with the place default shelf life', () => {
     const next = run(s, { type: 'addScanned', lines: [line('Tofu', 'fridge', 2), line('Cumin', 'pantry')] });
     expect(byName(next, 'Tofu')[0]).toMatchObject({ place: 'fridge', qty: 2, daysLeft: 7, meta: 'From today’s receipt' });
-    expect(byName(next, 'Cumin')[0]).toMatchObject({ place: 'pantry', qty: 1, daysLeft: 180 });
+    expect(byName(next, 'Cumin')[0]).toMatchObject({ place: 'pantry', daysLeft: 180 });
+    // One of something stays uncounted (Decisions #162).
+    expect(byName(next, 'Cumin')[0].qty).toBeUndefined();
   });
 
   test('new lines get the shelf life of what they are', () => {
@@ -499,7 +535,9 @@ describe('onboarding', () => {
     const me = { ...s, user: { id: 'me', name: 'Jo', note: '' } };
     const next = run(me, { type: 'choosePath', path: 'join' });
     expect(next.session.path).toBe('join');
+    // You join as yourself, first; Alex stays the maker (Decisions #123, #124).
     expect(next.kitchen.people.map((p) => p.id)).toEqual(['me', 'alex', 'sam']);
+    expect(next.kitchen.people[0].name).toBe('Jo');
     expect(next.items).toBe(SEED_ITEMS);
     expect(next.toBuy).toBe(SEED_TO_BUY);
   });
@@ -562,14 +600,16 @@ describe('Just bought', () => {
 
   test('ticking off something new puts it under Just bought; unticking takes it back', () => {
     const ticked = run(s, { type: 'toggleToBuy', id: 't', scope: 'kitchen' });
-    expect(named(ticked, 'Tomatoes')).toEqual([expect.objectContaining({ qty: 1, unsorted: true, place: 'fridge', meta: 'Just bought' })]);
+    expect(named(ticked, 'Tomatoes')).toEqual([expect.objectContaining({ unsorted: true, place: 'fridge', meta: 'Just bought' })]);
+    // One of something stays uncounted (Decisions #162).
+    expect(named(ticked, 'Tomatoes')[0].qty).toBeUndefined();
     expect(named(run(ticked, { type: 'toggleToBuy', id: 't', scope: 'kitchen' }), 'Tomatoes')).toEqual([]);
   });
 
   test('ticking off something already in the kitchen adds one to it', () => {
     const rice = s.items.find((i) => i.name === 'Rice')!;
     const ticked = run(s, { type: 'toggleToBuy', id: 'r', scope: 'kitchen' });
-    expect(named(ticked, 'Rice')).toEqual([expect.objectContaining({ id: rice.id, qty: rice.qty + 1 })]);
+    expect(named(ticked, 'Rice')).toEqual([expect.objectContaining({ id: rice.id, qty: rice.qty! + 1 })]);
     expect(named(ticked, 'Rice')[0].unsorted).toBeUndefined();
   });
 

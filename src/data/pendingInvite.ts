@@ -1,9 +1,23 @@
-// An invite code that arrived by link (cooked://join/<code>, and https://cooked.app/join/<code> once
-// the domain is linked), kept until onboarding reaches Join. Lives in memory: a link opens the app fresh.
+// An invite link that opened the app (cooked.app/join/<code>) before onboarding reached Join.
+// +native-intent.tsx keeps the code here; Who you cook with picks "I have an invite" and Join fills it in.
 
-export const pendingInvite: { code: string | null } = { code: null };
+let pending: string | null = null;
 
-/** Keeps a code from an invite link until Join; a fresh code replaces an older one. */
-export function rememberInvite(code: string) {
-  pendingInvite.code = code.trim().toLowerCase();
+/** The code in an invite link, or null when the path isn't one: "https://cooked.app/join/rivera-k7m2", "cooked://join/x". */
+export function inviteCodeIn(path: string): string | null {
+  const m = /(?:^|\/)join\/([a-z0-9-]+)\/?(?:[?#]|$)/i.exec(path);
+  return m ? m[1].toLowerCase() : null;
+}
+
+export function setPendingInvite(code: string) {
+  pending = code;
+}
+
+/** The waiting code, if any. Stays until joining clears it, so going back and forth keeps it. */
+export function pendingInvite(): string | null {
+  return pending;
+}
+
+export function clearPendingInvite() {
+  pending = null;
 }

@@ -21,6 +21,12 @@ jest.mock('react-native-worklets', () => jest.requireActual('react-native-workle
 jest.mock('react-native-reanimated', () => ({ ...jest.requireActual<object>('react-native-reanimated/mock'), useReducedMotion: () => true }));
 jest.mock('expo-image', () => ({ Image: () => null }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
+// The store starts empty (Decisions #163); these screens need the sample kitchen's recipes.
+jest.mock('@/data/saved', () => ({
+  ...jest.requireActual<object>('@/data/saved'),
+  loadSaved: () => jest.requireActual<typeof import('@/data/store')>('@/data/store').sampleState(),
+  save: () => undefined,
+}));
 jest.mock('@/components/Sheet', () => ({
   Sheet: ({ visible = true, title, subtitle, children }: { visible?: boolean; title?: string; subtitle?: string; children: ReactNode }) => {
     const { Text, View } = jest.requireActual<typeof import('react-native')>('react-native');

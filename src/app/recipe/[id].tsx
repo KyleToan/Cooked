@@ -12,10 +12,9 @@ import { ScoreRing } from '@/components/ScoreRing';
 import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
-import { count, isUseSoon, PLACE_LABEL, recipeMeta, scaleAmount, servingsCount } from '@/data/helpers';
+import { count, isUseSoon, PLACE_LABEL, recipeMeta, scaleAmount, servingsCount, STAPLES } from '@/data/helpers';
 import { matches, usedWhenMade } from '@/data/match';
 import { ranked, scores } from '@/data/ranking';
-import { STAPLES } from '@/data/seed';
 import { useStore, useUndo } from '@/data/store';
 import { makeStyles, radius, shadow, size, space } from '@/theme';
 

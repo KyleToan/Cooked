@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { View } from 'react-native';
 
 import { ActionPill } from '@/components/ActionPill';
+import { SyncNotice } from '@/components/Controls';
 import { GreetingHeader, SectionHeader } from '@/components/Header';
 import { Icon } from '@/components/Icon';
 import { RecipeRow } from '@/components/ListRows';
@@ -41,7 +42,7 @@ const passes = (r: Recipe, fs: Filter[]) => {
 export default function Recipes() {
   const styles = useStyles();
   const router = useRouter();
-  const { state, actions } = useStore();
+  const { state, actions, sync } = useStore();
   const [filter, setFilter] = useState<Filter[]>([]);
   const [sort, setSort] = useState<RecipeSort>('rank');
   const [sheet, setSheet] = useState(false);
@@ -88,6 +89,8 @@ export default function Recipes() {
         title="Recipes"
         onAccount={() => router.push('/account')}
       />
+
+      <SyncNotice problem={sync.problem} onRetry={sync.retry} />
 
       <SearchField placeholder="Search recipes or an ingredient" value={query} onChangeText={setQuery} />
 

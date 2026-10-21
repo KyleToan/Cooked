@@ -1,7 +1,7 @@
 // Ingredient matching: whether the kitchen has what a recipe needs, worked out
 // from the items rather than stored on the recipe.
 
-import { isUseSoon, joinAnd } from './helpers';
+import { hasSome, isUseSoon, joinAnd } from './helpers';
 import type { Ingredient, Item, Recipe } from './types';
 
 /** Amounts and sizes that come before or after a name ("2 cups", "1 large"). */
@@ -95,7 +95,7 @@ export function itemsFor(name: string, items: Item[]): Item[] {
  */
 export function haveIngredient(ingredient: Pick<Ingredient, 'name' | 'have'>, items: Item[]): boolean {
   const tracked = itemsFor(ingredient.name, items);
-  return tracked.length ? tracked.some((i) => i.qty > 0) : ingredient.have;
+  return tracked.length ? tracked.some(hasSome) : ingredient.have;
 }
 
 /** Everything the recipe lists, with the missing names as ingredients you don't have. */
@@ -123,7 +123,7 @@ export function checkRecipe(recipe: Recipe, items: Item[]): Recipe {
   const missingAmounts: Record<string, string> = {};
   for (const g of allIngredients(recipe, items)) {
     if (haveIngredient(g, items)) {
-      const place = itemsFor(g.name, items).find((i) => i.qty > 0)?.place ?? g.place;
+      const place = itemsFor(g.name, items).find(hasSome)?.place ?? g.place;
       ingredients.push({ ...g, place, have: true });
     } else {
       missing.push(g.name);
@@ -187,7 +187,7 @@ export function usedWhenMade(recipe: Recipe, items: Item[], staples: string[]): 
   for (const g of checkRecipe(recipe, items).ingredients) {
     if (staples.some((s) => matches(s, g.name))) continue;
     const item = itemsFor(g.name, items)
-      .filter((i) => i.qty > 0 && !used.includes(i))
+      .filter((i) => hasSome(i) && !used.includes(i))
       .sort((x, y) => x.daysLeft - y.daysLeft)[0];
     if (item) used.push(item);
   }

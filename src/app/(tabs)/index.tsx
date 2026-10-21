@@ -4,7 +4,7 @@ import { View } from 'react-native';
 
 import { ActionPill, PillRow } from '@/components/ActionPill';
 import { Chevron } from '@/components/Chevron';
-import { UndoBar } from '@/components/Controls';
+import { SyncNotice, UndoBar } from '@/components/Controls';
 import { SectionHeader, TopBar } from '@/components/Header';
 import { Icon } from '@/components/Icon';
 import { Screen } from '@/components/Screen';
@@ -14,7 +14,7 @@ import { Tap } from '@/components/Tap';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
 import { AddRow, TodoList } from '@/components/TodoList';
-import { count, doneAtOpen, inStock, isUseSoon, PLACE_LABEL, PLACES, sortToBuy, syncedLabel, toBuyProgress } from '@/data/helpers';
+import { count, doneAtOpen, hasSome, inStock, isUseSoon, PLACE_LABEL, PLACES, sortToBuy, syncedLabel, toBuyProgress } from '@/data/helpers';
 import { useStore, useUndo } from '@/data/store';
 import type { ToBuyItem } from '@/data/types';
 import { makeStyles, size, space } from '@/theme';
@@ -33,7 +33,7 @@ function snapshot(list: ToBuyItem[]) {
 export default function Home() {
   const styles = useStyles();
   const router = useRouter();
-  const { state, actions } = useStore();
+  const { state, actions, sync } = useStore();
   const undo = useUndo('home');
   const [query, setQuery] = useState('');
 
@@ -54,7 +54,7 @@ export default function Home() {
   const shared = state.kitchen.people.length > 1;
 
   // Just bought and not put away: counted under Just bought, not in a note.
-  const unsorted = state.items.filter((i) => i.unsorted && i.qty > 0).length;
+  const unsorted = state.items.filter((i) => i.unsorted && hasSome(i)).length;
   const notes = useMemo(() => {
     const sorted = inStock(state.items).filter((i) => !i.unsorted);
     const soon = PLACES.map((p) => sorted.filter((i) => i.place === p && isUseSoon(i)).length);
@@ -119,6 +119,8 @@ export default function Home() {
         onScan={() => router.push('/scan')}
         onAccount={() => router.push('/account')}
       />
+
+      <SyncNotice problem={sync.problem} onRetry={sync.retry} />
 
       {emptyKitchen ? null : (
         <SearchField placeholder="Search your kitchen and recipes" value={query} onChangeText={setQuery} />

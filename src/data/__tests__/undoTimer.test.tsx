@@ -31,13 +31,20 @@ beforeEach(() => {
   });
 });
 
+/** Puts a thing on To Buy and ticks it off, which offers an undo. */
+function tick(name: string) {
+  act(() => box.store!.actions.addToBuy(name));
+  const id = box.store!.state.toBuy.find((t) => t.name === name)!.id;
+  act(() => box.store!.actions.toggleToBuy(id, 'home'));
+}
+
 afterEach(() => {
   jest.useRealTimers();
   jest.restoreAllMocks();
 });
 
 test('an undo clears itself after a few seconds', () => {
-  act(() => box.store!.actions.toggleToBuy('t', 'home'));
+  tick('Tomatoes');
   expect(box.store!.state.undo?.text).toBe('Tomatoes ticked off');
   act(() => jest.advanceTimersByTime(UNDO_MS - 100));
   expect(box.store!.state.undo).not.toBeNull();
@@ -46,9 +53,9 @@ test('an undo clears itself after a few seconds', () => {
 });
 
 test('a newer undo gets its own time', () => {
-  act(() => box.store!.actions.toggleToBuy('t', 'home'));
+  tick('Tomatoes');
   act(() => jest.advanceTimersByTime(UNDO_MS - 1000));
-  act(() => box.store!.actions.toggleToBuy('f', 'home'));
+  tick('Feta');
   act(() => jest.advanceTimersByTime(2000));
   expect(box.store!.state.undo?.text).toBe('Feta ticked off');
   act(() => jest.advanceTimersByTime(UNDO_MS));
@@ -70,7 +77,7 @@ test('with a screen reader on, the undo waits for the next change', async () => 
     );
   });
   await act(async () => {});
-  act(() => box.store!.actions.toggleToBuy('t', 'home'));
+  tick('Tomatoes');
   act(() => jest.advanceTimersByTime(UNDO_MS * 3));
   expect(box.store!.state.undo?.text).toBe('Tomatoes ticked off');
 });

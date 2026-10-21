@@ -16,7 +16,8 @@ export type ItemRow = {
   kitchen_id: string;
   name: string;
   place: Place;
-  qty: number;
+  /** Null when nobody counted it. */
+  qty: number | null;
   unit: string;
   amount_text: string | null;
   meta: string;
@@ -71,7 +72,7 @@ export function itemToRow(item: Item, kitchenId: string, today: Date): ItemRow {
     kitchen_id: kitchenId,
     name: item.name,
     place: item.place,
-    qty: item.qty,
+    qty: item.qty ?? null,
     unit: item.unit,
     amount_text: item.amountText ?? null,
     meta: item.meta,
@@ -88,7 +89,7 @@ export function rowToItem(row: ItemRow, today: Date): Item {
     id: row.id,
     name: row.name,
     place: row.place,
-    qty: row.qty,
+    qty: row.qty ?? undefined,
     unit: row.unit,
     amountText: row.amount_text ?? undefined,
     meta: row.meta,
@@ -176,7 +177,11 @@ export function diffRows<T extends { id: string }>(prev: T[], next: T[]): { upse
   const before = new Map(prev.map((r) => [r.id, r]));
   const ids = new Set(next.map((r) => r.id));
   return {
-    upserts: next.filter((r) => before.get(r.id) !== r),
+    // Same row, or the same content (a copy read back from the phone after a restart): nothing to send.
+    upserts: next.filter((r) => {
+      const was = before.get(r.id);
+      return was !== r && (!was || JSON.stringify(was) !== JSON.stringify(r));
+    }),
     deletes: prev.filter((r) => !ids.has(r.id)).map((r) => r.id),
   };
 }
@@ -198,11 +203,31 @@ export type Loaded = {
 /** The tables the store writes through, as of one moment. */
 export type Synced = Pick<Loaded, 'kitchen' | 'items' | 'toBuy' | 'recipes'>;
 
-type Result = { error: unknown };
+type Result = { error: unknown; status?: number };
+
+/** A failed request, with the HTTP status the server answered (0 when it never got there). */
+export class RequestError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+}
 
 function check<T extends Result>(r: T): T {
-  if (r.error) throw r.error;
+  if (r.error) throw new RequestError((r.error as { message?: string }).message ?? 'Request failed', r.status ?? 0);
   return r;
+}
+
+/**
+ * How a write failed. 'offline' (no answer) and 'server' (a 5xx) are worth retrying with the change kept;
+ * 'rejected' (a 4xx: not allowed any more, bad data) never will work, so the change is undone.
+ */
+export function writeFailure(e: unknown): 'offline' | 'server' | 'rejected' {
+  const status = e instanceof RequestError ? e.status : 0;
+  if (!status) return 'offline';
+  return status >= 400 && status < 500 ? 'rejected' : 'server';
 }
 
 function client() {

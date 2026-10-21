@@ -1,6 +1,8 @@
 // Sample data, copied from the prototypes in design/screens/prototypes and
-// context.md. It stands in for a backend.
+// context.md. Development and tests only: the app reaches it through devSeed
+// (devSeed.ts), which a release build folds to null, so none of this ships.
 
+import { DEFAULT_NOTIFICATIONS } from './helpers';
 import type { Item, Kitchen, NotificationSettings, Person, Recipe, ScanLine, ToBuyItem } from './types';
 
 export const ALEX: Person = {
@@ -166,16 +168,9 @@ export const SEED_RECIPES: Recipe[] = [
   },
 ];
 
-/** Oil and spices stay in the pantry when you make something. */
-export const STAPLES = ['Olive oil', 'Cumin'];
+export { STAPLES } from './helpers';
 
-export const SEED_NOTIFICATIONS: NotificationSettings = {
-  toBuy: true,
-  useSoon: true,
-  joins: true,
-  weekly: false,
-  useSoonTime: '5:00 pm',
-};
+export const SEED_NOTIFICATIONS: NotificationSettings = DEFAULT_NOTIFICATIONS;
 
 // AppScanReview: what real OCR will return one day. Corner Market, 7 lines.
 export const SAMPLE_SCAN: ScanLine[] = [

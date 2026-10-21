@@ -34,8 +34,9 @@ export type Item = {
   id: string;
   name: string;
   place: Place;
-  qty: number;
-  /** "carton", "eggs". Empty for things counted with × n. */
+  /** How many. Missing until someone enters one (the default, Decisions #160); 0 once it's used up. */
+  qty?: number;
+  /** "carton", "eggs". Empty for things counted with × n, or with no amount. */
   unit: string;
   /** Shown instead of the count while the count hasn't changed ("About 1 cup"). */
   amountText?: string;
