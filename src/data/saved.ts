@@ -3,6 +3,7 @@
 // Items are kept with a best-by date, so "2 days left" counts down.
 
 import { bestByFromDays, daysFromBestBy } from './helpers';
+import type { Synced } from './remote';
 import type { State } from './store';
 import type { Item } from './types';
 
@@ -13,6 +14,7 @@ type SavedItem = Omit<Item, 'daysLeft'> & { bestBy: string };
 /** Bump when the saved shape changes; a copy with another version is dropped. */
 export const SAVE_VERSION = 1;
 const KEY = 'cooked.state';
+const SERVER_KEY = 'cooked.server';
 
 export function toSaved(s: State, today: Date): string {
   const { session, user, kitchen, toBuy, recipes, notifications } = s;
@@ -55,7 +57,41 @@ export function save(s: State) {
 export function clearSaved() {
   try {
     globalThis.localStorage?.removeItem(KEY);
+    globalThis.localStorage?.removeItem(SERVER_KEY);
   } catch {
     // Nothing to do.
+  }
+}
+
+/**
+ * What the server held when it last confirmed a write. Kept so changes made offline still go up
+ * after the app is closed: on the next launch the difference from this copy is sent.
+ */
+export function saveServerCopy(c: Synced | null) {
+  try {
+    if (!c) return globalThis.localStorage?.removeItem(SERVER_KEY);
+    const items: SavedItem[] = c.items.map(({ daysLeft, ...rest }) => ({ ...rest, bestBy: bestByFromDays(daysLeft, new Date()) }));
+    globalThis.localStorage?.setItem(SERVER_KEY, JSON.stringify({ version: SAVE_VERSION, ...c, items }));
+  } catch {
+    // Nothing to do: the next confirmed write tries again.
+  }
+}
+
+/** The server's last confirmed copy, or null. */
+export function loadServerCopy(): Synced | null {
+  try {
+    const text = globalThis.localStorage?.getItem(SERVER_KEY);
+    if (!text) return null;
+    const { version, items, kitchen, toBuy, recipes } = JSON.parse(text);
+    if (version !== SAVE_VERSION || !Array.isArray(items)) return null;
+    const today = new Date();
+    return {
+      kitchen,
+      toBuy,
+      recipes,
+      items: (items as SavedItem[]).map(({ bestBy, ...item }) => ({ ...item, daysLeft: daysFromBestBy(bestBy, today) })),
+    };
+  } catch {
+    return null;
   }
 }

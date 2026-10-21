@@ -11,7 +11,8 @@ import { Text } from '@/components/Text';
 import { inStock } from '@/data/helpers';
 import { failText } from '@/data/errors';
 import * as api from '@/data/kitchenApi';
-import { SEED_ITEMS, SEED_KITCHEN, SEED_TO_BUY, SAM } from '@/data/seed';
+import { devSeed } from '@/data/devSeed';
+import { clearPendingInvite, pendingInvite } from '@/data/pendingInvite';
 import { useStore } from '@/data/store';
 import { hasBackend } from '@/data/supabase';
 import { space } from '@/theme';
@@ -37,7 +38,8 @@ const FAILED: Partial<Record<api.Result, string>> = {
 export default function Join() {
   const router = useRouter();
   const { actions, reload } = useStore();
-  const [value, setValue] = useState('');
+  // Opened from an invite link: its code is already in the field.
+  const [value, setValue] = useState(() => pendingInvite() ?? '');
   // The server's answer for the code that was last tried; cleared when the code changes.
   const [failed, setFailed] = useState<{ code: string; result: api.Result } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -48,13 +50,19 @@ export default function Join() {
   const [peek, setPeek] = useState<{ code: string; info: api.InvitePeek | null } | null>(null);
 
   const code = codeOf(value);
-  // Without a backend only the sample code is known, so it shows the kitchen before joining.
-  const found = !hasBackend && code === SEED_KITCHEN.inviteCode;
+  // Without a backend (development) only the sample code is known, so it shows the kitchen before joining.
+  const sample = !hasBackend ? devSeed : null;
+  const found = !!sample && code === sample.SEED_KITCHEN.inviteCode;
   const peeked = hasBackend && peek?.code === code ? peek : null;
   const note: api.InvitePeek | null = hasBackend
     ? (peeked?.info ?? null)
-    : found
-      ? { kitchen: SEED_KITCHEN.name, invitedBy: SAM.name, items: inStock(SEED_ITEMS).length, toBuy: SEED_TO_BUY.length }
+    : found && sample
+      ? {
+          kitchen: sample.SEED_KITCHEN.name,
+          invitedBy: sample.SAM.name,
+          items: inStock(sample.SEED_ITEMS).length,
+          toBuy: sample.SEED_TO_BUY.length,
+        }
       : null;
   const result = failed?.code === code ? failed.result : null;
   const failMessage = result ? FAILED[result] : undefined;
@@ -99,10 +107,12 @@ export default function Join() {
       if (r === 'ok') await reload();
       setBusy(false);
       if (r !== 'ok') return setFailed({ code, result: r });
+      clearPendingInvite();
       actions.finishOnboarding();
       return;
     }
     if (!found) return;
+    clearPendingInvite();
     actions.choosePath('join');
     actions.finishOnboarding();
   };
@@ -116,7 +126,7 @@ export default function Join() {
         <>
           {failMessage ? <ErrorLine text={failMessage} /> : null}
           <ActionPill
-            label={note ? `Join ${note.kitchen}` : 'Join'}
+            label={result === 'offline' || result === 'server' ? 'Try again' : note ? `Join ${note.kitchen}` : 'Join'}
             variant="primary"
             height="bottom"
             onPress={join}
@@ -130,7 +140,7 @@ export default function Join() {
         label="Invite link or code"
         value={value}
         onChangeText={setValue}
-        placeholder="rivera-kitchen"
+        placeholder="cooked.app/join/…"
         autoFocus
         autoCapitalize="none"
         autoCorrect={false}

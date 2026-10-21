@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { ActionPill } from '@/components/ActionPill';
-import { FilterPills } from '@/components/Controls';
+import { FilterPills, SyncNotice } from '@/components/Controls';
 import { GreetingHeader, SectionHeader } from '@/components/Header';
 import { Icon } from '@/components/Icon';
 import { RecipeRow } from '@/components/ListRows';
@@ -33,7 +33,7 @@ const passes = (r: Recipe, f: Filter) => {
 
 export default function Recipes() {
   const router = useRouter();
-  const { state, actions } = useStore();
+  const { state, actions, sync } = useStore();
   const [filter, setFilter] = useState<Filter>('all');
   const [query, setQuery] = useState('');
   // `/recipes?q=spinach` (Find a recipe that uses it) fills the search, and shows every recipe it's in.
@@ -75,6 +75,8 @@ export default function Recipes() {
         title="Recipes"
         onAccount={() => router.push('/account')}
       />
+
+      <SyncNotice problem={sync.problem} onRetry={sync.retry} />
 
       <View style={styles.searchRow}>
         <View style={styles.grow}>

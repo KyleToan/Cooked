@@ -3,15 +3,18 @@ import {
   daysUntil,
   dateIn,
   shortDate,
+  addCounts,
   amountLabel,
   bestByFromDays,
   count,
   daysFromBestBy,
   greeting,
   guessPlace,
+  hasSome,
   inStock,
   initial,
   isDueSoon,
+  receiptCount,
   isUseSoon,
   joinAnd,
   makeId,
@@ -133,6 +136,23 @@ describe('words', () => {
     // Once the count changes, the text no longer fits.
     expect(amountLabel(item({ qty: 2, unit: 'cup', amountText: 'About 1 cup' }), 1)).toBe('2 cups');
     expect(amountLabel(item({ qty: 1, unit: 'cup', amountText: 'About 1 cup' }), 1)).toBe('About 1 cup');
+    // No amount: nothing on the right of the row.
+    expect(amountLabel(item({ qty: undefined, unit: '' }))).toBe('');
+  });
+
+  test('uncounted items are there until used up', () => {
+    expect(hasSome(item({ qty: undefined }))).toBe(true);
+    expect(hasSome(item({ qty: 0 }))).toBe(false);
+    expect(inStock([item({ qty: undefined }), item({ qty: 0 })])).toHaveLength(1);
+  });
+
+  test('receipt counts: one stays uncounted, more adds up', () => {
+    expect(receiptCount(1)).toBeUndefined();
+    expect(receiptCount(3)).toBe(3);
+    expect(addCounts(undefined, 2)).toBeUndefined();
+    expect(addCounts(2, 1)).toBe(3);
+    expect(addCounts(0, 1)).toBeUndefined();
+    expect(addCounts(0, 2)).toBe(2);
   });
 
   test('initial', () => {

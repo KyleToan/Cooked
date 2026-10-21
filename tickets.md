@@ -9,7 +9,7 @@ Suggested order: Phase 0 → 1 → 2 → 3 → 4 and 5 side by side → 6 → 7.
 - [x] **T0.1 🔑 Backend.** Pick one for accounts, database, real-time sync and file storage (Supabase or Firebase are the usual Expo choices). Create the project with your own account; keys go in EAS environment variables. Log it in `Decisions.md`. *Supabase (Decisions #82).*
 - [x] **T0.2 🔑 Receipt reading.** On-device (Apple Vision, needs a development build) or an AI/OCR service (sends photos out). How items get sorted into fridge, pantry or freezer. *On the phone with Google ML Kit (Decisions #86, #92); places still come from the keyword table in `receipt.ts`.*
 - [x] **T0.3 🔑 Open product rules.** Who can remove whom from a kitchen. How "use soon" dates are worked out (shelf-life defaults, by hand, or both). Whether recipe links are fetched on a server or on the device. *Only the kitchen's maker removes people (Decisions #84), and when the maker leaves, the earliest joiner takes over. Use soon is both: a per-item shelf life sets it, and you can mark or change it by hand. Links are fetched on the device (Decisions #59; see T5.5).*
-- [ ] **T0.4 🔑 Account fields.** Can Email, Sign-in method and Units be changed, and how? Decisions #54 left them read-only. For Units: is metric wanted, and where do units show besides recipe amounts? Needs design if yes. *Replaces "Units" under "Needs a decision".*
+- [x] **T0.4 🔑 Account fields.** Can Email, Sign-in method and Units be changed, and how? *Email and Sign-in method stay read-only. Units belong to items, not the account: an item's quantity is empty by default and optional, and its quantity and unit can be added or changed by hand (Decisions #122).*
 
 ## Phase 1: Foundations
 
@@ -17,8 +17,8 @@ Suggested order: Phase 0 → 1 → 2 → 3 → 4 and 5 side by side → 6 → 7.
 - [x] **T1.2 Backend client.** Install the SDK with `npx expo install`, pinned. Config only from env vars; list the names in `AGENTS.md`. *`src/data/supabase.ts`; `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.*
 - [x] **T1.3 Schema.** Tables matching `src/data/types.ts`: people, kitchens, kitchen_members, items, to_buy, recipes, invites, notification_settings. Access rules so you only see kitchens you belong to. *Done when two test accounts can't see each other's kitchens.* *In `supabase/migrations/`, applied and checked with two test users.*
 - [x] **T1.4 Store on the backend.** Keep the `actions` in `src/data/store.tsx` with the same names and inputs; each writes to the backend. Load on sign-in, subscribe to live changes, keep undo, cache on the device for offline. *Done when a change on one phone shows on another within seconds.* *Built (`remote.ts`, `store.tsx`, Decisions #83); not yet run on two phones. Offline writes are T1.6.*
-- [ ] **T1.5 Network error states with retry.** Every call that can fail (saving a change, loading the kitchen, joining, importing a recipe) needs an error state and a Retry, following the design system's error rules; the checklist asks that "every flow that can fail has an error state". Today error lines already say whether you're offline or the server failed (Decisions #89), but none offers Retry, and a failed kitchen write rolls back without telling you. *Done when, with the network off, each of the four shows an error with Retry, and Retry works once the network is back.*
-- [ ] **T1.6 Offline write queue.** Decision #83 says "No offline queue yet: a failed write rolls back". Instead, keep failed writes on the phone and retry them about every 5 seconds and when the app comes back to the front, so changes made offline aren't lost. The `supabase-backend` branch has a reference design in commit 977d7c1: `flush` and `RETRY_MS` in `src/data/store.tsx`, and the diff against the server's last copy in `src/data/sync.ts`. Log the change to #83 in `Decisions.md`. *Done when ticking items in airplane mode and turning the network back on brings the same changes to a second phone, and killing the app while offline doesn't lose them.*
+- [x] **T1.5 Network error states with retry.** Every call that can fail (saving a change, loading the kitchen, joining, importing a recipe) needs an error state and a Retry, following the design system's error rules; the checklist asks that "every flow that can fail has an error state". Today error lines already say whether you're offline or the server failed (Decisions #89), but none offers Retry, and a failed kitchen write rolls back without telling you. *Done when, with the network off, each of the four shows an error with Retry, and Retry works once the network is back.* *Built (Decisions #126); checked in a browser against an unreachable server. Needs a check on a phone with real Supabase.*
+- [x] **T1.6 Offline write queue.** Decision #83 says "No offline queue yet: a failed write rolls back". Instead, keep failed writes on the phone and retry them about every 5 seconds and when the app comes back to the front, so changes made offline aren't lost. The `supabase-backend` branch has a reference design in commit 977d7c1: `flush` and `RETRY_MS` in `src/data/store.tsx`, and the diff against the server's last copy in `src/data/sync.ts`. Log the change to #83 in `Decisions.md`. *Done when ticking items in airplane mode and turning the network back on brings the same changes to a second phone, and killing the app while offline doesn't lose them.* *Built (Decisions #126); the second-phone check is still to do.*
 
 ## Phase 2: Accounts
 
@@ -27,19 +27,19 @@ Suggested order: Phase 0 → 1 → 2 → 3 → 4 and 5 side by side → 6 → 7.
 - [x] **T2.3 Sign in with Google.** Google OAuth (client IDs in env vars). *Through Supabase's OAuth page (`src/data/auth.ts`).*
 - [x] **T2.4 Stay signed in.** Session in `expo-secure-store`; "onboarded" saved on the account. *The session is kept in `expo-sqlite/localStorage` (`src/data/supabase.ts`), not `expo-secure-store`.*
 - [x] **T2.5 Log out and delete account.** Delete removes sign-in and name, keeps the kitchen for the others (server function). *The `delete_account` function is called from Account. The App Store requires in-app account deletion, so this covers that requirement (T7.4).*
-- [ ] **T2.6 Edit account fields.** Build whatever T0.4 decides for Email, Sign-in method and Units. The name sheet already exists and only needs to save to the server. *Done when each field T0.4 makes editable changes on the server and shows on the next sign-in.*
+- [x] **T2.6 Edit an item's quantity and unit.** Per Decisions #122: a new item has no quantity unless one is entered (`Item.qty` becomes optional; rows show just the name when it's missing), and an item's quantity and unit can be added, changed or cleared by hand, saved to the server. The account's name sheet only needs to save to the server. *Done when an item can get a quantity and unit, lose them again, and both show on a second phone.* *Built (Decisions #124). The owner applies `supabase/migrations/20261020230000_item_qty_optional.sql` to the Supabase project; not yet tried on two phones.*
 
 ## Phase 3: Kitchens and sharing
 
 - [x] **T3.1 Create a kitchen.** Just me and Me and my household make a real kitchen. *`create_kitchen` (`src/data/kitchenApi.ts`).*
 - [x] **T3.2 Invite links.** `cooked.app/join/<code>`, one person, 7 days; Make a new link cancels the old; system share sheet.
-- [ ] **T3.3 Join.** Server checks the code; universal links open the app; existing error for unknown or expired codes. Before joining, Join shows a preview of the kitchen the code belongs to (its name and who made it). *The server check and the error are built; universal links (`associatedDomains` and the apple-app-site-association file on `cooked.app`) aren't. The preview is being built now.*
+- [ ] **T3.3 Join.** Server checks the code; universal links open the app; existing error for unknown or expired codes. Before joining, Join shows a preview of the kitchen the code belongs to (its name and who made it). *The server check, the error and the preview are built. The app side of universal links is built (Decisions #127); the owner serves the files in `site/.well-known/` on `cooked.app` with their Team ID and signing fingerprint.*
 - [x] **T3.4 Household.** Rename, remove (rule from T0.3) with undo, leave; "Added by Sam" and activity lines from real data. *Only the maker removes people (Decisions #84). When the maker leaves, the earliest joiner becomes the maker; that hand-over is being built now.*
 
 ## Phase 4: Scanning
 
 - [x] **T4.1 Receipts.** Photo → text (T0.2) → lines with `parseReceipt` in `src/data/receipt.ts` → Check your scan. Unreadable → Couldn't read this receipt. *ML Kit is wired into Scan (Decisions #92, #93); not yet checked against real receipt photos.*
-- [ ] **T4.2 Fridge, Pantry, Freezer and Recipe modes.** Recognize items on a shelf; read a recipe page photo. *Recipe mode is done (Decisions #94). The shelf modes wait on "Needs a decision".*
+- [x] **T4.2 Fridge, Pantry, Freezer and Recipe modes.** Recognize items on a shelf; read a recipe page photo. *Recipe mode is done (Decisions #94). Shelf modes are not in the launch; they are under "After launch" below (Decisions #123).*
 - [ ] **T4.3 Use-soon dates.** `daysLeft` from the T0.3 rule instead of `DEFAULT_DAYS`. *The automatic part is done: a per-item shelf life (Decisions #95). Marking or changing it by hand is being built now.*
 
 ## Phase 5: Recipes
@@ -54,7 +54,7 @@ Suggested order: Phase 0 → 1 → 2 → 3 → 4 and 5 side by side → 6 → 7.
 ## Phase 6: Notifications
 
 - [ ] **T6.1 🔑 Push.** `expo-notifications`, permission, save device tokens.
-- [ ] **T6.2 The four notifications.** To Buy changes, daily use soon at the chosen time, someone joins, weekly summary. Switches saved on the server; sent by scheduled server jobs.
+- [ ] **T6.2 The four notifications.** *For launch only the nudge and the weekly summary show, both scheduled on the phone; To Buy changes and joins are hidden until push works (`PUSH_READY`, Decisions #127).* To Buy changes, daily use soon at the chosen time, someone joins, weekly summary. Switches saved on the server; sent by scheduled server jobs.
 
 ## Phase 7: Launch
 
@@ -62,10 +62,17 @@ Suggested order: Phase 0 → 1 → 2 → 3 → 4 and 5 side by side → 6 → 7.
 - [ ] **T7.2 App icon and splash** to replace the Expo placeholders.
 - [x] **T7.3 Tests** for the store, receipt parser, recipe import and ingredient matching (`npm test`). Keep adding as features land.
 - [ ] **T7.4 Ship.** Update to `preview`, test with friends, then `production` and the App Store. The App Store also needs a store listing, screenshots and the privacy nutrition labels (every service that gets user data, matching T7.1). In-app account deletion is required and already built (T2.5).
-- [ ] **T7.5 Remove sample data and dev shortcuts.** Before launch, take out `src/data/seed.ts` (Rivera kitchen), the `SAMPLE_SCAN` and `SAMPLE_RECIPE_PAGE` fallbacks in Scan and `ocr.ts`, the `rivera-kitchen` join code, the **DEV error** button on Scan, `supabase/seed.sql`, and the notes about them in `AGENTS.md` and `context.md`. Keep what the tests need as test fixtures. *Done when a production build has no sample data or dev shortcuts and `npm test` still passes.*
+- [x] **T7.5 Remove sample data and dev shortcuts.** Before launch, take out `src/data/seed.ts` (Rivera kitchen), the `SAMPLE_SCAN` and `SAMPLE_RECIPE_PAGE` fallbacks in Scan and `ocr.ts`, the `rivera-kitchen` join code, the **DEV error** button on Scan, `supabase/seed.sql`, and the notes about them in `AGENTS.md` and `context.md`. Keep what the tests need as test fixtures. *Done when a production build has no sample data or dev shortcuts and `npm test` still passes.* *Done by keeping them development only (Decisions #125); `supabase/seed.sql` is a database seed the app never ships, so it stays for local Supabase.*
 - [ ] **T7.6 Accessibility pass on a device.** VoiceOver labels on every control, Dynamic Type at the largest sizes, reduced motion, 44pt tap targets and 4.5:1 contrast for text that matters (design checklist). *Done when every flow in `design/screens/README.md` works with VoiceOver and at the largest text size on a phone.*
 
 ---
+
+## After launch
+
+Wanted, but not in the first App Store release (Decisions #123).
+
+- [ ] **L1 Scan a shelf.** Fridge, Pantry and Freezer modes on Scan: point the camera at a shelf and add what it sees. Needs an image model, either on the phone or a service (a service sends photos out, so it needs the owner's OK, a server function and a line in the privacy policy). Add the modes to `MODES` in `src/app/scan.tsx` when it works.
+- [ ] **L2 Share to Cooked from Safari.** A share extension so a recipe link can be sent from Safari's share sheet straight into Import. Needs a native config plugin and a new build.
 
 ## Step by step: everything except the backend
 
@@ -227,10 +234,10 @@ Account links to `cooked.app/help`, `/privacy` and `/terms`, which don't exist. 
 
 These are features the design mentions but that need the owner's choice before they can become tickets.
 
-- **Fridge, Pantry and Freezer scan modes.** Recognising food on a shelf from a photo needs an image model, either on the phone (big download, rough results) or a service (backend, costs per scan). Which, or drop it?
-- **Units, Email and Sign-in.** Now T0.4 and T2.6 above.
+- **Fridge, Pantry and Freezer scan modes.** Decided: not for launch, see "After launch" (Decisions #123).
+- **Units, Email and Sign-in.** Decided (T0.4, Decisions #122); the build is T2.6.
 - **Editing an item by hand** (quantity, place). The design has Use and swipe to Use up, but no edit screen. Marking an item use soon or changing its date by hand is decided (T0.3) and being built.
-- **Import from Safari's share sheet.** Sharing a recipe link straight to Cooked needs a share extension (a native config plugin and a new build). Wanted?
+- **Import from Safari's share sheet.** Decided: not for launch, see "After launch" (Decisions #123).
 - **Dark mode and iPad** (Decision #40: light mode and iPhone only). No designs yet.
 
 ---
@@ -282,9 +289,9 @@ Pushing failed with "could not read Username". Run `gh auth login` (or set up a 
   - the largest text size
 
 ### 7. Small calls to make
-- **Nudge text:** it keeps names as stored, so it reads "Chicken thighs and Spinach need using." Keep that, or lower-case all but proper nouns?
+- [x] **Nudge text:** keep names as stored ("Chicken thighs and Spinach need using.") (Decisions #123).
 - **Shelf-life numbers:** check a few in ticket 4's table against USDA FoodKeeper.
-- **Photo scan error:** after a failed photo scan, Import's error still offers "Try another link". Hide it?
+- [x] **Photo scan error:** "Try another link" is hidden after a photo scan (Decisions #123).
 - **Icon source:** re-export `design/system/design-system.json` from the design source so it lists the two new icons.
 - **`npm run doctor`:** it fails because `expo-doctor` isn't installed (`npx -y expo-doctor` works). An agent can fix the script.
 

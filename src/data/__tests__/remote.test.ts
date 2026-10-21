@@ -25,6 +25,8 @@ describe('diffRows', () => {
 
   test('unchanged rows by reference are skipped', () => {
     expect(diffRows([a, b], [a, b])).toEqual({ upserts: [], deletes: [] });
+    // A copy read back from the phone is a new object with the same content.
+    expect(diffRows([a, b], [{ ...a }, JSON.parse(JSON.stringify(b))])).toEqual({ upserts: [], deletes: [] });
   });
 
   test('add, change and delete', () => {
@@ -68,6 +70,13 @@ describe('mappers round-trip', () => {
     const row = itemToRow(item, K, today);
     expect(row).toMatchObject({ amount_text: null, running_low: false, use_soon: null, added_by: null });
     expect(rowToItem(row, today)).toEqual(item);
+  });
+
+  test('items: no amount is a null qty and back', () => {
+    const item: Item = { id: 'x', name: 'Basil', place: 'fridge', unit: '', meta: '', daysLeft: 4, addedBy: 'a' };
+    const row = itemToRow(item, K, today);
+    expect(row.qty).toBeNull();
+    expect(rowToItem(row, today).qty).toBeUndefined();
   });
 
   test('items: use soon set off by hand stays off, apart from following the date', () => {

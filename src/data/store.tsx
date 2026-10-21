@@ -4,24 +4,16 @@
 
 import { useFocusEffect } from 'expo-router';
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
-import { AccessibilityInfo } from 'react-native';
+import { AccessibilityInfo, AppState } from 'react-native';
 
 import { useAuth } from './auth';
-import { guessPlace, makeId, shortDate, USE_SOON_DAYS } from './helpers';
+import { addCounts, DEFAULT_NOTIFICATIONS, guessPlace, hasSome, makeId, receiptCount, shortDate, STAPLES, USE_SOON_DAYS } from './helpers';
 import { checkRecipe, checkRecipes, usedWhenMade } from './match';
 import { shelfLifeFor } from './receipt';
-import { clearSaved, loadSaved, save, type Saved } from './saved';
-import {
-  ALEX,
-  NEW_INVITE_CODE,
-  SEED_ITEMS,
-  SEED_KITCHEN,
-  SEED_NOTIFICATIONS,
-  SEED_RECIPES,
-  SEED_TO_BUY,
-  STAPLES,
-} from './seed';
-import { loadAll, markSynced, subscribeKitchen, writeDiff, type Loaded, type Synced } from './remote';
+import { clearSaved, loadSaved, loadServerCopy, save, saveServerCopy, type Saved } from './saved';
+import { devSeed } from './devSeed';
+import { loadAll, markSynced, subscribeKitchen, writeDiff, writeFailure, type Loaded, type Synced } from './remote';
+import type { Failure } from './errors';
 import { hasBackend } from './supabase';
 import type {
   Item,
@@ -62,16 +54,33 @@ export type State = {
   undo: Undo | null;
 };
 
+/** Before onboarding: nobody signed in, nothing in the kitchen. Onboarding names the person and makes or joins a kitchen. */
 export function initialState(): State {
+  const user: Person = { id: 'me', name: '', note: '' };
   return {
     session: { onboarded: false, signIn: null, contact: '', path: null, lastScan: { fridge: [], pantry: [], freezer: [] } },
+    user,
+    kitchen: { name: '', people: [user], inviteCode: '', newLink: false, syncedAgo: '' },
+    items: [],
+    toBuy: [],
+    recipes: [],
+    notifications: DEFAULT_NOTIFICATIONS,
+    undo: null,
+  };
+}
+
+/** Development and tests: signed in as Alex in the sample Rivera kitchen, as the design screenshots show. */
+export function sampleState(): State {
+  if (!devSeed) throw new Error('The sample kitchen is development only');
+  const { ALEX, SEED_ITEMS, SEED_KITCHEN, SEED_NOTIFICATIONS, SEED_RECIPES, SEED_TO_BUY } = devSeed;
+  return {
+    ...initialState(),
     user: ALEX,
     kitchen: SEED_KITCHEN,
     items: SEED_ITEMS,
     toBuy: SEED_TO_BUY,
     recipes: SEED_RECIPES,
     notifications: SEED_NOTIFICATIONS,
-    undo: null,
   };
 }
 
@@ -80,6 +89,7 @@ export type Action =
   | { type: 'addToBuy'; name: string; place?: Place }
   | { type: 'addItem'; name: string; place: Place }
   | { type: 'setQty'; id: string; qty: number; scope: string }
+  | { type: 'setAmount'; id: string; qty?: number; unit: string }
   | { type: 'itemToBuy'; id: string }
   | { type: 'setUseSoon'; id: string; on: boolean }
   | { type: 'setBestBy'; id: string; daysLeft: number }
@@ -160,7 +170,6 @@ export function reducer(s: State, a: Action): State {
         id: makeId('i'),
         name,
         place: a.place,
-        qty: 1,
         unit: '',
         meta: `Added by ${s.user.name}`,
         daysLeft: shelfLifeFor(name, a.place),
@@ -173,8 +182,15 @@ export function reducer(s: State, a: Action): State {
       if (!item) return s;
       const qty = Math.max(0, a.qty);
       const items = s.items.map((i) => (i.id === a.id ? { ...i, qty } : i));
-      const undo = qty === 0 && item.qty > 0 ? withUndo(s, `${item.name} used up`, a.scope) : null;
+      const undo = qty === 0 && hasSome(item) ? withUndo(s, `${item.name} used up`, a.scope) : null;
       return { ...s, items, undo };
+    }
+    case 'setAmount': {
+      // Typed by hand, so it replaces the receipt's "About 1 cup". No count clears the unit too.
+      const qty = a.qty === undefined ? undefined : Math.max(0, a.qty);
+      const unit = qty === undefined ? '' : a.unit.trim();
+      const items = s.items.map((i) => (i.id === a.id ? { ...i, qty, unit, amountText: undefined } : i));
+      return { ...s, items, undo: null };
     }
     case 'setUseSoon': {
       // Kept only when it disagrees with the date, so agreeing with it goes back to following the date.
@@ -198,13 +214,21 @@ export function reducer(s: State, a: Action): State {
     case 'addScanned': {
       let items = s.items;
       let toBuy = s.toBuy;
+      // The same thing twice on one receipt is two of it, so lines are merged before they're counted.
+      const merged: (ScanLine & { place: Place })[] = [];
       for (const line of a.lines) {
         if (line.place === 'skip' || !line.name.trim()) continue;
+        const place = line.place;
+        const same = merged.find((m) => m.place === place && sameName(m.name, line.name));
+        if (same) same.qty += line.qty;
+        else merged.push({ ...line, place });
+      }
+      for (const line of merged) {
         const place = line.place;
         const existing = items.find((i) => i.place === place && sameName(i.name, line.name));
         if (existing) {
           items = items.map((i) =>
-            i.id === existing.id ? { ...i, qty: i.qty + line.qty, amountText: undefined, meta: 'From today’s receipt' } : i,
+            i.id === existing.id ? { ...i, qty: addCounts(i.qty, line.qty), amountText: undefined, meta: 'From today’s receipt' } : i,
           );
         } else {
           items = [
@@ -213,7 +237,7 @@ export function reducer(s: State, a: Action): State {
               id: makeId('i'),
               name: line.name.trim(),
               place,
-              qty: line.qty,
+              qty: receiptCount(line.qty),
               unit: '',
               meta: 'From today’s receipt',
               daysLeft: shelfLifeFor(line.name, place),
@@ -260,7 +284,7 @@ export function reducer(s: State, a: Action): State {
       const recipe = s.recipes.find((r) => r.id === a.id);
       if (!recipe) return s;
       const used = usedWhenMade(recipe, s.items, STAPLES);
-      const items = s.items.map((i) => (used.includes(i) ? { ...i, qty: i.qty - 1 } : i));
+      const items = s.items.map((i) => (used.includes(i) && i.qty !== undefined ? { ...i, qty: i.qty - 1 } : i));
       return { ...s, items, undo: withUndo(s, `Made ${recipe.title}`, `recipe:${recipe.id}`) };
     }
     case 'importRecipe': {
@@ -289,7 +313,8 @@ export function reducer(s: State, a: Action): State {
     case 'newInviteLink': {
       // A fresh code kills the old link. The sample kitchen's next code is the one in the design.
       const family = s.kitchen.inviteCode.replace(/-kitchen$|-[a-z0-9]{4}$/, '');
-      const fresh = s.kitchen.inviteCode === SEED_KITCHEN.inviteCode ? NEW_INVITE_CODE : `${family}-${Math.random().toString(36).slice(2, 6)}`;
+      const sampleCode = devSeed && s.kitchen.inviteCode === devSeed.SEED_KITCHEN.inviteCode ? devSeed.NEW_INVITE_CODE : null;
+      const fresh = sampleCode ?? `${family}-${Math.random().toString(36).slice(2, 6)}`;
       return { ...s, kitchen: { ...s.kitchen, inviteCode: fresh, newLink: true }, undo: null };
     }
     case 'leaveKitchen':
@@ -310,9 +335,13 @@ export function reducer(s: State, a: Action): State {
     case 'choosePath': {
       const session = { ...s.session, path: a.path };
       if (a.path === 'join') {
-        // Until there's a backend, the only kitchen to join is the sample Rivera kitchen.
-        const people = [s.user, ...SEED_KITCHEN.people.filter((p) => p.id !== s.user.id)];
-        return { ...s, session, kitchen: { ...SEED_KITCHEN, people }, items: SEED_ITEMS, toBuy: SEED_TO_BUY, recipes: SEED_RECIPES };
+        // With a backend, Join loads the real kitchen. Without one (development), the only kitchen to join is the
+        // sample Rivera kitchen, joined as Alex so "Added by" lines read as in the design.
+        if (!devSeed || hasBackend) return { ...s, session };
+        const sample = sampleState();
+        const user = { ...s.user, id: sample.user.id };
+        const people = [user, ...sample.kitchen.people.filter((p) => p.id !== user.id)];
+        return { ...s, session, user, kitchen: { ...sample.kitchen, people }, items: sample.items, toBuy: sample.toBuy, recipes: sample.recipes };
       }
       // Just me or a household: a new, empty kitchen. The first scan fills it.
       return { ...s, session, kitchen: newKitchen(s.user), items: [], toBuy: [], recipes: [] };
@@ -344,7 +373,29 @@ type Store = {
   reload: () => Promise<void>;
   /** False while a signed-in person's first load is running. */
   ready: boolean;
+  sync: SyncStatus;
 };
+
+/** How the kitchen is getting on with the server, for the line under Home's and Kitchen's titles. */
+export type SyncStatus = {
+  /**
+   * Null when all's well. 'offline' or 'server': changes are kept on the phone and sent when it works again.
+   * 'rejected': the server refused the last change, so it was undone. 'load': the kitchen couldn't be loaded.
+   */
+  problem: Failure | 'rejected' | 'load' | null;
+  /** True while changes made here haven't reached the server. */
+  unsent: boolean;
+  /** Tries again now: sends what's waiting, or loads the kitchen. */
+  retry: () => void;
+  /** True when this phone has no copy of the kitchen to show (first load failed with nothing saved). */
+  empty: boolean;
+};
+
+/** A failed load says so, unless changes waiting to go up already explain what's wrong. */
+const loadFailed = (p: SyncStatus['problem']): SyncStatus['problem'] => (p === 'offline' || p === 'server' ? p : 'load');
+
+/** How long to wait before sending changes again after a failed write. */
+export const RETRY_MS = 5000;
 
 const StoreContext = createContext<Store | null>(null);
 
@@ -354,6 +405,7 @@ function makeActions(dispatch: (a: Action) => void) {
     addToBuy: (name: string, place?: Place) => dispatch({ type: 'addToBuy', name, place }),
     addItem: (name: string, place: Place) => dispatch({ type: 'addItem', name, place }),
     setQty: (id: string, qty: number, scope: string) => dispatch({ type: 'setQty', id, qty, scope }),
+    setAmount: (id: string, qty: number | undefined, unit: string) => dispatch({ type: 'setAmount', id, qty, unit }),
     addItemToBuy: (id: string) => dispatch({ type: 'itemToBuy', id }),
     /** Use soon by hand, on or off. Matching the date clears the override. */
     setUseSoon: (id: string, on: boolean) => dispatch({ type: 'setUseSoon', id, on }),
@@ -394,32 +446,45 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   // The person whose first load has finished, so the loader shows once per sign-in.
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
 
-  // What the server is known to hold (`synced`), the last write it confirmed (`confirmed`),
-  // and how many writes are still on their way.
-  // The restored copy is the baseline, like a hydrate, so it is never written back as local edits.
-  const restored: Synced | null =
-    hasBackend && cached ? { kitchen: state.kitchen, items: state.items, toBuy: state.toBuy, recipes: state.recipes } : null;
+  // `confirmed` is what the server held when it last answered; `synced` is the newest local copy handed to the writer.
+  // While they differ, changes are waiting to go up. The confirmed copy is also kept on the phone, so changes made
+  // offline go up after a restart. The restored copy is the baseline, like a hydrate, so it isn't written back.
+  const restored: Synced | null = useMemo(() => {
+    if (!hasBackend || !cached) return null;
+    const server = loadServerCopy();
+    const mine = { kitchen: state.kitchen, items: state.items, toBuy: state.toBuy, recipes: state.recipes };
+    return server && server.kitchen?.id === mine.kitchen.id ? server : mine;
+    // Only the first render's copy.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const synced = useRef<Synced | null>(restored);
   const confirmed = useRef<Synced | null>(restored);
-  const chain = useRef(Promise.resolve());
-  const pending = useRef(0);
-  const writes = useRef(0);
+  const flushing = useRef(false);
+  const retryTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const reloadAfterWrites = useRef(false);
   const sessionRef = useRef(session);
   const kitchenId = useRef(state.kitchen.id);
+  const [problem, setProblem] = useState<SyncStatus['problem']>(null);
+  const [unsent, setUnsent] = useState(false);
   // Declared before the load effect, so reload sees this render's session.
   useEffect(() => {
     sessionRef.current = session;
     kitchenId.current = state.kitchen.id;
   });
 
+  const waiting = () => synced.current !== confirmed.current;
+
   const reload = useCallback(async () => {
     const s = sessionRef.current;
     if (!hasBackend || !s) return;
-    const startedAt = writes.current;
+    // Changes waiting to go up: this load would miss them, so load once they're sent.
+    if (flushing.current || waiting()) {
+      reloadAfterWrites.current = true;
+      return;
+    }
     const data = await loadAll(s.user.id, { email: s.user.email, phone: s.user.phone });
-    // A local change happened meanwhile: this load may miss it, so load again once it's written.
-    if (pending.current || writes.current !== startedAt) {
+    // A local change happened meanwhile: load again once it's written.
+    if (flushing.current || waiting()) {
       reloadAfterWrites.current = true;
       return;
     }
@@ -427,8 +492,59 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     // Set before dispatching, so the write effect sees no difference and nothing echoes back.
     synced.current = snapshot;
     confirmed.current = snapshot;
+    saveServerCopy(snapshot);
+    // "Couldn't save your last change" stays until it's read and Reload is tapped.
+    setProblem((p) => (p === 'rejected' ? p : null));
     dispatch({ type: 'hydrate', data });
   }, []);
+
+  /** Sends everything that changed since the server last answered, one write at a time. */
+  const flush = useCallback(function send() {
+    clearTimeout(retryTimer.current);
+    retryTimer.current = undefined;
+    const base = confirmed.current;
+    const next = synced.current;
+    const id = next?.kitchen?.id;
+    if (flushing.current || !base || !next || base === next || !id || base.kitchen?.id !== id) {
+      setUnsent(waiting());
+      return;
+    }
+    flushing.current = true;
+    setUnsent(true);
+    writeDiff(id, base, next, new Date())
+      .then(
+        () => {
+          confirmed.current = next;
+          saveServerCopy(next);
+          setProblem(null);
+        },
+        (e) => {
+          const why = writeFailure(e);
+          if (why === 'rejected') {
+            // It will never be accepted: back to what the server has, and tell the person.
+            synced.current = base;
+            dispatch({ type: 'hydrate', data: base });
+            reloadAfterWrites.current = true;
+          } else {
+            // Kept on the phone, with the server's copy beside it so a restart still knows what to send.
+            // Try again in a few seconds, and when the app comes back to the front.
+            saveServerCopy(base);
+            retryTimer.current = setTimeout(send, RETRY_MS);
+          }
+          setProblem(why);
+        },
+      )
+      .finally(() => {
+        flushing.current = false;
+        setUnsent(waiting());
+        // Newer changes arrived while this one was on its way.
+        if (waiting() && !retryTimer.current) send();
+        else if (!waiting() && reloadAfterWrites.current) {
+          reloadAfterWrites.current = false;
+          reload().catch(() => undefined);
+        }
+      });
+  }, [reload]);
 
   const userId = session?.user.id;
   // The phone's copy belongs to someone else (or nobody is signed in any more): drop it.
@@ -442,11 +558,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (!authReady) return;
     if (!userId) {
       synced.current = confirmed.current = null;
+      setProblem(null);
       return;
     }
-    // shortcut: a failed first load (offline) opens the app on local data, add a retry screen if testers hit it.
+    // Offline at launch: with a copy on the phone the app opens on it; without one, the Routes show "Couldn't load".
     reload()
-      .catch(() => undefined)
+      .catch(() => setProblem(loadFailed))
       .finally(() => setLoadedFor(userId));
   }, [authReady, userId, reload]);
 
@@ -464,34 +581,34 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const prev = synced.current;
     const id = state.kitchen.id;
     if (!hasBackend || !id || !prev || prev.kitchen?.id !== id) return;
-    if (prev.items === state.items && prev.toBuy === state.toBuy && prev.recipes === state.recipes && prev.kitchen?.name === state.kitchen.name) return;
-    const next: Synced = { kitchen: state.kitchen, items: state.items, toBuy: state.toBuy, recipes: state.recipes };
-    synced.current = next;
-    pending.current++;
-    writes.current++;
-    // One write at a time, in order, each against the one before it.
-    chain.current = chain.current
-      .then(() => writeDiff(id, prev, next, new Date()))
-      .then(
-        () => {
-          confirmed.current = next;
-        },
-        () => {
-          // shortcut: no offline queue, writes need a connection; add a queue if testers hit it.
-          const back = confirmed.current;
-          synced.current = back;
-          if (back) dispatch({ type: 'hydrate', data: back });
-          reloadAfterWrites.current = true;
-        },
-      )
-      .finally(() => {
-        pending.current--;
-        if (!pending.current && reloadAfterWrites.current) {
-          reloadAfterWrites.current = false;
-          reload().catch(() => undefined);
-        }
-      });
-  }, [state.kitchen, state.items, state.toBuy, state.recipes, reload]);
+    if (prev.items === state.items && prev.toBuy === state.toBuy && prev.recipes === state.recipes && prev.kitchen?.name === state.kitchen.name) {
+      // Nothing new, but a restored copy may still hold changes made offline before the app was closed.
+      if (waiting()) flush();
+      return;
+    }
+    synced.current = { kitchen: state.kitchen, items: state.items, toBuy: state.toBuy, recipes: state.recipes };
+    // Waiting on a retry: the new change goes with it, unless it's the first one.
+    if (!retryTimer.current) flush();
+    else setUnsent(true);
+  }, [state.kitchen, state.items, state.toBuy, state.recipes, flush]);
+
+  // Back in the app: send what's waiting straight away.
+  useEffect(() => {
+    if (!hasBackend) return;
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'active' && waiting()) flush();
+    });
+    return () => {
+      sub.remove();
+      clearTimeout(retryTimer.current);
+    };
+  }, [flush]);
+
+  const retry = useCallback(() => {
+    if (waiting()) return flush();
+    setProblem((p) => (p === 'rejected' ? null : p));
+    reload().catch(() => setProblem(loadFailed));
+  }, [flush, reload]);
 
   // Other people's changes. shortcut: whole refetch on any event, fine for household-sized kitchens.
   const liveId = state.kitchen.id;
@@ -501,8 +618,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const unsubscribe = subscribeKitchen(liveId, () => {
       clearTimeout(timer);
       timer = setTimeout(() => {
-        if (pending.current) reloadAfterWrites.current = true;
-        else reload().catch(() => undefined);
+        reload().catch(() => undefined);
       }, 300);
     });
     return () => {
@@ -533,7 +649,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(timer);
   }, [undo, reader]);
   const ready = authReady && (!userId || loadedFor === userId || (cachedFor === userId && state.user.id === userId));
-  const value = useMemo(() => ({ state: { ...state, recipes }, actions, reload, ready }), [state, recipes, actions, reload, ready]);
+  // Nothing to show: the first load failed and the phone has no copy of this person's kitchen.
+  const empty = !!userId && problem === 'load' && !(cachedFor && cachedFor === userId) && !state.kitchen.id;
+  const sync = useMemo<SyncStatus>(() => ({ problem, unsent, retry, empty }), [problem, unsent, retry, empty]);
+  const value = useMemo(() => ({ state: { ...state, recipes }, actions, reload, ready, sync }), [state, recipes, actions, reload, ready, sync]);
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
 

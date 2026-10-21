@@ -15,7 +15,8 @@ import { haptics } from '@/hooks/haptics';
 import { color, radius, size, space, type } from '@/theme';
 
 /** Without a backend sign-in is faked: this is the only code that works. */
-const CODE = '481726';
+/** Development without a backend only: the one code that works. Release builds always use Supabase. */
+const CODE = __DEV__ ? '481726' : null;
 const LENGTH = 6;
 const FIRST_WAIT = 24;
 const RESEND_WAIT = 30;

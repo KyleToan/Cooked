@@ -14,7 +14,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { ActionPill } from '@/components/ActionPill';
-import { ROW_LAYOUT, Switch, UndoBar } from '@/components/Controls';
+import { Field, ROW_LAYOUT, Switch, SyncNotice, UndoBar } from '@/components/Controls';
 import { GreetingHeader, SectionHeader } from '@/components/Header';
 import { Icon } from '@/components/Icon';
 import { KitchenRow } from '@/components/ListRows';
@@ -66,7 +66,7 @@ const isTab = (t: unknown): t is Tab => t === 'fridge' || t === 'pantry' || t ==
 export default function Kitchen() {
   const params = useLocalSearchParams<{ tab?: string }>();
   const router = useRouter();
-  const { state, actions } = useStore();
+  const { state, actions, sync } = useStore();
   const undo = useUndo('kitchen');
 
   const [tab, setTab] = useState<Tab>(isTab(params.tab) ? params.tab : 'fridge');
@@ -109,6 +109,8 @@ export default function Kitchen() {
         overlay={undo ? <UndoBar text={undo.text} onUndo={actions.undo} onDismiss={() => actions.clearUndo(undo.scope)} /> : null}
       >
         <GreetingHeader line={statusLine} title="Your Kitchen" onAccount={() => router.push('/account')} />
+
+        <SyncNotice problem={sync.problem} onRetry={sync.retry} />
 
         <SearchField placeholder={placeholder} value={query} onChangeText={setQuery} />
 
@@ -275,7 +277,7 @@ function StockTab({
   setOpen: (id: string | null) => void;
   sort: 'az' | 'useby';
   toggleSort: () => void;
-  startQty: Record<string, number>;
+  startQty: Record<string, number | undefined>;
 }) {
   const router = useRouter();
   const { state, actions } = useStore();
@@ -284,6 +286,25 @@ function StockTab({
   const [picking, setPicking] = useState<Item | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [draft, setDraft] = useState(() => new Date());
+  // The item whose amount is being typed in the sheet, and the two fields so far.
+  const [amountFor, setAmountFor] = useState<Item | null>(null);
+  const [amountOpen, setAmountOpen] = useState(false);
+  const [qtyText, setQtyText] = useState('');
+  const [unitText, setUnitText] = useState('');
+  const qtyValue = qtyText.trim() ? Number(qtyText.trim().replace(',', '.')) : undefined;
+  const qtyBad = qtyValue !== undefined && (!Number.isFinite(qtyValue) || qtyValue <= 0);
+  const unitAlone = qtyValue === undefined && !!unitText.trim();
+
+  const openAmount = (i: Item) => {
+    setAmountFor(i);
+    setQtyText(i.qty ? String(i.qty) : '');
+    setUnitText(i.qty ? i.unit : '');
+    setAmountOpen(true);
+  };
+  const saveAmount = () => {
+    if (amountFor) actions.setAmount(amountFor.id, qtyValue, unitText);
+    setAmountOpen(false);
+  };
 
   const setBestBy = (id: string, days: number) => actions.setBestBy(id, days);
 
@@ -371,6 +392,7 @@ function StockTab({
         actionLabel={recipeAction ? 'Find a recipe that uses it' : onList(i) ? 'On your To Buy list' : 'Add to To Buy'}
         onAction={() => (recipeAction ? findRecipe(i.name) : actions.addItemToBuy(i.id))}
         onQty={(qty) => actions.setQty(i.id, qty, 'kitchen')}
+        onEditAmount={() => openAmount(i)}
         onUseUp={() => actions.setQty(i.id, 0, 'kitchen')}
         extra={copy.soonIsDate ? dateControls(i) : undefined}
       />
@@ -431,6 +453,39 @@ function StockTab({
         <AddRow placeholder={copy.add} label={copy.add.replace('…', '')} onSubmit={(name) => actions.addItem(name, place)} />
       </View>
 
+      <Sheet visible={amountOpen} onClose={() => setAmountOpen(false)} title={amountFor ? `How much ${amountFor.name}?` : 'How much?'}>
+        <Field
+          label="How many (optional)"
+          value={qtyText}
+          onChangeText={setQtyText}
+          keyboardType="decimal-pad"
+          autoFocus
+          error={qtyBad ? 'Use a number above 0, or leave it empty.' : undefined}
+        />
+        <Field
+          label="Unit (optional)"
+          placeholder="carton, g, cups"
+          value={unitText}
+          onChangeText={setUnitText}
+          autoCapitalize="none"
+          returnKeyType="done"
+          onSubmitEditing={() => !qtyBad && !unitAlone && saveAmount()}
+          error={unitAlone ? 'Add how many first, or clear the unit.' : undefined}
+        />
+        <ActionPill label="Save" variant="primary" height="bottom" disabled={qtyBad || unitAlone} onPress={saveAmount} />
+        {amountFor?.qty !== undefined || amountFor?.amountText ? (
+          <TextLink
+            label="No amount"
+            variant="button"
+            align="center"
+            onPress={() => {
+              if (amountFor) actions.setAmount(amountFor.id, undefined, '');
+              setAmountOpen(false);
+            }}
+          />
+        ) : null}
+      </Sheet>
+
       {Platform.OS === 'ios' ? (
         <Sheet visible={pickerOpen} onClose={() => setPickerOpen(false)} title={`Use ${picking?.name ?? 'it'} by`}>
           <DateTimePicker
@@ -478,7 +533,8 @@ function ToBuyTab({
 
   const share = () => {
     const left = sortToBuy(state.toBuy).filter((t) => !t.done);
-    Share.share({ message: ['To Buy', ...left.map((t) => `• ${t.name}`)].join('\n') });
+    // Rejects where there's no share sheet (most desktop browsers); nothing to do then.
+    Share.share({ message: ['To Buy', ...left.map((t) => `• ${t.name}`)].join('\n') }).catch(() => undefined);
   };
 
   if (query && list.length === 0) {

@@ -293,15 +293,15 @@ describe('links', () => {
     expect(normalizeUrl('http://a.com')).toBe('http://a.com');
   });
 
-  test('importFromLink parses the fetched page, and is null on failure', async () => {
+  test('importFromLink parses the fetched page, is null without a recipe, and unreachable offline', async () => {
     const html = page('{"@type":"Recipe","name":"Soup","recipeIngredient":["1 onion"]}');
     global.fetch = jest.fn().mockResolvedValue({ ok: true, text: () => Promise.resolve(html) }) as unknown as typeof fetch;
-    expect((await importFromLink('example.com/soup', KITCHEN))?.have).toBe(1);
+    expect(await importFromLink('example.com/soup', KITCHEN)).toMatchObject({ have: 1 });
 
     global.fetch = jest.fn().mockResolvedValue({ ok: false, text: () => Promise.resolve('') }) as unknown as typeof fetch;
     expect(await importFromLink('https://example.com/404')).toBeNull();
 
     global.fetch = jest.fn().mockRejectedValue(new TypeError('Network request failed')) as unknown as typeof fetch;
-    expect(await importFromLink('https://example.com/cors')).toBeNull();
+    expect(await importFromLink('https://example.com/offline')).toBe('unreachable');
   });
 });

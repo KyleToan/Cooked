@@ -10,9 +10,8 @@ import { ToBuyToggle } from '@/components/ListRows';
 import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
 import { TextLink } from '@/components/TextLink';
-import { isUseSoon, PLACE_LABEL, recipeMeta } from '@/data/helpers';
+import { count, isUseSoon, PLACE_LABEL, recipeMeta, STAPLES } from '@/data/helpers';
 import { matches, usedWhenMade } from '@/data/match';
-import { STAPLES } from '@/data/seed';
 import { useStore, useUndo } from '@/data/store';
 import { color, radius, shadow, size, space } from '@/theme';
 
@@ -66,7 +65,7 @@ export default function RecipeScreen() {
       footer={footer}
       gap={space.s5 + 2}
       raised={!!made}
-      overlay={made ? <UndoBar island={false} text={`Took ${used} things out of your kitchen`} onUndo={actions.undo} onDismiss={() => actions.clearUndo(made.scope)} /> : null}
+      overlay={made ? <UndoBar island={false} text={`Took ${count(used, 'thing')} out of your kitchen`} onUndo={actions.undo} onDismiss={() => actions.clearUndo(made.scope)} /> : null}
     >
       {photo ? (
         <View>
